@@ -104,7 +104,7 @@ SSH is only reachable from this PC, not from the home network or the internet.
 In the SSH window, paste these two lines:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/Dr-Nerdlove/gapfinder/main/deploy/vm/setup.sh
+wget -q https://raw.githubusercontent.com/Dr-Nerdlove/gapfinder/main/deploy/vm/setup.sh
 sudo bash setup.sh
 ```
 
@@ -183,7 +183,7 @@ The hourly update only replaces the server program. When a later change touches 
 (the release notes say so), run the setup again; it keeps the settings and the database:
 
 ```sh
-curl -fsSLO https://raw.githubusercontent.com/Dr-Nerdlove/gapfinder/main/deploy/vm/setup.sh
+wget -q https://raw.githubusercontent.com/Dr-Nerdlove/gapfinder/main/deploy/vm/setup.sh
 sudo bash setup.sh
 ```
 
