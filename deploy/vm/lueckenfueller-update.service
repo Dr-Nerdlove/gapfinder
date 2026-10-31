@@ -1,0 +1,10 @@
+[Unit]
+Description=Update the Lückenfüller server to the newest image
+Documentation=https://github.com/Dr-Nerdlove/gapfinder/blob/main/docs/server-setup.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/lueckenfueller-update

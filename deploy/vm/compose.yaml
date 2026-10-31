@@ -1,0 +1,29 @@
+# Docker Compose file for the server VM. setup.sh copies it to /opt/lueckenfueller/compose.yaml.
+# Unlike the compose.yaml in the repository root it never builds: it only runs the published image.
+services:
+  api:
+    image: ghcr.io/dr-nerdlove/lueckenfueller-api:latest
+    # Never pull on start; lueckenfueller-update pulls and can roll back a broken image.
+    pull_policy: never
+    env_file:
+      - path: .env
+        required: true
+    volumes:
+      - ./data:/data
+    ports:
+      # Only reachable from the VM itself; Tailscale Funnel publishes it.
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # Keep logs small: the VM disk is limited to 10 GB.
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"

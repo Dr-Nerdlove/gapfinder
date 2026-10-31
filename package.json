@@ -15,7 +15,8 @@
   "scripts": {
     "build:shared": "npm run build -w shared",
     "check": "npm run build:shared && npm run check --workspaces --if-present",
-    "test": "npm run build:shared && npm test --workspaces --if-present",
+    "test": "npm run build:shared && npm test --workspaces --if-present && npm run test:vm",
+    "test:vm": "bash deploy/vm/test/update.test.sh",
     "build": "npm run build --workspaces --if-present"
   }
 }

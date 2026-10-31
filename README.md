@@ -9,8 +9,8 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 
 ## Status
 
-**Phase 1a: foundation.** The project skeleton exists and is deployed automatically, but the app can only show
-whether the server is reachable. Accounts, calendars, gap search and voting follow in later phases.
+**Phase 1b: foundation.** The project skeleton exists and is deployed automatically, and there is a guide for
+running the server on the home PC with automatic updates. The app can only show whether the server is reachable. Accounts, calendars, gap search and voting follow in later phases.
 
 | Server reachable (light mode)                          | Server off (dark mode)                                  |
 | ------------------------------------------------------ | ------------------------------------------------------- |
@@ -23,7 +23,8 @@ whether the server is reachable. Accounts, calendars, gap search and voting foll
 | `shared/` | TypeScript types and constants used by both sides (e.g. the `/api/health` answer).           |
 | `server/` | API server: Node.js, TypeScript, Fastify, SQLite (`node:sqlite`). Runs in Docker.            |
 | `web/`    | Frontend: Vite, Svelte 5, TypeScript, Material 3 look. Built as a static site.               |
-| `docs/`   | Project plan and decisions.                                                                  |
+| `deploy/` | Files for the server VM: setup script, hourly update with rollback, systemd units.            |
+| `docs/`   | Project plan and decisions, server setup guide.                                              |
 
 It is an npm workspaces monorepo; `shared` is compiled first because the other two import it.
 
@@ -48,9 +49,14 @@ npm test        # Vitest in all packages
 npm run build   # shared, then server (dist/) and web (web/dist/)
 ```
 
-CI runs exactly these on every push and pull request, plus a build of the server's Docker image.
+`npm test` also runs the tests of the VM update script (`npm run test:vm`, needs bash). CI runs exactly these on
+every push and pull request, plus a build of the server's Docker image and checks of the VM files (shellcheck,
+systemd units, compose file).
 
 ## Run the server with Docker Compose
+
+This is for trying the server on any Docker machine. The real server runs in a VM on the owner's PC; its setup
+is in [`docs/server-setup.md`](docs/server-setup.md).
 
 ```sh
 cp .env.example .env    # then set CORS_ORIGIN to the address of the frontend
@@ -69,8 +75,10 @@ of pulling it: `docker compose build`.
   (`.github/workflows/deploy.yml`). One-time setup in GitHub: Settings, Pages, Source "GitHub Actions"; and a
   repository variable `API_URL` with the public address of the API server.
 - **Server:** the same workflow builds the Docker image and pushes it to
-  `ghcr.io/dr-nerdlove/lueckenfueller-api` with the tags `latest` and `sha-<short commit>`. The VM updates itself
-  from there; the written guide for this follows in phase 1b.
+  `ghcr.io/dr-nerdlove/lueckenfueller-api` with the tags `latest` and `sha-<short commit>`. The VM checks about once an
+  hour, switches to a new image and goes back to the previous one if the new one is not healthy
+  ([`deploy/vm/update.sh`](deploy/vm/update.sh)). Setting up the VM, Tailscale Funnel and these updates:
+  [`docs/server-setup.md`](docs/server-setup.md).
 - Versions follow `vMAJOR.MINOR.PATCH`; changes are listed in [`CHANGELOG.md`](CHANGELOG.md).
 
 ## Licence
