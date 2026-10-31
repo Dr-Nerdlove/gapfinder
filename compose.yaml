@@ -1,0 +1,22 @@
+services:
+  api:
+    image: ghcr.io/dr-nerdlove/lueckenfueller-api:latest
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./data:/data
+    ports:
+      # Only reachable from the VM itself; Tailscale Funnel publishes it.
+      - "127.0.0.1:8080:8080"
+    restart: unless-stopped
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL

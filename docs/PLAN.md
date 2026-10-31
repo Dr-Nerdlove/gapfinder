@@ -45,7 +45,8 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 
 - Frontend: Vite + TypeScript + Svelte, hash-based routing (GitHub Pages has no fallback for app routes),
   Material 3 look with a colour scheme generated from a seed colour (`@material/material-color-utilities`).
-- Server: Node.js + TypeScript, SQLite, `ical.js` for calendar feeds (recurring events, exceptions, time
+- Server: Node.js + TypeScript + Fastify, SQLite through Node's built-in `node:sqlite` (no native add-on to
+  compile), `ical.js` for calendar feeds (recurring events, exceptions, time
   zones), Argon2 for password hashing, all in Docker Compose inside the VM.
 - The gap search is a pure function shared by the server and the tests.
 - Tests: Vitest for the gap search and the server logic; CI runs build and tests on every push and pull
@@ -134,7 +135,9 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 Each phase is its own branch and pull request, with screenshots of what is visible. Recommended model per
 phase in brackets.
 
-1. **Foundation** (Opus): repository basics (README, `.gitignore`, `CHANGELOG.md`, CI), empty app on GitHub
+1. **Foundation** (Opus), split into three pull requests: 1a skeleton (repository basics, CI, empty app on
+   Pages, server skeleton in Docker), 1b VM + Tailscale Funnel guide with automatic updates, 1c accounts,
+   invite links, login, profiles, admin area. Original scope: repository basics (README, `.gitignore`, `CHANGELOG.md`, CI), empty app on GitHub
    Pages, server skeleton in Docker, step-by-step guide for the VM + Tailscale Funnel, accounts, invite links,
    login, profiles, admin area.
 2. **Calendars** (Opus): link, manage and test ICS links, default calendar, per-calendar settings, preview of
@@ -144,8 +147,14 @@ phase in brackets.
 5. **Fixing and sending the date** (Sonnet): re-check, `.ics`, add-to-calendar buttons, personal feed.
 6. **Optional later:** direct Google/Outlook connection, offline vote queue.
 
+## Server updates
+
+Decided 2026-10-31: **automatic.** CI builds the server image on every merge to `main` and pushes it to GitHub's
+container registry (GHCR); the VM checks about once an hour and switches to a new image by itself. The owner
+does nothing; frontend and server stay close together. The API still has to stay backward compatible, because
+for up to an hour (or overnight, while the PC is off) the new frontend talks to the old server.
+
 ## Open points
 
-- How server updates reach the VM (manual `docker compose pull` vs. automatic updates) – decide in phase 1.
 - How long old polls are kept.
 - Where the nightly backup is copied to (outside the VM).
