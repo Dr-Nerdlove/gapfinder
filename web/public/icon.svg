@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#6750a4"/>
+  <!-- Two busy blocks with a gap between them: the free time that gets found. -->
+  <rect x="96" y="150" width="120" height="212" rx="24" fill="#eaddff"/>
+  <rect x="296" y="150" width="120" height="212" rx="24" fill="#eaddff"/>
+  <rect x="236" y="190" width="40" height="132" rx="20" fill="#ffd8e4"/>
+</svg>

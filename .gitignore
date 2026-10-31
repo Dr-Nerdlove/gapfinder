@@ -1,0 +1,23 @@
+# Dependencies and build output
+node_modules/
+dist/
+build/
+*.tsbuildinfo
+coverage/
+.svelte-kit/
+
+# Local configuration and data (never commit secrets)
+.env
+.env.*
+!.env.example
+data/
+*.sqlite
+*.sqlite-*
+*.sqlite3
+
+# Editors and OS files
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

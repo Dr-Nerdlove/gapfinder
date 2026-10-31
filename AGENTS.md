@@ -133,10 +133,13 @@ missing, with a recommendation, and let the people choose.
 - **Architecture:** Static frontend on GitHub Pages; API server + SQLite in Docker inside a Linux VM (Hyper-V)
   on the owner's Windows PC, reachable only through Tailscale Funnel (nothing opened on the router). Details
   and reasons: `docs/PLAN.md`.
-- **Build and test:** No code yet. Planned: Vite + TypeScript, Vitest; CI builds and tests every push and pull
-  request. Fill in once phase 1 exists.
-- **Release:** The frontend is built and deployed to GitHub Pages by CI. How server updates reach the VM: to
-  be decided in phase 1.
+- **Build and test:** npm workspaces (`shared`, `server`, `web`), Node 24 in CI and Docker (22.13+ works
+  locally). Before pushing: `npm run check`, `npm test`, `npm run build` (see README). CI (`ci.yml`) runs these
+  plus a Docker build of the server on every push and pull request. Cloud sessions have no Docker daemon, so
+  the image build is only verified by CI.
+- **Release:** On every push to `main`, `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
+  image to GHCR (`ghcr.io/dr-nerdlove/lueckenfueller-api`, tags `latest` and `sha-<short>`). The VM updates
+  itself automatically from GHCR (decided with the owner on 2026-10-31; set up in phase 1b).
 - **Traps:**
   - GitHub Pages only serves static files and has no fallback for app routes (use hash routing). Nothing
     secret (calendar links, tokens, keys) may ever end up in the static site.
@@ -145,8 +148,11 @@ missing, with a recommendation, and let the people choose.
   - The frontend updates immediately on deploy, the server only when the owner updates the VM: keep the API
     backward compatible.
   - The Funnel address is public; treat the API as exposed to the whole internet.
+  - `shared` must be built (`npm run build:shared`) before the server or web can use it; the root scripts and
+    the `predev` hooks do this, `npm test -w server` alone does not.
+  - TypeScript stays on 6.x until `svelte-check` supports 7.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
-  No CI yet.
+  CI: `.github/workflows/ci.yml` (checks) and `deploy.yml` (Pages + server image).
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
   tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
   later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never

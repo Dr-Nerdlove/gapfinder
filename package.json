@@ -1,0 +1,21 @@
+{
+  "name": "lueckenfueller",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Lückenfüller: finds time slots where all friends are free.",
+  "license": "AGPL-3.0-only",
+  "engines": {
+    "node": ">=22.13"
+  },
+  "workspaces": [
+    "shared",
+    "server",
+    "web"
+  ],
+  "scripts": {
+    "build:shared": "npm run build -w shared",
+    "check": "npm run build:shared && npm run check --workspaces --if-present",
+    "test": "npm run build:shared && npm test --workspaces --if-present",
+    "build": "npm run build --workspaces --if-present"
+  }
+}
