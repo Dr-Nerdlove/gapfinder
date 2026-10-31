@@ -122,21 +122,32 @@ missing, with a recommendation, and let the people choose.
 
 ## Project knowledge
 
-- **People:** The owner (GitHub `Dr-Nerdlove`) builds the project together with AI assistants and decides
-  about merging and releases. The users are the owner and their friends (a small, closed group).
-- **Product:** A web app that connects the friends' calendars (Google, Apple, Outlook, ...) and finds time
-  slots where everyone is free, with sharing, voting and sending the chosen date. Repository name
-  "Gapfinder"; the product's name is **"Lückenfüller"**.
+- **People:** The owner (GitHub `Dr-Nerdlove`) builds the project only with AI assistants (does not program)
+  and decides about merging and releases. The users are the owner and their friends (10–20, at most 50),
+  plus guests who vote through a share link.
+- **Product:** A mobile-first web app that reads the friends' calendars (Google, Apple, Outlook, ...) and finds
+  time slots where everyone is free, with sharing, voting and sending the chosen date. Repository name
+  "Gapfinder"; the product's name is **"Lückenfüller"**. All decisions and the phases: `docs/PLAN.md`.
 - **Product languages:** German only. All text shown to users is German (with ä, ö, ü, ß); there is no
   English interface. Where the texts live: to be decided when the code exists.
-- **Build and test:** No code yet; the plan is being agreed with the owner. Fill in once decided.
-- **Release:** Hosted on GitHub Pages. How it is built and deployed: to be decided (planned: built by CI).
-- **Traps:** GitHub Pages only serves static files. User accounts, passwords, votes and access to calendars
-  need a separate backend service; nothing secret (calendar links, tokens, keys) may ever end up in the
-  static site.
+- **Architecture:** Static frontend on GitHub Pages; API server + SQLite in Docker inside a Linux VM (Hyper-V)
+  on the owner's Windows PC, reachable only through Tailscale Funnel (nothing opened on the router). Details
+  and reasons: `docs/PLAN.md`.
+- **Build and test:** No code yet. Planned: Vite + TypeScript, Vitest; CI builds and tests every push and pull
+  request. Fill in once phase 1 exists.
+- **Release:** The frontend is built and deployed to GitHub Pages by CI. How server updates reach the VM: to
+  be decided in phase 1.
+- **Traps:**
+  - GitHub Pages only serves static files and has no fallback for app routes (use hash routing). Nothing
+    secret (calendar links, tokens, keys) may ever end up in the static site.
+  - The home PC is off from 01:00 to 07:00: the app must cope with an unreachable server.
+  - Frontend (`github.io`) and API (`ts.net`) are different sites: no login cookies, use a token header.
+  - The frontend updates immediately on deploy, the server only when the owner updates the VM: keep the API
+    backward compatible.
+  - The Funnel address is public; treat the API as exposed to the whole internet.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
   No CI yet.
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
-  tools. A session cannot create accounts with outside services (backend, Google/Microsoft app
-  registrations); the owner does that and puts the keys into the service's settings, never into the
-  repository.
+  tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
+  later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never
+  in the repository.

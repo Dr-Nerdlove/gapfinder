@@ -1,0 +1,151 @@
+# Lückenfüller – project plan
+
+Agreed with the owner on 2026-10-31. This file records **what** the app does and **why** it is built the way it
+is. Change it when a decision changes, and say in the commit why.
+
+## Goal
+
+A mobile-first web app for the owner and their friends (expected 10–20 people, at most 50). Everyone links their
+digital calendars; the app finds time slots where all selected people are free, lets everyone vote on them,
+and sends the chosen date to everyone. The interface is **German only**; the product name is **"Lückenfüller"**
+(repository name: "Gapfinder").
+
+## Architecture
+
+```
+ Phone / browser                      Owner's Windows PC (on 07:00–01:00)
+ ┌──────────────────────┐            ┌─────────────────────────────────────────┐
+ │ Lückenfüller (PWA)   │   HTTPS    │ Hyper-V: Linux VM "lueckenfueller"      │
+ │ static files from    │──────────► │  ├─ Tailscale (Funnel) ── end of TLS     │
+ │ GitHub Pages         │  via       │  ├─ API server (Docker)                  │
+ └──────────────────────┘  Tailscale │  └─ SQLite database file + backups       │
+                           Funnel    │ (Home Assistant, Jellyfin: untouched)   │
+                           relay     └─────────────────────────────────────────┘
+```
+
+- **Frontend:** static site on GitHub Pages, built and deployed by GitHub Actions. Installable as an app
+  (PWA). Keeps the last loaded state so it can show it while the server is off.
+- **Server:** runs on the owner's home PC, inside its **own small Linux VM in Hyper-V** (Debian, 1 GB RAM,
+  dynamically expanding disk with a 10 GB limit – it actually uses about 3–4 GB). The VM isolates the app from
+  Windows, Home Assistant, Jellyfin and the owner's files.
+- **Reachability:** **Tailscale Funnel**, started inside the VM. The VM opens the connection outwards; nothing
+  is opened on the router, and only the app's API is reachable – not the home network, not the WireGuard VPN.
+  Free, no own domain needed (address like `<name>.<tailnet>.ts.net`), and TLS ends inside the VM, so the relay
+  cannot read the traffic ([Tailscale docs](https://tailscale.com/docs/features/tailscale-funnel)).
+  Alternatives considered: Cloudflare Tunnel (needs an own domain, Cloudflare decrypts traffic), a rented
+  server as relay (costs money, a second server to maintain), VPN-only (no guests; browsers partly block a
+  public site from calling private addresses), the owner's "mailbox" idea (works, but every action would wait
+  for the next poll and still needs a third service).
+- **Database:** SQLite file inside the VM, nightly backup.
+- **Server off (01:00–07:00 or any outage):** the app shows a friendly notice ("Lückenfüller schläft gerade")
+  plus the last loaded state, read-only. Voting resumes when the server is back. (Queueing votes offline is a
+  possible later extension.)
+
+### Planned technology (decided in phase 1, recorded here when final)
+
+- Frontend: Vite + TypeScript + Svelte, hash-based routing (GitHub Pages has no fallback for app routes),
+  Material 3 look with a colour scheme generated from a seed colour (`@material/material-color-utilities`).
+- Server: Node.js + TypeScript, SQLite, `ical.js` for calendar feeds (recurring events, exceptions, time
+  zones), Argon2 for password hashing, all in Docker Compose inside the VM.
+- The gap search is a pure function shared by the server and the tests.
+- Tests: Vitest for the gap search and the server logic; CI runs build and tests on every push and pull
+  request.
+
+## Decisions
+
+### Accounts and roles
+
+- Accounts are created only through an **invite link** the admin (owner) generates.
+- Username defaults to first name + initial of the last name ("Vincent R."); it must be unique and can be
+  changed.
+- Login with username and password. No e-mail addresses; a forgotten password is reset by the admin.
+- The admin can rename and delete profiles and reset passwords. The admin does **not** see the contents of
+  other people's calendars – nobody does; others only ever see "busy" or "free".
+
+### Calendars
+
+- Phase 1 links calendars through their **subscription link (ICS)**: Google "Secret address in iCal format",
+  Outlook "Publish calendar", Apple iCloud "Public calendar". Read-only, works for all providers, no app
+  registration with Google or Microsoft.
+- A user can link several calendars and mark one as **default calendar** (decides which "add to calendar"
+  button the user sees first).
+- Per calendar: "counts as busy" on/off (e.g. switch off a birthday calendar).
+- Events marked as "free" (`TRANSP:TRANSPARENT`) never count as busy. All-day events count as busy unless
+  their calendar is switched off.
+- The links are stored **encrypted**; only the server reads them. They never reach other users or the admin.
+- Direct login with Google/Microsoft (OAuth, read and write) is a possible **later extension**. Apple offers no
+  such interface.
+
+### Finding gaps
+
+1. Choose friends.
+2. Choose either
+   - **weekdays + duration**, optionally with a time window (e.g. Saturday, 5 hours, 18:00–23:00). Without a
+     time window the default window is **09:00–23:00**; or
+   - a **multi-day period** (e.g. 7 days in a row), optionally starting on a given weekday. A day is free when
+     it has **no busy event at all**.
+   - Optional buffer before and after (travel time).
+3. Choose the search range: next 30 / 90 days, half a year, a year, a month, or a custom range of months.
+4. Results are **grouped per day** ("Sa 12.12.: alle frei 14:00–23:00") instead of listing every start time.
+   When there is no slot for everyone, the app shows the best near misses ("alle außer Max").
+- All times are German time (Europe/Berlin), including daylight saving changes.
+- Calendars are fetched fresh for a search (short cache of a few minutes).
+
+### Sharing and voting
+
+- A poll gets a share link. **Everyone with the link can vote**, including guests without an account, who
+  enter their name. A guest can change their own vote later (from the same device). Votes of account holders
+  are marked with a check mark.
+- Votes: **Ja / Vielleicht / Nein**; optional voting deadline.
+- Everyone sees the current state of the vote.
+
+### Fixing the date
+
+- The **poll's creator or the admin** picks the final date.
+- Before fixing it, the server checks the calendars again and warns if someone has become busy meanwhile.
+- The date is sent as:
+  - a calendar file (`.ics`) to download,
+  - "In Google Kalender eintragen" / "In Outlook eintragen" buttons (pre-filled event, one click to save),
+  - a **personal "Lückenfüller" calendar feed** each user can subscribe to once; fixed dates then appear in
+    their calendar by themselves (note: Google refreshes subscribed calendars only every few hours, sometimes
+    once a day).
+- Entering a date without confirmation needs the OAuth extension; not part of the first version.
+
+### Look
+
+- Mobile first, Material 3 ("Material You") style, follows the phone's light/dark mode.
+- A web page cannot reliably read Android's Material You wallpaper colours (to be verified at the source in
+  the design phase). Where the browser offers the system accent colour, use it; otherwise each user picks a
+  seed colour in their profile and the full colour scheme is generated from it.
+- Installable to the home screen.
+
+## Security
+
+- Only the API is reachable from the internet; it runs as a non-root user in a container inside its own VM.
+- The Funnel address is public (it appears in certificate logs and in the built site), so everything behind
+  it assumes that strangers will knock: login rate limiting, Argon2 password hashes, CORS limited to the
+  GitHub Pages origin, encrypted calendar links, no calendar details in any API response to other users.
+- Secrets (encryption key, Tailscale login) live only in the VM (environment file outside the repository).
+- Login sessions use a token sent in a header, not a cookie: the site (`github.io`) and the API (`ts.net`) are
+  different sites, and browsers increasingly block cookies across sites.
+
+## Phases
+
+Each phase is its own branch and pull request, with screenshots of what is visible. Recommended model per
+phase in brackets.
+
+1. **Foundation** (Opus): repository basics (README, `.gitignore`, `CHANGELOG.md`, CI), empty app on GitHub
+   Pages, server skeleton in Docker, step-by-step guide for the VM + Tailscale Funnel, accounts, invite links,
+   login, profiles, admin area.
+2. **Calendars** (Opus): link, manage and test ICS links, default calendar, per-calendar settings, preview of
+   one's own busy times.
+3. **Gap search** (Opus for the algorithm, Sonnet for the screens): steps 1–4 above, with thorough tests.
+4. **Sharing and voting** (Sonnet): share link, guest votes, live state.
+5. **Fixing and sending the date** (Sonnet): re-check, `.ics`, add-to-calendar buttons, personal feed.
+6. **Optional later:** direct Google/Outlook connection, offline vote queue.
+
+## Open points
+
+- How server updates reach the VM (manual `docker compose pull` vs. automatic updates) – decide in phase 1.
+- How long old polls are kept.
+- Where the nightly backup is copied to (outside the VM).
