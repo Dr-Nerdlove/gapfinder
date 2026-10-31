@@ -139,7 +139,9 @@ missing, with a recommendation, and let the people choose.
   the image build is only verified by CI.
 - **Release:** On every push to `main`, `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
   image to GHCR (`ghcr.io/dr-nerdlove/lueckenfueller-api`, tags `latest` and `sha-<short>`). The VM updates
-  itself automatically from GHCR (decided with the owner on 2026-10-31; set up in phase 1b).
+  itself hourly from GHCR and rolls back an image that is not healthy (`deploy/vm/update.sh`, guide
+  `docs/server-setup.md`). Changes to `deploy/vm/` reach the VM only when the owner reruns `setup.sh`: say so
+  in the release notes.
 - **Traps:**
   - GitHub Pages only serves static files and has no fallback for app routes (use hash routing). Nothing
     secret (calendar links, tokens, keys) may ever end up in the static site.
@@ -151,6 +153,8 @@ missing, with a recommendation, and let the people choose.
   - `shared` must be built (`npm run build:shared`) before the server or web can use it; the root scripts and
     the `predev` hooks do this, `npm test -w server` alone does not.
   - TypeScript stays on 6.x until `svelte-check` supports 7.
+  - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
+    healthy, and that older server then runs on the already migrated database.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
   CI: `.github/workflows/ci.yml` (checks) and `deploy.yml` (Pages + server image).
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP

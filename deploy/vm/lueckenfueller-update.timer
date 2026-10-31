@@ -1,0 +1,11 @@
+[Unit]
+Description=Check for a new Lückenfüller server image about once an hour
+
+[Timer]
+# A few minutes after the VM starts in the morning, then every hour.
+OnBootSec=3min
+OnUnitActiveSec=1h
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

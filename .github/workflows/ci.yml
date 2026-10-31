@@ -21,6 +21,20 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  vm-scripts:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Check the VM shell scripts (shellcheck is preinstalled on the runner)
+        run: shellcheck deploy/vm/*.sh deploy/vm/test/*.sh
+      - name: Check the systemd units
+        # The service points at the installed script, so install it first, as setup.sh does.
+        run: |
+          sudo install -m 0755 deploy/vm/update.sh /usr/local/sbin/lueckenfueller-update
+          systemd-analyze verify deploy/vm/lueckenfueller-update.service deploy/vm/lueckenfueller-update.timer
+      - name: Check the VM compose file
+        run: touch deploy/vm/.env && docker compose -f deploy/vm/compose.yaml config --quiet
+
   docker:
     runs-on: ubuntu-latest
     steps:

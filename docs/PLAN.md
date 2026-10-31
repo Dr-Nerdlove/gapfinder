@@ -154,6 +154,22 @@ container registry (GHCR); the VM checks about once an hour and switches to a ne
 does nothing; frontend and server stay close together. The API still has to stay backward compatible, because
 for up to an hour (or overnight, while the PC is off) the new frontend talks to the old server.
 
+How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
+
+- A systemd timer in the VM runs [`deploy/vm/update.sh`](../deploy/vm/update.sh) a few minutes after boot and
+  then hourly. It pulls `:latest`, starts a new image and waits for its health check. If the new image is not
+  healthy, it goes back to the image that ran before and remembers the broken one, so it is not retried every
+  hour; the next published image is tried normally. Chosen over Watchtower because it is a short script
+  with no extra service and no Docker socket handed to a container, and because it can roll back.
+- Because of this rollback, **database migrations must be additive**: an older server has to keep working on a
+  database that a newer one has already migrated (it ignores migrations it does not know).
+- The files in `deploy/vm/` (compose file, update script, units) are **not** updated automatically: the VM does
+  not run new scripts from the internet as root on its own. A change to them means the owner runs `setup.sh`
+  again; the release notes must say so.
+- Debian security updates and Docker come through `unattended-upgrades`; Tailscale updates itself
+  (`tailscale set --auto-update`). No automatic reboot is configured: the PC (and with it the VM) restarts
+  every day anyway.
+
 ## Open points
 
 - How long old polls are kept.
