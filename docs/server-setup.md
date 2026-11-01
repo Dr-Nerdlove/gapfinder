@@ -85,20 +85,24 @@ and start the VM again.
 
 Typing long commands into the VM window is tedious, and it cannot paste. Use a terminal on Windows instead:
 
-1. In the VM window, log in with your user name and password, then type `hostname -I` and press Enter. It
-   shows the VM's address, e.g. `172.20.31.5`.
-2. On Windows open **Terminal** or PowerShell (normal, not administrator) and type, with your user name and
-   that address:
+1. On Windows open **Terminal** or PowerShell (normal, not administrator) and type, with the user name you
+   chose when installing Debian instead of `admin`:
 
    ```powershell
-   ssh admin@172.20.31.5
+   ssh admin@lueckenfueller.mshome.net
    ```
 
    Answer `yes` to the question about the fingerprint, then enter your password. From now on you can paste
    commands with a right-click.
 
-The address can change after Windows restarts; run `hostname -I` in the VM window again if `ssh` stops working.
-SSH is only reachable from this PC, not from the home network or the internet.
+Hyper-V's "Default Switch" gives the VM a new address after Windows restarts, but the name
+`lueckenfueller.mshome.net` (the VM's hostname from step 3) always leads to the current one, so the command
+stays the same. If the name is not found (rarely, for a few minutes after Windows starts), use the address
+instead: log in in the VM window, type `hostname -I`, and connect with that address, e.g.
+`ssh admin@172.20.31.5`. SSH is only reachable from this PC, not from the home network or the internet.
+
+Do not give the VM a fixed address inside Debian: the Default Switch changes its network on every Windows
+restart, and the VM would lose its internet connection (the backups find the PC's address by themselves).
 
 ## 5. Run the setup
 
@@ -402,7 +406,8 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
   the shared folder still exists (`Get-SmbShare lueckenfueller-backup` in PowerShell) and run
   `sudo lueckenfueller-backup setup` again. If Windows security ("Controlled folder access") blocks the
   writes, allow them there.
-- **`ssh` does not connect.** The address changed: run `hostname -I` in the VM window.
+- **`ssh` does not connect.** Wait a few minutes after Windows starts, or connect with the address from
+  `hostname -I` in the VM window (step 4).
 - **Start over completely.** In Hyper-V Manager turn the VM off and delete it, delete
   `lueckenfueller.vhdx`, remove the machine in the Tailscale admin page, and begin at step 2. This deletes the
   database in the VM; to bring it back, follow "The VM is lost completely" above.
