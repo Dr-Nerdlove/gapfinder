@@ -154,16 +154,16 @@ it anywhere.
 
 ## 8. Create your admin account
 
-Accounts only exist through personal invite links. The very first one, yours, you create in the VM. This works
-only once the server version with accounts is running in the VM: wait about an hour after it was merged (the VM
-checks hourly), or update right away:
+Accounts only exist through personal invite links. The very first one, yours, you create in the VM. Connect to
+the VM with `ssh` (step 4). This works only once the server version with accounts is running in the VM: wait
+about an hour after it was merged (the VM checks hourly), or update right away with this command in the VM:
 
 ```bash
 sudo systemctl start lueckenfueller-update
 ```
 
-Then connect with `ssh` (step 4) and run these two commands. Replace "Vorname Nachname" with your own name; it
-is only used to suggest your username (e.g. "Vincent Richter" becomes "Vincent R."):
+Then run these two commands. Replace "Vorname Nachname" with your own name; it is only used to suggest your
+username (e.g. "Vincent Richter" becomes "Vincent R."):
 
 ```bash
 cd /opt/lueckenfueller

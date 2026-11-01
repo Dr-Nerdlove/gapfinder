@@ -136,7 +136,9 @@ missing, with a recommendation, and let the people choose.
   time slots where everyone is free, with sharing, voting and sending the chosen date. Repository name
   "Gapfinder"; the product's name is **"Lückenfüller"**. All decisions and the phases: `docs/PLAN.md`.
 - **Product languages:** German only. All text shown to users is German (with ä, ö, ü, ß); there is no
-  English interface. Where the texts live: to be decided when the code exists.
+  English interface. The texts live directly in the Svelte pages and components (`web/src/pages`,
+  `web/src/components`); error messages for the server's error codes are in `web/src/lib/messages.ts`. The
+  server never sends text meant for users, only codes (`ErrorCode` in `shared/src/index.ts`).
 - **Architecture:** Static frontend on GitHub Pages; API server + SQLite in Docker inside a Linux VM (Hyper-V)
   on the owner's Windows PC, reachable only through Tailscale Funnel (nothing opened on the router). Details
   and reasons: `docs/PLAN.md`.
@@ -163,6 +165,11 @@ missing, with a recommendation, and let the people choose.
   - `docker compose pull` skips services with `pull_policy: never` (set in `deploy/vm/compose.yaml`), so
     `deploy/vm/update.sh` downloads with `docker pull`. The fake `docker` in `deploy/vm/test/` must behave like
     the real one, or the test passes against a broken script.
+  - Fastify logs every request URL, and invite and password reset links carry their token in the URL: the
+    request log masks them (`server/src/log-masking.ts`). New routes with a secret in the path must be added
+    there.
+  - The first admin account and an admin's own password reset come from the CLI in the VM
+    (`server/dist/cli.js`, see `docs/server-setup.md`); the app itself never creates admins.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.

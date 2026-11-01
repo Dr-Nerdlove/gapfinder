@@ -7,6 +7,19 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 1c, accounts:
+  - Friends join through a personal invite link from the admin. The link works once and for 14 days, and it
+    already suggests the username (e.g. "Vincent R."); username and password are chosen by the person.
+  - Login with username and password. The login stays on the device for half a year after it was last used.
+  - Profile: change the username, the password and the app's colour (8 colours or an own one), log out.
+    Changing the password logs out the other devices.
+  - Admin area ("Verwaltung"): create and withdraw invite links, rename and delete accounts, and create a
+    link for a forgotten password (works once and for 24 hours; the person chooses the new password).
+  - The first admin account is created with a command in the VM; the guide (`docs/server-setup.md`) explains
+    it, and also what to do when the admin forgets their own password. Nothing has to be changed in the VM
+    otherwise; `setup.sh` does not need to run again.
+  - Protection against guessing: passwords are stored only as Argon2 hashes, too many wrong attempts are
+    blocked for 15 minutes, and links with secret codes never appear in the server's log.
 - Phase 1b, the home server:
   - A step-by-step guide for running the server in its own small Linux VM on the home PC, reachable from the
     internet only through Tailscale Funnel, with nothing opened on the router (`docs/server-setup.md`).

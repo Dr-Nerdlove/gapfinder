@@ -62,6 +62,22 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 - Login with username and password. No e-mail addresses; a forgotten password is reset by the admin.
 - The admin can rename and delete profiles and reset passwords. The admin does **not** see the contents of
   other people's calendars – nobody does; others only ever see "busy" or "free".
+- Decided 2026-11-01 (phase 1c):
+  - Invite links are **personal and single-use**: the admin types the person's name, the app suggests the
+    username from it, and the link works once and for **14 days**. Only the suggested username is stored, not
+    the full name. A group link was rejected: whoever forwards it invites strangers.
+  - A forgotten password is reset with a **reset link** the admin creates (once, **24 hours**); the person
+    chooses the new password, the admin never knows it. Using it ends all logins of that account.
+  - The **first admin** is created with a command in the VM (`admin-link`), which prints an admin invite link;
+    the same CLI makes a reset link for the admin's own password (`password-link`). The app never creates
+    admins, so nobody on the internet can become one.
+  - A login stays valid for **180 days after it was last used**. Changing the password ends the logins on all
+    other devices.
+  - Failed attempts are limited in memory: 5 wrong passwords per username and 20 per address within 15
+    minutes, 30 invalid invite/reset links per address. Trade-off: a stranger who knows a username can block
+    its login for 15 minutes; accepted for a friends' app, because it also stops guessing from many addresses.
+  - Each user picks a seed colour in the profile (8 presets or an own colour); the app remembers it on the
+    device so it shows before the server answers.
 
 ### Calendars
 
