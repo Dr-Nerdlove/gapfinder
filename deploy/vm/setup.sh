@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # One-time setup of the Lückenfüller server VM (Debian 13 "trixie"). Guide: docs/server-setup.md
 #
-#   wget -q https://raw.githubusercontent.com/Dr-Nerdlove/gapfinder/main/deploy/vm/setup.sh
+#   wget -q -O setup.sh https://raw.githubusercontent.com/Dr-Nerdlove/gapfinder/main/deploy/vm/setup.sh
 #   sudo bash setup.sh
 #
 # Safe to run again: it keeps an existing /opt/lueckenfueller/.env and the database, and only
