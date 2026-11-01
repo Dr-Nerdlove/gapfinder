@@ -52,7 +52,8 @@ wait_healthy() {
 cd "$APP_DIR"
 
 current="$(running_image)"
-docker compose pull --quiet "$SERVICE"
+# Not "docker compose pull": it skips services with pull_policy: never (compose.yaml), so it never downloads.
+docker pull --quiet "$IMAGE" >/dev/null
 new="$(image_id "$IMAGE")"
 
 if [[ -z "$new" ]]; then
