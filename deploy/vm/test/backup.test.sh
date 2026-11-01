@@ -14,6 +14,10 @@ WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 export REPO
 
+if ! command -v age >/dev/null || ! command -v age-keygen >/dev/null; then
+  echo "age is not installed (needed to test the backups): sudo apt-get install age" >&2
+  exit 1
+fi
 [[ -d "$REPO/shared/dist" ]] || { echo "shared is not built: run  npm run build:shared  first" >&2; exit 1; }
 
 # The fake docker only knows the calls backup.sh makes. State lives in files under $FAKE:
