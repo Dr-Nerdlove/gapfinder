@@ -176,7 +176,8 @@ missing, with a recommendation, and let the people choose.
     over SMB (`smbclient`) to a OneDrive folder on the Windows host, reached as the VM's default gateway
     (Hyper-V Default Switch). `smbclient ls` with no match exits 1 (`NT_STATUS_NO_SUCH_FILE`): that is an
     empty folder, not an error. Backup, restore and `update.sh` share `/opt/lueckenfueller/.maintenance.lock`.
-    `deploy/vm/test/backup.test.sh` runs the real CLI (via tsx) behind its fake `docker`.
+    `deploy/vm/test/backup.test.sh` runs the real CLI (via tsx) behind its fake `docker` and needs `age`:
+    both `ci.yml` and `deploy.yml` run `npm test`, so both install it.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
