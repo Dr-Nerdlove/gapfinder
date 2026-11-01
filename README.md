@@ -31,7 +31,7 @@ is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9
 | `shared/` | The API contract: types, error codes and rules (usernames, durations) used by both sides.     |
 | `server/` | API server: Node.js, TypeScript, Fastify, SQLite (`node:sqlite`). Runs in Docker.            |
 | `web/`    | Frontend: Vite, Svelte 5, TypeScript, Material 3 look. Built as a static site.               |
-| `deploy/` | Files for the server VM: setup script, hourly update with rollback, nightly backup, systemd units. |
+| `deploy/` | Files for the server VM: setup script, hourly update with rollback, nightly backup, firewall, systemd units. |
 | `docs/`   | Project plan and decisions, server setup guide.                                              |
 
 It is an npm workspaces monorepo; `shared` is compiled first because the other two import it.
@@ -70,7 +70,8 @@ npm run build   # shared, then server (dist/) and web (web/dist/)
 `npm test` also runs the tests of the VM update and backup scripts (`npm run test:vm`, needs bash and
 [age](https://age-encryption.org/)). CI runs exactly these on
 every push and pull request, plus a build of the server's Docker image and checks of the VM files (shellcheck,
-systemd units, compose file).
+systemd units, compose file). The VM firewall's test needs root and is run by CI only:
+`sudo bash deploy/vm/test/firewall.test.sh` (needs `nft` and `ip`).
 
 ## Run the server with Docker Compose
 

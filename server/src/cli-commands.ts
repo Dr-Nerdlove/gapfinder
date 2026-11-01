@@ -3,7 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { createInvite } from "./accounts/invites.js";
 import { createPasswordReset } from "./accounts/resets.js";
 import { findUserByKey, listUsers } from "./accounts/users.js";
-import { createBackup, inspectBackup } from "./backup.js";
+import { createBackup, inspectBackup, takeBackupKey } from "./backup.js";
 import type { Config } from "./config.js";
 
 export const USAGE = `Usage: node server/dist/cli.js <command>
@@ -14,6 +14,8 @@ Commands:
   password-link <username> Create a link to set a new password for an existing account (valid once, 24 hours).
   backup <file>            Write a consistent copy of the database to <file> (must not exist yet).
   check-backup <file>      Check a backup file without changing it; fails when it is damaged.
+  take-calendar-key <file> Print the calendar key stored in a backup file (nothing else) and remove it from
+                           the file. Prints nothing when the backup has no key. Used by the restore script.
 `;
 
 export interface CliDeps {
@@ -51,6 +53,8 @@ export function runCli(args: readonly string[], deps: CliDeps): number {
       return backup(rest, deps);
     case "check-backup":
       return checkBackup(rest, deps);
+    case "take-calendar-key":
+      return takeCalendarKey(rest, deps);
     default:
       deps.err(USAGE.trimEnd());
       return 1;
@@ -99,29 +103,35 @@ function passwordLink(args: readonly string[], { db, config, now, out, err }: Cl
   return 0;
 }
 
-function backup(args: readonly string[], { db, out, err }: CliDeps): number {
+function backup(args: readonly string[], { db, config, out, err }: CliDeps): number {
   if (args.length !== 1 || args[0] === "") {
     err(USAGE.trimEnd());
     return 1;
   }
+  let result;
   try {
-    createBackup(db, args[0]!);
+    result = createBackup(db, args[0]!, config.calendarKey);
   } catch (error) {
     err(`Backup failed: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
   }
   out(`Backup written to ${args[0]}.`);
+  out(
+    result.keyIncluded
+      ? "Calendar key included."
+      : "Warning: no CALENDAR_KEY is set, so calendar links in this backup cannot be read after a restore.",
+  );
   return 0;
 }
 
-function checkBackup(args: readonly string[], { out, err }: CliDeps): number {
+function checkBackup(args: readonly string[], { config, out, err }: CliDeps): number {
   if (args.length !== 1 || args[0] === "") {
     err(USAGE.trimEnd());
     return 1;
   }
   let info;
   try {
-    info = inspectBackup(args[0]!);
+    info = inspectBackup(args[0]!, config.calendarKey);
   } catch (error) {
     err(`This is not a readable Lückenfüller backup: ${error instanceof Error ? error.message : String(error)}`);
     return 1;
@@ -134,5 +144,45 @@ function checkBackup(args: readonly string[], { out, err }: CliDeps): number {
   out(`Accounts: ${info.accounts} (admins: ${info.admins})`);
   out(`Last activity: ${info.lastActivity ? describeExpiry(info.lastActivity) : "none"}`);
   out(`Database version: ${info.schemaVersion}`);
+  if (info.keyIncluded && (!info.includedKeyValid || info.keyCheck === "differs")) {
+    err(
+      info.includedKeyValid
+        ? "The calendar key in the backup does not match its calendar links (the backup is damaged)."
+        : "The calendar key in the backup is not a valid key (the backup is damaged).",
+    );
+    return 1;
+  }
+  if (info.keyIncluded) {
+    out(
+      info.keyCheck === "matches"
+        ? "Calendar key: included and matches the stored calendar links."
+        : "Calendar key: included.",
+    );
+  } else if (info.keyCheck === "differs") {
+    out(
+      "Warning: the backup has no calendar key, and this VM's key does not fit its calendar links. The links cannot be read after a restore; people would have to enter their calendar links again.",
+    );
+  } else if (info.keyCheck === "matches") {
+    out("Calendar key: not included, but this VM's key fits the stored calendar links.");
+  } else {
+    out("Calendar key: no calendar links are stored.");
+  }
+  return 0;
+}
+
+function takeCalendarKey(args: readonly string[], { out, err }: CliDeps): number {
+  if (args.length !== 1 || args[0] === "") {
+    err(USAGE.trimEnd());
+    return 1;
+  }
+  let key: string | null;
+  try {
+    key = takeBackupKey(args[0]!);
+  } catch (error) {
+    err(`This is not a readable Lückenfüller backup: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+  // Only the key goes to standard output: the restore script captures it.
+  if (key !== null) out(key);
   return 0;
 }

@@ -101,6 +101,37 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 - The links are stored **encrypted**; only the server reads them. They never reach other users or the admin.
 - Direct login with Google/Microsoft (OAuth, read and write) is a possible **later extension**. Apple offers no
   such interface.
+- Decided 2026-11-01 (phase 2):
+  - **Fetching:** only when needed (one's own preview, later a search), then kept **15 minutes in memory**.
+    Calendar contents are never written to disk and never reach a backup. Rejected: an hourly background
+    fetch of every calendar (finds broken links earlier, but reads everyone's calendar all the time for
+    nothing).
+  - **Preview of one's own busy times:** the next **4 weeks**, with time, calendar name and the event's
+    **title**. Only the owner of the calendar gets the titles, and they are not stored. Events marked "free"
+    show greyed out as "zählt nicht".
+  - **Tentative events** ("mit Vorbehalt", Outlook "vorläufig") count as busy; cancelled events never.
+  - **A link that stops working:** when the provider says the calendar is gone (e.g. Google's secret address
+    was reset), it is marked broken at once; when the provider only does not answer, the next fetch tries
+    again. Nothing is ever deleted on its own. The person sees a notice on the start page and next to the
+    calendar ("Link neu eintragen"); the admin sees only a count ("1 Kalender mit Problem"), never contents.
+    A search (phase 3) shows "Kalender nicht lesbar" for that person instead of counting them as free.
+  - **Fetching foreign links safely:** only `https://` (and `webcal://`, which is the same) on the standard
+    port; every address, including each redirect (at most 5), must be a public internet address – never the
+    home network, the VM, Docker, the Hyper-V host or Tailscale – and the server connects to exactly the
+    address it checked. At most 10 MB and 20 seconds per fetch. A new link is tried at once and stored only
+    when it works; afterwards the app shows only the provider, never the link. At most 10 calendars per
+    person.
+  - **Firewall in the VM** as a second line: the server's container may only open HTTPS connections and DNS
+    queries to two public resolvers, and nothing in private, Docker, Hyper-V or Tailscale ranges
+    (`deploy/vm/firewall.nft`, tested in network namespaces by `deploy/vm/test/firewall.test.sh`).
+  - **The key** for the stored links (`CALENDAR_KEY`) is created by `setup.sh` in the VM's `.env` and **travels
+    inside every nightly backup**, which is already encrypted with the owner's backup key; a restore puts it
+    back. The owner keeps nothing extra. Rejected: a second key the owner keeps separately (a little safer if
+    only the backup key leaked, but two keys to keep). If both were ever lost, everyone enters their links
+    again; nothing else is lost.
+  - The server starts without the key (calendars then report "not set up"): a new image that refused to start
+    would be rolled back by the VM before the owner could rerun `setup.sh`.
+  - Built as two pull requests: 2a the VM side (key, backups, firewall), 2b the calendars in the app.
 
 ### Finding gaps
 
@@ -115,7 +146,7 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 4. Results are **grouped per day** ("Sa 12.12.: alle frei 14:00–23:00") instead of listing every start time.
    When there is no slot for everyone, the app shows the best near misses ("alle außer Max").
 - All times are German time (Europe/Berlin), including daylight saving changes.
-- Calendars are fetched fresh for a search (short cache of a few minutes).
+- Calendars are fetched fresh for a search (kept 15 minutes in memory, see "Calendars").
 
 ### Sharing and voting
 

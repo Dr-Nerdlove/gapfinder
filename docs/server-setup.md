@@ -130,6 +130,10 @@ https://lueckenfueller.tail1234.ts.net (Funnel on)
 
 That address (here `https://lueckenfueller.tail1234.ts.net`) is the **server address**. Write it down.
 
+The very last part, **"Checking the firewall"**, must end with `Firewall check passed`. It proves that the
+server can fetch calendars from the internet but cannot reach your PC, the VM itself or Tailscale (see
+"10. Calendar links: key and firewall").
+
 Test it: open `<server address>/api/health` in a browser on your phone (Wi-Fi off, so it really goes through the
 internet). It should show a short text with `"status":"ok"`. The very first time it can take a minute until the
 certificate is ready.
@@ -194,6 +198,8 @@ PC was off at that time, the backup is made a few minutes after it starts again.
 - **kept in the VM** (the newest 14) and **copied to a folder in your OneDrive** on the Windows PC (the newest
   60). OneDrive uploads it to the cloud, so the backups survive a broken VM, a broken PC disk or a stolen PC.
   A copy that failed (the PC's folder was not reachable) is caught up the next night.
+- **complete with the calendar key** (step 10): a restore puts it back by itself, so the calendar links stay
+  readable. You do not keep that key yourself; your backup key protects it.
 
 The backup is made while the server runs; the app keeps working. The files are small (a few hundred KB).
 
@@ -265,7 +271,40 @@ Now do the **trial restore** below once, to be sure that your saved key works.
   again (it keeps the key).
 - **The key is lost**: the old backups can no longer be opened. In the VM run
   `sudo rm /opt/lueckenfueller/backup-settings/public-key.txt` and `sudo lueckenfueller-backup setup`; it creates
-  a new key. Backups from then on use the new key.
+  a new key. Backups from then on use the new key (and carry the calendar key again, step 10).
+
+## 10. Calendar links: key and firewall
+
+From phase 2 on, everyone links their calendars through a secret subscription link. The server stores these
+links **encrypted** and fetches the calendars from the internet. Two things in the VM protect this; `setup.sh`
+sets up both by itself:
+
+- **The calendar key** (`CALENDAR_KEY` in `/opt/lueckenfueller/.env`) encrypts the stored links. It is made once
+  in the VM, never leaves it except inside the encrypted backups, and is never in the repository. Do not
+  change or delete it: the stored links could no longer be read and everyone would have to enter them again.
+  You do not have to save it anywhere: every nightly backup carries it (encrypted with your backup key), and a
+  restore puts it back.
+- **A firewall** for the server's container: it may only open HTTPS connections to the internet and ask two
+  public name servers (Quad9 `9.9.9.9` and Cloudflare `1.1.1.1`) for addresses. It cannot reach your home
+  network, the Windows PC, the VM itself, Docker or Tailscale, even if someone enters a calendar link that
+  points there. The app checks every link for this as well; the firewall is the second line. The VM itself is
+  not limited (backups to Windows, updates and Tailscale keep working).
+
+**If your VM was set up before phase 2**, do this once:
+
+1. Run the setup again as in "When the files in `deploy/vm/` change" (two commands). It prints
+   `Created the key for the calendar links` and, at the very end, `Firewall check passed`.
+2. Make a backup now and check it with your backup key:
+
+   ```bash
+   sudo lueckenfueller-backup
+   sudo lueckenfueller-backup check
+   ```
+
+   The check must say that the calendar key is included and end with `trial restore passed`. From now on every
+   backup carries the key.
+
+To run the firewall check again later: `sudo lueckenfueller-firewall-check`.
 
 ## Forgot your own admin password
 
@@ -301,6 +340,9 @@ keeps running. It shows how many accounts the backup holds and when the last act
 `trial restore passed`. If it says the key cannot open the backup, you have the wrong key: look for the right
 one now, while the server still runs fine.
 
+It also checks the **calendar key** (step 10) in the backup: it should say that the key is included. Backups
+made before you ran the setup for phase 2 have none; that is fine as long as nobody had linked a calendar yet.
+
 To try an older backup, add a part of its name, e.g. the date: `sudo lueckenfueller-backup check 2026-10-30`.
 
 ### Which backups there are
@@ -334,6 +376,11 @@ sudo lueckenfueller-backup restore 2026-11-01-142233-before-restore
 The replaced database files also stay in `/opt/lueckenfueller/replaced-<date>`; you can delete that folder
 once everything works.
 
+The **calendar key** comes back with the backup: if the backup holds a different key than the VM (for example
+on a new VM), the restore writes the backup's key into `/opt/lueckenfueller/.env` and keeps the old settings
+file in that same `replaced-<date>` folder. The undo command above brings the previous key back as well. A
+backup without a calendar key (made before phase 2) leaves the VM's key as it is.
+
 ### The VM is lost completely
 
 If the VM is broken or deleted, the backups are still in your OneDrive folder.
@@ -347,7 +394,8 @@ If the VM is broken or deleted, the backups are still in your OneDrive folder.
    backup key** (do not press Enter, that would create a new key). Then answer as in part 2. It finds the old
    backups in the Windows folder and does not make a new backup yet.
 4. Right away run `sudo lueckenfueller-backup restore`. It downloads the newest backup from the Windows folder
-   and restores it. Everyone can log in again as before.
+   and restores it, together with the calendar key it carries (the new VM's own key is replaced). Everyone can
+   log in again as before, and the linked calendars work as before.
 
 ## Everyday operation
 
@@ -367,12 +415,16 @@ To look at the server, connect with `ssh` (step 4) and use:
 | Back up right now                       | `sudo lueckenfueller-backup`                                    |
 | Server log                              | `cd /opt/lueckenfueller && sudo docker compose logs --tail 50`  |
 | Is Funnel on, and the address           | `tailscale funnel status`                                       |
+| Does the firewall for the server work?  | `sudo lueckenfueller-firewall-check`                            |
 
 Where things are in the VM:
 
 - `/opt/lueckenfueller/compose.yaml` – how the server container runs (from [`deploy/vm/compose.yaml`](../deploy/vm/compose.yaml)).
-- `/opt/lueckenfueller/.env` – the server's settings. Secrets added in later phases go here, never into the
-  repository.
+- `/opt/lueckenfueller/.env` – the server's settings, including the calendar key (`CALENDAR_KEY`, step 10).
+  Secrets go here, never into the repository.
+- `/etc/lueckenfueller/firewall.nft` and the `lueckenfueller-firewall` service – the firewall for the server's
+  container ([`deploy/vm/firewall.nft`](../deploy/vm/firewall.nft)); `/usr/local/sbin/lueckenfueller-firewall-check`
+  checks it.
 - `/opt/lueckenfueller/data/` – the database. **This is the data to keep**; the backups protect it.
 - `/opt/lueckenfueller/backups/` – the newest 14 backups (encrypted). `/opt/lueckenfueller/backup-settings/` –
   the backup key's public half and the login for the Windows folder.
@@ -406,6 +458,13 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
   the shared folder still exists (`Get-SmbShare lueckenfueller-backup` in PowerShell) and run
   `sudo lueckenfueller-backup setup` again. If Windows security ("Controlled folder access") blocks the
   writes, allow them there.
+- **The firewall check failed** (at the end of the setup, or with `sudo lueckenfueller-firewall-check`). The line
+  marked as failed says what: if the server *can* reach the PC, the VM or Tailscale, the firewall is not
+  active (`sudo systemctl status lueckenfueller-firewall`); if it *cannot* reach `calendar.google.com`, the
+  internet or the name servers are not reachable. Send the output to the AI assistant working on the project.
+- **The server log says "CALENDAR_KEY does not match"**. The database and the key in `.env` do not belong
+  together (e.g. `.env` was edited by hand). Linked calendars cannot be read until the matching key is back:
+  restore the newest backup, which carries the right key. Never just create a new key.
 - **`ssh` does not connect.** Wait a few minutes after Windows starts, or connect with the address from
   `hostname -I` in the VM window (step 4).
 - **Start over completely.** In Hyper-V Manager turn the VM off and delete it, delete
@@ -420,6 +479,12 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
 - The server listens only on `127.0.0.1` inside the VM and runs in a container as a normal user with a
   read-only file system and no extra rights.
 - The server image is public (the code is AGPL anyway), so the VM needs no GitHub password.
+- Calendar links are stored encrypted (AES-256-GCM) with a key that exists only in the VM's `.env` and inside
+  the encrypted backups. Calendar contents are only held in memory for a few minutes, never written to disk.
+- The server's container may only reach the internet over HTTPS and two public name servers; a firewall
+  ([`deploy/vm/firewall.nft`](../deploy/vm/firewall.nft)) blocks it from the home network, the Windows PC, the
+  VM, Docker and Tailscale, so a calendar link pointing there gets nowhere. The app checks every link and
+  every redirect for the same.
 - Backups are encrypted with [age](https://age-encryption.org/) to a key whose secret half only the owner has;
   the VM holds only the public half, so even someone who breaks into the VM cannot read the older backups in
   OneDrive. The Windows user for the backups can only reach its one shared folder, and the firewall lets only

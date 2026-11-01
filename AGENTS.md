@@ -178,6 +178,17 @@ missing, with a recommendation, and let the people choose.
     empty folder, not an error. Backup, restore and `update.sh` share `/opt/lueckenfueller/.maintenance.lock`.
     `deploy/vm/test/backup.test.sh` runs the real CLI (via tsx) behind its fake `docker` and needs `age`:
     both `ci.yml` and `deploy.yml` run `npm test`, so both install it.
+  - Calendar key (`CALENDAR_KEY`, 32 bytes base64 in the VM's `.env`, made by `setup.sh`): the server must start
+    without it or with a bad one (calendars then report "not set up"), never fail on it, or the VM rolls back
+    the image before the owner can rerun `setup.sh`. The CLI's `backup` writes the key into the backup copy's
+    `meta` table (`backup_calendar_key`); `backup.sh restore` takes it out (`take-calendar-key`, with
+    `secure_delete` + `VACUUM`) and writes it into `.env` before the database is put in place. The live
+    database never holds it; a `calendar_key_check` row (HMAC) tells whether key and database belong together.
+  - Firewall (`deploy/vm/firewall.nft`, own nftables table, not Debian's `nftables.service`, which flushes
+    Docker's rules): the container may only reach TCP 443 and DNS at 9.9.9.9/1.1.1.1. That is why
+    `deploy/vm/compose.yaml` sets `dns:`: the VM's resolver (Hyper-V gateway or Tailscale's 100.100.100.100) is
+    blocked. A new outgoing service the server needs must be added there. `deploy/vm/test/firewall.test.sh`
+    tests the rules in network namespaces (root; CI runs it with sudo, `npm test` does not).
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.

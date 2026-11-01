@@ -1,0 +1,92 @@
+#!/usr/sbin/nft -f
+# Firewall for the Lückenfüller server VM. setup.sh installs it as /etc/lueckenfueller/firewall.nft and
+# lueckenfueller-firewall.service loads it before Docker starts.
+#
+# The server fetches calendar subscription links from the internet. Anyone who can enter such a link could
+# point it at an address inside the home network. So the server's container may only reach the public
+# internet: not the Windows PC, not this VM, not Docker itself, not Tailscale, not other devices at home.
+#
+# This VM runs nothing but this app, so every Docker network (docker0 and the br-* bridges that Docker
+# Compose creates) is treated the same way. Traffic of the VM itself (SMB backups to the Windows PC,
+# Tailscale, updates) never comes in through these bridges and is not touched by any rule here.
+#
+# Our own table next to Docker's: a packet that is accepted here still goes through Docker's rules, but a
+# packet dropped here is gone for good. The priority "filter - 10" runs these rules before Docker's.
+
+# Declare the table first, so that "delete table" works the first time too and loading the file again
+# replaces the old rules instead of failing or doubling them.
+table inet lueckenfueller
+delete table inet lueckenfueller
+
+table inet lueckenfueller {
+
+  # IPv4 addresses a container must never reach: the home network and everything that is not the public
+  # internet.
+  set blocked4 {
+    type ipv4_addr
+    flags interval
+    elements = {
+      0.0.0.0/8,        # "this network", not a real destination
+      10.0.0.0/8,       # private network (home network, Docker)
+      100.64.0.0/10,    # carrier-grade NAT range, used by Tailscale for its addresses
+      127.0.0.0/8,      # loopback
+      169.254.0.0/16,   # link-local (cloud metadata services, automatic addresses)
+      172.16.0.0/12,    # private network (Docker networks, Hyper-V's Default Switch)
+      192.0.0.0/24,     # reserved for protocol assignments
+      192.0.2.0/24,     # documentation range (TEST-NET-1)
+      192.88.99.0/24,   # old 6to4 relay anycast
+      192.168.0.0/16,   # private network (typical home router and PCs)
+      198.18.0.0/15,    # network benchmarking range
+      198.51.100.0/24,  # documentation range (TEST-NET-2)
+      203.0.113.0/24,   # documentation range (TEST-NET-3)
+      224.0.0.0/3       # multicast, reserved and broadcast (224.0.0.0 to 255.255.255.255)
+    }
+  }
+
+  # The same for IPv6.
+  set blocked6 {
+    type ipv6_addr
+    flags interval
+    elements = {
+      ::/127,           # unspecified address and loopback
+      ::ffff:0:0/96,    # IPv4 addresses written in IPv6 (could hide a blocked IPv4 address)
+      64:ff9b::/96,     # NAT64 translation (could reach IPv4 addresses)
+      64:ff9b:1::/48,   # local NAT64 translation
+      100::/64,         # discard-only range
+      2001::/23,        # protocol assignments (Teredo and others)
+      2001:db8::/32,    # documentation range
+      2002::/16,        # 6to4 tunnels (could reach IPv4 addresses)
+      fc00::/7,         # private IPv6 network (unique local addresses)
+      fe80::/10,        # link-local
+      ff00::/8          # multicast
+    }
+  }
+
+  # Packets that a container sends on to somewhere else (out to the internet).
+  chain forward {
+    type filter hook forward priority filter - 10; policy accept;
+
+    # Everything below is only about packets that come from a container network.
+    # Answers to connections the container started are fine.
+    iifname { "br-*", "docker0" } ct state established,related accept
+    # Home network and other non-public addresses: never.
+    iifname { "br-*", "docker0" } ip daddr @blocked4 drop
+    iifname { "br-*", "docker0" } ip6 daddr @blocked6 drop
+    # Web traffic (HTTPS) to the public internet: the calendar links.
+    iifname { "br-*", "docker0" } tcp dport 443 accept
+    # Name lookups, but only at the two public resolvers set in compose.yaml.
+    iifname { "br-*", "docker0" } meta l4proto { tcp, udp } th dport 53 ip daddr { 9.9.9.9, 1.1.1.1 } accept
+    # Anything else from a container (mail, SSH, SMB, other ports): no.
+    iifname { "br-*", "docker0" } drop
+  }
+
+  # Packets that a container sends to the VM itself.
+  chain input {
+    type filter hook input priority filter - 10; policy accept;
+
+    # Answers to connections the VM started are fine.
+    iifname { "br-*", "docker0" } ct state established,related accept
+    # The VM's own services (SSH, Tailscale, Docker) are not for the container.
+    iifname { "br-*", "docker0" } drop
+  }
+}

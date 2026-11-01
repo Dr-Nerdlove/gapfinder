@@ -20,6 +20,8 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     trustProxy: false,
     appUrl: "https://friends.example.github.io/app/",
     logLevel: "silent",
+    calendarKey: null,
+    calendarKeyProblem: "CALENDAR_KEY is not set",
     ...overrides,
   };
 }

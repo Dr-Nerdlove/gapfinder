@@ -8,14 +8,20 @@
 #   lueckenfueller-backup setup        set up the backup key and the Windows folder (asks questions)
 #   lueckenfueller-backup list         show the backups in the VM and in the Windows folder
 #   lueckenfueller-backup check [name] trial restore: decrypt a backup and check it, without changing anything
-#   lueckenfueller-backup restore [name]  replace the database with a backup
+#   lueckenfueller-backup restore [name]  replace the database with a backup (and put back its calendar key)
 #
 # How a backup is made:
 # 1. The server's own command line tool writes a consistent copy of the database while the server runs.
 # 2. The copy is checked, then encrypted with age to the backup key's public half. The secret half is never
 #    stored in the VM: only the owner has it, so nobody who gets the backup files can read them.
+#    The copy also carries the key for the calendar links (CALENDAR_KEY from .env): without it the links in the
+#    database could not be read. It is encrypted together with the database, so it is only as exposed as it.
 # 3. The encrypted file is kept in the VM (newest $KEEP_LOCAL) and copied to a shared folder on the Windows
 #    PC (newest $KEEP_REMOTE), which OneDrive copies to the cloud. Copies that failed earlier are caught up.
+#
+# A restore also puts the calendar key from the backup back into .env (the old .env is kept in the
+# replaced-* folder), so a new VM can read the calendar links of the old one. A backup without a key (made
+# before calendar links existed) leaves the VM's own key alone.
 set -euo pipefail
 
 APP_DIR="${LUECKENFUELLER_DIR:-/opt/lueckenfueller}"
@@ -42,6 +48,29 @@ fail() { echo "lueckenfueller-backup: ERROR: $*" >&2; exit 1; }
 WORK=""
 cleanup() { [[ -n "$WORK" ]] && rm -rf "$WORK"; return 0; }
 trap cleanup EXIT
+
+# The value of CALENDAR_KEY in the VM's .env (empty if there is none). Never print it.
+current_calendar_key() {
+  [[ -f "$APP_DIR/.env" ]] || return 0
+  sed -n 's/^CALENDAR_KEY=//p' "$APP_DIR/.env" | tail -n 1
+}
+
+# put_calendar_key <key> <folder>: keeps the old .env in <folder> and sets CALENDAR_KEY in .env to <key>. The
+# key goes in through the environment, not into a pattern (keys contain / + =).
+put_calendar_key() {
+  local key="$1" aside="$2"
+  if [[ -f "$APP_DIR/.env" ]]; then install -m 0600 "$APP_DIR/.env" "$aside/.env"; fi
+  (
+    umask 077
+    NEW_CALENDAR_KEY="$key" awk '
+      /^CALENDAR_KEY=/ { if (!done) print "CALENDAR_KEY=" ENVIRON["NEW_CALENDAR_KEY"]; done = 1; next }
+      { print }
+      END { if (!done) print "CALENDAR_KEY=" ENVIRON["NEW_CALENDAR_KEY"] }
+    ' "$APP_DIR/.env" >"$APP_DIR/.env.new"
+  ) || { rm -f "$APP_DIR/.env.new"; return 1; }
+  chmod 0600 "$APP_DIR/.env.new"
+  mv "$APP_DIR/.env.new" "$APP_DIR/.env"
+}
 
 # A private temporary directory the container may also read and write (for the plain database file).
 make_work_dir() {
@@ -354,7 +383,7 @@ wait_healthy() {
 }
 
 cmd_restore() {
-  local file answer before="" aside
+  local file answer before="" aside key
   cd "$APP_DIR"
   file="$(choose_backup "${1:-}")"
   decrypt_and_check "$file"
@@ -375,6 +404,17 @@ cmd_restore() {
   fi
   aside="$APP_DIR/replaced-$(date +%Y-%m-%d-%H%M%S)"
   install -d -m 0700 "$aside"
+  # The calendar key inside the backup (removed from the copy, which is then just the database). Done before
+  # the database is touched; the server is started below, so it starts with the key it needs.
+  key="$(cli -v "$WORK:/check" -- take-calendar-key /check/backup.sqlite)" || fail "could not read the calendar key from the backup; nothing was replaced. Start the server again:  cd $APP_DIR && sudo docker compose up --detach $SERVICE"
+  if [[ -z "$key" ]]; then
+    log "this backup holds no calendar key; the VM keeps its own"
+  elif [[ "$key" == "$(current_calendar_key)" ]]; then
+    log "the calendar key in the backup is the one this VM already has"
+  else
+    put_calendar_key "$key" "$aside" || fail "could not put the calendar key into .env; nothing was replaced. Start the server again:  cd $APP_DIR && sudo docker compose up --detach $SERVICE"
+    log "the calendar key from the backup was put back into .env (the old .env is in $aside)"
+  fi
   find "$APP_DIR/data" -maxdepth 1 -name "$DB_NAME*" -exec mv {} "$aside/" \;
   install -m 0640 "$WORK/backup.sqlite" "$APP_DIR/data/$DB_NAME"
   if [[ "$(id -u)" -eq 0 ]]; then chown "$APP_UID:$APP_UID" "$APP_DIR/data/$DB_NAME"; fi

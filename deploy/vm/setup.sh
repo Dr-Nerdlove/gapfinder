@@ -34,8 +34,8 @@ fetch() {
 step "System packages and automatic security updates"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-# age encrypts the backups, smbclient copies them to the Windows PC.
-apt-get install -y -qq ca-certificates curl unattended-upgrades age smbclient >/dev/null
+# age encrypts the backups, smbclient copies them to the Windows PC, nftables loads the firewall.
+apt-get install -y -qq ca-certificates curl unattended-upgrades age smbclient nftables >/dev/null
 # Debian's security updates are installed automatically every day. Docker comes from Docker's own
 # package source (below), so it is added to the automatic updates explicitly.
 cat >/etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
@@ -48,6 +48,19 @@ Unattended-Upgrade::Origins-Pattern {
         "origin=Docker";
 };
 EOF
+
+step "Firewall for the server"
+# The server fetches calendar links from the internet, so its container may only reach the public internet:
+# not the Windows PC, this VM, Docker or Tailscale. Loaded before Docker and before the server starts.
+# Loaded again (restart) on every run, so that changed rules take effect.
+install -d -m 0755 /etc/lueckenfueller
+fetch firewall.nft /etc/lueckenfueller/firewall.nft
+chmod 0644 /etc/lueckenfueller/firewall.nft
+fetch lueckenfueller-firewall.service /etc/systemd/system/lueckenfueller-firewall.service
+systemctl daemon-reload
+systemctl enable lueckenfueller-firewall.service >/dev/null
+systemctl restart lueckenfueller-firewall.service || fail "The firewall did not load. Details:  journalctl -u lueckenfueller-firewall -n 50"
+echo "The firewall is active."
 
 step "Installing Docker"
 if ! command -v docker >/dev/null || ! docker compose version >/dev/null 2>&1; then
@@ -85,6 +98,19 @@ EOF
 else
   echo "Keeping the existing settings file $APP_DIR/.env."
 fi
+# The key that encrypts the calendar links in the database. Without it they cannot be read, so the nightly
+# backups carry it (encrypted). Created once; an existing one is never changed. The key is never printed.
+if ! grep -q '^CALENDAR_KEY=' "$APP_DIR/.env"; then
+  calendar_key="$(head -c 32 /dev/urandom | base64)"
+  # Start on a new line even if the file does not end with one.
+  [[ -z "$(tail -c 1 "$APP_DIR/.env")" ]] || echo >>"$APP_DIR/.env"
+  {
+    echo "# Key that encrypts the calendar links in the database. Do not change or delete it: the links could no longer be read."
+    echo "CALENDAR_KEY=$calendar_key"
+  } >>"$APP_DIR/.env"
+  chmod 0600 "$APP_DIR/.env"
+  echo "Created the key for the calendar links (in $APP_DIR/.env; the nightly backups carry it, encrypted)."
+fi
 # The container runs as user "node" (uid 1000) and must be able to write the database.
 install -d -m 0750 -o 1000 -g 1000 "$APP_DIR/data"
 
@@ -97,6 +123,15 @@ systemctl daemon-reload
 systemctl enable --now lueckenfueller-update.timer >/dev/null
 echo "Downloading and starting the server (this can take a few minutes) ..."
 systemctl start lueckenfueller-update.service || fail "The server did not start. Details:  journalctl -u lueckenfueller-update -n 50"
+# The update only recreates the server in some cases (and not when it fails early). "up" makes sure that a
+# running server also picks up a changed .env (new calendar key) and compose.yaml (DNS servers). It does
+# nothing when nothing changed. Same lock as the update and the backup.
+(
+  cd "$APP_DIR"
+  exec 9>>"$APP_DIR/.maintenance.lock"
+  flock 9
+  docker compose up --detach api
+) || fail "The server did not start. Details:  cd $APP_DIR && sudo docker compose logs --tail 50"
 curl -fsS http://127.0.0.1:8080/api/health && echo
 
 step "Nightly backups"
@@ -130,6 +165,12 @@ step "Switching on Tailscale Funnel"
 echo "If a link appears: open it and allow Funnel (and HTTPS) for this machine."
 tailscale funnel --bg 8080
 tailscale funnel status
+
+step "Checking the firewall"
+# Last, from inside the server container: the internet works, the PC, the VM and Tailscale are out of reach.
+fetch firewall-check.sh /usr/local/sbin/lueckenfueller-firewall-check
+chmod 0755 /usr/local/sbin/lueckenfueller-firewall-check
+lueckenfueller-firewall-check || fail "The firewall check failed (see above). The server must not be used for calendar links until this is fixed."
 
 step "Done"
 cat <<'EOF'

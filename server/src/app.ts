@@ -5,6 +5,7 @@ import type { DatabaseSync } from "node:sqlite";
 import type { Writable } from "node:stream";
 import { purgeExpired } from "./accounts/cleanup.js";
 import { RateLimiter } from "./auth/rate-limit.js";
+import { prepareCalendarKey } from "./calendar-key.js";
 import type { Config } from "./config.js";
 import type { AppContext } from "./context.js";
 import { openDatabase } from "./db.js";
@@ -55,7 +56,15 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   app.addHook("onClose", async () => {
     db.close();
   });
-  const ctx: AppContext = { config, db, now, limiter: new RateLimiter(now) };
+  const calendarKeyStatus = prepareCalendarKey(db, config.calendarKey);
+  if (calendarKeyStatus === "ok") {
+    app.log.info("Calendar key is set and matches the stored calendar links");
+  } else if (calendarKeyStatus === "not-configured") {
+    app.log.warn(`Calendar links are off: ${config.calendarKeyProblem ?? "CALENDAR_KEY is not set"}`);
+  } else {
+    app.log.error("CALENDAR_KEY does not match the key the stored calendar links were encrypted with");
+  }
+  const ctx: AppContext = { config, db, now, limiter: new RateLimiter(now), calendarKeyStatus };
   purgeExpired(db, now());
 
   // A JSON content type without a body (e.g. logout) is an empty request, not a syntax error.

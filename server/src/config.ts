@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { decodeCalendarKey } from "./calendar-key.js";
 
 export interface Config {
   port: number;
@@ -19,6 +20,10 @@ export interface Config {
   appUrl: string;
   /** Pino log level; `silent` turns logging off (tests). */
   logLevel: LogLevel;
+  /** Key (32 bytes) that encrypts calendar subscription links; null when `CALENDAR_KEY` is missing or invalid. */
+  calendarKey: Buffer | null;
+  /** Why `calendarKey` is null (never contains the value); null when the key is usable. */
+  calendarKeyProblem: string | null;
 }
 
 export const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
@@ -56,6 +61,20 @@ function parseAppUrl(value: string): string | null {
   } catch {
     return null;
   }
+}
+
+/**
+ * Reads `CALENDAR_KEY`: standard base64 of exactly 32 bytes in its canonical form. A missing or invalid key
+ * is reported as a problem text, never as an error, and the text never contains the value.
+ */
+function parseCalendarKey(value: string | undefined): { key: Buffer | null; problem: string | null } {
+  const text = value?.trim() ?? "";
+  if (text === "") return { key: null, problem: "CALENDAR_KEY is not set" };
+  const key = decodeCalendarKey(text);
+  if (key === null) {
+    return { key: null, problem: "CALENDAR_KEY is not valid: it must be standard base64 of exactly 32 bytes" };
+  }
+  return { key, problem: null };
 }
 
 /** Reads and validates the configuration. Throws a `ConfigError` that lists every problem. */
@@ -114,6 +133,12 @@ export function loadConfig(env: Env = process.env): Config {
     throw new ConfigError(problems);
   }
 
+  // The calendar key must NEVER make loadConfig throw, whatever is wrong with it. A new server image that
+  // fails to start is rolled back by the VM and not retried, and the key only reaches the VM's .env when the
+  // owner reruns setup.sh, which happens after the image is already out. So the server starts without a
+  // key and says so (log, status); features that need the key stay off until it is set.
+  const calendar = parseCalendarKey(env.CALENDAR_KEY);
+
   return {
     port,
     host,
@@ -124,5 +149,7 @@ export function loadConfig(env: Env = process.env): Config {
     trustProxy: trustProxyText === "true",
     appUrl,
     logLevel,
+    calendarKey: calendar.key,
+    calendarKeyProblem: calendar.problem,
   };
 }

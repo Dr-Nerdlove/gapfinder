@@ -23,7 +23,9 @@ fi
 # The fake docker only knows the calls backup.sh makes. State lives in files under $FAKE:
 #   calls   log of "stop" and "up" (the calls that change the server)
 # "compose run" runs the real tool (server/src/cli.ts) on $APP/data; paths /data/... and /check/... are
-# mapped to the folders the real container would see there.
+# mapped to the folders the real container would see there. Like the compose file's env_file, it hands the
+# lines of $APP/.env to the tool as environment variables (and nothing else of the caller's environment:
+# a real container does not see the host's CALENDAR_KEY).
 mkdir -p "$WORK/bin"
 cat >"$WORK/bin/docker" <<'EOF'
 #!/usr/bin/env bash
@@ -47,6 +49,12 @@ case "$1 ${2:-}" in
       esac
       args+=("$a")
     done
+    unset CALENDAR_KEY
+    if [[ -f "$app/.env" ]]; then
+      while IFS= read -r line || [[ -n "$line" ]]; do
+        if [[ -n "$line" && "$line" != \#* ]]; then export "${line%%=*}=${line#*=}"; fi
+      done <"$app/.env"
+    fi
     cd "$REPO"
     DATA_DIR="$app/data" exec node "$REPO/node_modules/.bin/tsx" "$REPO/server/src/cli.ts" "${args[@]}" ;;
   "compose stop") [[ "$3" == "api" ]] && echo stop >>"$f/calls" ;;
@@ -132,7 +140,21 @@ case_no=0
 problems=""
 status=0
 
-# new_case: a fresh app folder, a fresh share and a fresh backup key (SECRET / PUBLIC, key file $FAKE/key).
+# A calendar key like the one setup.sh creates (32 random bytes, base64: it contains + / and =).
+make_calendar_key() { head -c 32 /dev/urandom | base64; }
+
+# set_env_key <key or ->: the VM's .env with that CALENDAR_KEY (or none), mode 600.
+set_env_key() {
+  (
+    umask 077
+    printf '# settings\nCORS_ORIGIN=https://example.org\n' >"$APP/.env"
+    if [[ "$1" != "-" ]]; then printf '# key\nCALENDAR_KEY=%s\nTRUST_PROXY=true\n' "$1" >>"$APP/.env"; fi
+  )
+  chmod 0600 "$APP/.env"
+}
+
+# new_case: a fresh app folder (with a .env that has a calendar key, VM_KEY), a fresh share and a fresh backup
+# key (SECRET / PUBLIC, key file $FAKE/key).
 new_case() {
   case_no=$((case_no + 1))
   problems=""
@@ -142,6 +164,8 @@ new_case() {
   mkdir -p "$APP/data" "$FAKE/share"
   : >"$FAKE/calls"
   : >"$FAKE/input"
+  VM_KEY="$(make_calendar_key)"
+  set_env_key "$VM_KEY"
   age-keygen -o "$FAKE/key" 2>/dev/null
   SECRET="$(grep '^AGE-SECRET-KEY-' "$FAKE/key")"
   PUBLIC="$(age-keygen -y "$FAKE/key")"
@@ -181,6 +205,9 @@ invites_in() {
     const db = new DatabaseSync(process.argv[1], { readOnly: true });
     console.log(db.prepare("SELECT count(*) AS c FROM invites").get().c);' "$1" 2>/dev/null
 }
+
+# occurrences <text> <file>: how many lines of the (binary) file contain the text.
+occurrences() { grep -c -a -F -- "$1" "$2" || true; }
 
 # decrypt_to <encrypted file> <plain file>, with the case's secret key.
 decrypt_to() { age -d -i "$FAKE/key" -o "$2" "$1" 2>/dev/null; }
@@ -417,6 +444,93 @@ expect "no new backup in the share" [ "$(share_names)" == "$old" ]
 expect "no new backup in the VM" [ -z "$(local_names)" ]
 expect "points to restore" grep -q 'lueckenfueller-backup restore' "$FAKE/output"
 finish "setup on a new VM with old backups in Windows: makes no backup of the empty database"
+
+# --- 10. the calendar key travels with the backup ---------------------------------------------------
+
+# A backup made while the VM had key K1 holds K1; restoring it into a VM whose .env has another key K2 puts K1
+# back into .env, keeps the old .env, and the installed database does not contain the key.
+new_case
+preconfigure
+K1="$VM_KEY"
+K2="$(make_calendar_key)"
+seed_invite Anna
+bk run
+expect "backup run says the key is included" grep -q 'Calendar key included' "$FAKE/output"
+decrypt_to "$APP/backups/$(local_names | head -n 1)" "$FAKE/plain.sqlite" || problems+=" [decrypts]"
+expect "the backup file holds the key (so the next checks mean something)" [ "$(occurrences "$K1" "$FAKE/plain.sqlite")" -ge 1 ]
+set_env_key "$K2"
+answers "$SECRET"
+bk check
+expect "check exit 0" [ "$status" -eq 0 ]
+expect "check says the key is included" grep -q 'Calendar key: included' "$FAKE/output"
+expect "check left .env alone" grep -qxF "CALENDAR_KEY=$K2" "$APP/.env"
+finish "backup with key K1: includes it, check-backup says so"
+
+sleep 1
+cp "$APP/.env" "$FAKE/env.before"
+answers "$SECRET" yes
+bk restore
+expect "exit 0" [ "$status" -eq 0 ]
+expect ".env has K1 now" grep -qxF "CALENDAR_KEY=$K1" "$APP/.env"
+expect ".env no longer has K2" [ "$(occurrences "$K2" "$APP/.env")" -eq 0 ]
+expect ".env has one key line" [ "$(grep -c '^CALENDAR_KEY=' "$APP/.env")" -eq 1 ]
+expect ".env keeps its other lines" bash -c 'grep -qx "CORS_ORIGIN=https://example.org" "$1" && grep -qx "TRUST_PROXY=true" "$1"' _ "$APP/.env"
+expect ".env is still mode 600" [ "$(stat -c %a "$APP/.env")" == "600" ]
+expect "no half-written .env.new" [ ! -e "$APP/.env.new" ]
+expect "old .env is kept in replaced-*" bash -c 'cmp "$1" "$2"/replaced-*/.env' _ "$FAKE/env.before" "$APP"
+expect "old .env in replaced-* is mode 600" [ "$(stat -c %a "$(ls "$APP"/replaced-*/.env | head -n 1)")" == "600" ]
+expect "the installed database does not contain K1" [ "$(occurrences "$K1" "$APP/data/lueckenfueller.sqlite")" -eq 0 ]
+expect "the installed database is the backup (1 invite)" [ "$(invites_in "$APP/data/lueckenfueller.sqlite")" == "1" ]
+expect "log says the key was put back" grep -q 'calendar key from the backup was put back into .env' "$FAKE/output"
+expect "no key in the output" bash -c '! grep -qF -e "$1" -e "$2" "$3"' _ "$K1" "$K2" "$FAKE/output"
+expect "server stopped, then started" [ "$(calls)" == "stop,up" ]
+finish "restore of a K1 backup into a VM with K2: .env gets K1, old .env kept, database without the key"
+
+# Undo: the -before-restore backup was made while .env had K2.
+sleep 1
+answers "$SECRET" yes
+bk restore before-restore
+expect "exit 0" [ "$status" -eq 0 ]
+expect "undo brings K2 back into .env" grep -qxF "CALENDAR_KEY=$K2" "$APP/.env"
+expect "undo: .env has one key line" [ "$(grep -c '^CALENDAR_KEY=' "$APP/.env")" -eq 1 ]
+expect "undo: .env is mode 600" [ "$(stat -c %a "$APP/.env")" == "600" ]
+expect "undo: the installed database does not contain K2" [ "$(occurrences "$K2" "$APP/data/lueckenfueller.sqlite")" -eq 0 ]
+finish "restore before-restore: the old calendar key K2 is back"
+
+# The same key already in .env: nothing to replace.
+new_case
+preconfigure
+seed_invite Anna
+bk run
+cp "$APP/.env" "$FAKE/env.before"
+answers "$SECRET" yes
+bk restore
+expect "exit 0" [ "$status" -eq 0 ]
+expect ".env unchanged" cmp "$FAKE/env.before" "$APP/.env"
+expect "no copy of .env in replaced-*" [ -z "$(find "$APP" -path '*/replaced-*/.env')" ]
+expect "the installed database does not contain the key" [ "$(occurrences "$VM_KEY" "$APP/data/lueckenfueller.sqlite")" -eq 0 ]
+finish "restore of a backup with the VM's own key: .env stays as it is"
+
+# A backup made without any key (CALENDAR_KEY not set): the VM keeps its own.
+new_case
+preconfigure
+set_env_key -
+seed_invite Anna
+bk run
+expect "backup run warns about the missing key" grep -q 'no CALENDAR_KEY' "$FAKE/output"
+K2="$(make_calendar_key)"
+set_env_key "$K2"
+cp "$APP/.env" "$FAKE/env.before"
+sleep 1
+answers "$SECRET" yes
+bk restore
+expect "exit 0" [ "$status" -eq 0 ]
+expect ".env unchanged" cmp "$FAKE/env.before" "$APP/.env"
+expect ".env is still mode 600" [ "$(stat -c %a "$APP/.env")" == "600" ]
+expect "no copy of .env in replaced-*" [ -z "$(find "$APP" -path '*/replaced-*/.env')" ]
+expect "log says the backup holds no key" grep -q 'holds no calendar key' "$FAKE/output"
+expect "database restored (1 invite)" [ "$(invites_in "$APP/data/lueckenfueller.sqlite")" == "1" ]
+finish "restore of a backup without a calendar key: the VM keeps its own .env"
 
 if ((failures > 0)); then
   echo "$failures test(s) failed"
