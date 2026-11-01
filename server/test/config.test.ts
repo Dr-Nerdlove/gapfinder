@@ -13,6 +13,8 @@ describe("loadConfig", () => {
       trustProxy: false,
       appUrl: "http://localhost:5173/",
       logLevel: "info",
+      calendarKey: null,
+      calendarKeyProblem: "CALENDAR_KEY is not set",
     });
     expect(config.databasePath).toMatch(/lueckenfueller\.sqlite$/);
   });
@@ -67,5 +69,47 @@ describe("loadConfig", () => {
 
   it("lists every problem at once", () => {
     expect(() => loadConfig({ PORT: "x", TRUST_PROXY: "y" })).toThrow(/PORT[\s\S]*TRUST_PROXY/);
+  });
+
+  describe("CALENDAR_KEY", () => {
+    const bytes = Buffer.from(Array.from({ length: 32 }, (_, i) => i * 7));
+    const valid = bytes.toString("base64");
+
+    it("reads a valid key, trimmed", () => {
+      for (const text of [valid, `  ${valid}\n`]) {
+        const config = loadConfig({ CALENDAR_KEY: text });
+        expect(config.calendarKey?.equals(bytes)).toBe(true);
+        expect(config.calendarKeyProblem).toBeNull();
+      }
+    });
+
+    it("is not configured when unset or empty", () => {
+      for (const env of [{}, { CALENDAR_KEY: "" }, { CALENDAR_KEY: "   " }]) {
+        expect(loadConfig(env)).toMatchObject({ calendarKey: null, calendarKeyProblem: "CALENDAR_KEY is not set" });
+      }
+    });
+
+    it.each([
+      ["too short", Buffer.alloc(16, 5).toString("base64")],
+      ["too long", Buffer.alloc(33, 5).toString("base64")],
+      ["not base64", "this is not a key, definitely!!"],
+      ["without padding", valid.replace(/=+$/, "") + "A"],
+      ["url-safe alphabet", Buffer.alloc(32, 0xfb).toString("base64url")],
+      ["trailing bits set (not canonical)", Buffer.alloc(32, 0).toString("base64").replace("A=", "B=")],
+      ["extra characters inside", `${valid.slice(0, 10)} ${valid.slice(10)}`],
+    ])("rejects a key that is %s without throwing and without leaking it", (_name, value) => {
+      let config;
+      expect(() => {
+        config = loadConfig({ CALENDAR_KEY: value });
+      }).not.toThrow();
+      expect(config).toMatchObject({ calendarKey: null });
+      const problem = (config as unknown as { calendarKeyProblem: string | null }).calendarKeyProblem;
+      expect(problem).toMatch(/^CALENDAR_KEY is not valid/);
+      expect(problem).not.toContain(value.trim());
+    });
+
+    it("never turns a bad key into a ConfigError, also next to other valid settings", () => {
+      expect(() => loadConfig({ CALENDAR_KEY: "x", PORT: "9000" })).not.toThrow();
+    });
   });
 });

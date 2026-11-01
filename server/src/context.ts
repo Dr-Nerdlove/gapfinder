@@ -1,5 +1,6 @@
 import type { DatabaseSync } from "node:sqlite";
 import type { RateLimiter } from "./auth/rate-limit.js";
+import type { CalendarKeyStatus } from "./calendar-key.js";
 import type { Config } from "./config.js";
 
 /** Everything a route needs; built once per app so tests can swap the clock and the database. */
@@ -9,4 +10,6 @@ export interface AppContext {
   /** The only source of "now": tests move it to check expiry. */
   now: () => Date;
   limiter: RateLimiter;
+  /** Whether the configured calendar key is missing, matches the stored links, or does not. Set at startup. */
+  calendarKeyStatus: CalendarKeyStatus;
 }
