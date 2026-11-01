@@ -2,6 +2,7 @@
 export const API_VERSION = 1;
 
 export * from "./accounts.js";
+export * from "./calendars.js";
 
 /** Response of `GET /api/health`. */
 export interface HealthResponse {
@@ -39,6 +40,22 @@ export type ErrorCode =
   | "wrong_password"
   /** The admin tried to delete their own account. */
   | "cannot_delete_self"
+  /** The calendar link is not an `https://` or `webcal://` address on the standard port. */
+  | "calendar_link_invalid"
+  /** The calendar link (or a redirect) points to an address the server may not reach (e.g. a home network). */
+  | "calendar_link_blocked"
+  /** The provider says there is no calendar at this link (wrong, reset or no longer published). */
+  | "calendar_gone"
+  /** The provider did not answer in time, or the connection failed. Trying again later may work. */
+  | "calendar_unreachable"
+  /** The link answered, but not with a calendar (e.g. a login page). */
+  | "calendar_not_ics"
+  /** The calendar is bigger than the server reads (10 MB). */
+  | "calendar_too_large"
+  /** The person already has the most calendars allowed (`CALENDARS_PER_USER`). */
+  | "calendar_limit"
+  /** Calendars cannot be used: the server has no or the wrong key for the stored links (admin must set it up). */
+  | "calendars_unavailable"
   /** Anything else (server errors, unknown routes). */
   | "error";
 

@@ -3,7 +3,11 @@ import type {
   AdminInvite,
   AdminRenameUserRequest,
   AdminUser,
+  AddCalendarRequest,
   ApiErrorBody,
+  Calendar,
+  CalendarList,
+  CalendarPreview,
   ChangePasswordRequest,
   CompletePasswordResetRequest,
   CreateInviteRequest,
@@ -15,6 +19,7 @@ import type {
   Me,
   PasswordResetInfo,
   SessionResponse,
+  UpdateCalendarRequest,
   UpdateMeRequest,
 } from "@lueckenfueller/shared";
 import { API_URL } from "./config";
@@ -41,6 +46,12 @@ export interface ErrorFailure {
 export type ApiFailure = OfflineFailure | ErrorFailure;
 export type ApiResult<T> = { ok: true; data: T } | ApiFailure;
 
+/**
+ * Adding or changing a calendar link and the preview fetch calendars from outside; the server waits up to
+ * about 25 seconds for them, so the app waits a little longer.
+ */
+export const CALENDAR_REQUEST_TIMEOUT_MS = 35000;
+
 export interface CallOptions {
   token?: string | null;
   timeoutMs?: number;
@@ -66,6 +77,14 @@ const KNOWN_CODES: Record<ErrorCode, true> = {
   reset_invalid: true,
   wrong_password: true,
   cannot_delete_self: true,
+  calendar_link_invalid: true,
+  calendar_link_blocked: true,
+  calendar_gone: true,
+  calendar_unreachable: true,
+  calendar_not_ics: true,
+  calendar_too_large: true,
+  calendar_limit: true,
+  calendars_unavailable: true,
   error: true,
 };
 
@@ -180,3 +199,19 @@ export const createInvite = (body: CreateInviteRequest, o: CallOptions = {}) =>
 
 export const deleteInvite = (id: number, o: CallOptions = {}) =>
   request<void>(`/api/admin/invites/${segment(id)}`, { ...o, method: "DELETE" });
+
+// Calendars (`shared/src/calendars.ts`). The server never sends a link, only the provider and the name.
+
+export const listCalendars = (o: CallOptions = {}) => request<CalendarList>("/api/calendars", o);
+
+export const addCalendar = (body: AddCalendarRequest, o: CallOptions = {}) =>
+  request<Calendar>("/api/calendars", { timeoutMs: CALENDAR_REQUEST_TIMEOUT_MS, ...o, method: "POST", body });
+
+export const updateCalendar = (id: number, body: UpdateCalendarRequest, o: CallOptions = {}) =>
+  request<Calendar>(`/api/calendars/${segment(id)}`, { timeoutMs: CALENDAR_REQUEST_TIMEOUT_MS, ...o, method: "PATCH", body });
+
+export const deleteCalendar = (id: number, o: CallOptions = {}) =>
+  request<void>(`/api/calendars/${segment(id)}`, { ...o, method: "DELETE" });
+
+export const getCalendarPreview = (o: CallOptions = {}) =>
+  request<CalendarPreview>("/api/calendars/preview", { timeoutMs: CALENDAR_REQUEST_TIMEOUT_MS, ...o });

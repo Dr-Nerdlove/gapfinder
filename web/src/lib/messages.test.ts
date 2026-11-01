@@ -10,6 +10,25 @@ describe("messages", () => {
     }
   });
 
+  it("has a German text for every calendar error code", () => {
+    const codes = [
+      "calendar_link_invalid",
+      "calendar_link_blocked",
+      "calendar_gone",
+      "calendar_unreachable",
+      "calendar_not_ics",
+      "calendar_too_large",
+      "calendar_limit",
+      "calendars_unavailable",
+    ] as const;
+    for (const code of codes) {
+      expect(ERROR_MESSAGES[code].length, code).toBeGreaterThan(20);
+      expect(ERROR_MESSAGES[code], code).not.toBe(ERROR_MESSAGES.error);
+    }
+    expect(ERROR_MESSAGES.calendar_gone).toContain("Link");
+    expect(ERROR_MESSAGES.calendar_limit).toContain("10 Kalender");
+  });
+
   it("has a text for every username problem", () => {
     expect(Object.keys(USERNAME_MESSAGES).sort()).toEqual(["invalid_characters", "too_long", "too_short"]);
     for (const text of Object.values(USERNAME_MESSAGES)) expect(text.trim()).not.toBe("");
@@ -55,6 +74,10 @@ describe("errorMessage", () => {
   it("names the field of a validation error in plain words", () => {
     expect(errorMessage(failure({ code: "validation", field: "username" }))).toBe("Bitte prüfe das Feld „Benutzername“.");
     expect(errorMessage(failure({ code: "validation", field: "newPassword" }))).toContain("Neues Passwort");
+  });
+
+  it("names the calendar link field", () => {
+    expect(errorMessage(failure({ code: "validation", field: "link" }))).toBe("Bitte prüfe das Feld „Kalender-Link“.");
   });
 
   it("does not show a technical field name it does not know", () => {

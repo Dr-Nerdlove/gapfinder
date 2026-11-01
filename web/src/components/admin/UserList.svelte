@@ -2,6 +2,7 @@
   import type { AdminUser } from "@lueckenfueller/shared";
   import { normalizeName, RESET_VALID_HOURS } from "@lueckenfueller/shared";
   import * as api from "../../lib/api";
+  import { calendarProblemsText } from "../../lib/calendars";
   import { buildPasswordResetLink } from "../../lib/links";
   import { errorMessage } from "../../lib/messages";
   import { session, sessionState } from "../../lib/session.svelte";
@@ -79,6 +80,9 @@
         <div class="head">
           <strong>{user.username}</strong>
           {#if user.isAdmin}<span class="badge">Admin</span>{/if}
+          {#if calendarProblemsText(user.calendarProblems)}
+            <span class="badge problem">{calendarProblemsText(user.calendarProblems)}</span>
+          {/if}
         </div>
         {#if renamingId === user.id}
           <form onsubmit={(e) => saveRename(e, user)}>
@@ -139,6 +143,7 @@
 
   .head {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: 8px;
   }
@@ -150,6 +155,11 @@
     color: var(--md-sys-color-on-primary-container);
     font-size: 0.875rem;
     font-weight: 500;
+  }
+
+  .badge.problem {
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
   }
 
   form {

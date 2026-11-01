@@ -177,3 +177,110 @@ describe("typed endpoints", () => {
     expect(await call((o) => api.deleteInvite(3, o))).toMatchObject({ url: "http://api.test/api/admin/invites/3", method: "DELETE" });
   });
 });
+
+describe("calendar endpoints", () => {
+  async function call(fn: (o: api.CallOptions) => Promise<unknown>) {
+    const fetchImpl = mockFetch(() => jsonResponse({}));
+    await fn({ baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl), token: "t" });
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    return { url, method: init.method, body: init.body };
+  }
+
+  it("uses the paths and methods of the contract", async () => {
+    expect(await call((o) => api.listCalendars(o))).toMatchObject({ url: "http://api.test/api/calendars", method: "GET" });
+    expect(await call((o) => api.addCalendar({ link: "https://x.test/a.ics", name: "Arbeit" }, o))).toMatchObject({
+      url: "http://api.test/api/calendars",
+      method: "POST",
+      body: '{"link":"https://x.test/a.ics","name":"Arbeit"}',
+    });
+    expect(await call((o) => api.updateCalendar(5, { countsAsBusy: false }, o))).toMatchObject({
+      url: "http://api.test/api/calendars/5",
+      method: "PATCH",
+      body: '{"countsAsBusy":false}',
+    });
+    expect(await call((o) => api.deleteCalendar(5, o))).toMatchObject({ url: "http://api.test/api/calendars/5", method: "DELETE" });
+    expect(await call((o) => api.getCalendarPreview(o))).toMatchObject({ url: "http://api.test/api/calendars/preview", method: "GET" });
+  });
+
+  it("does not mistake the preview for a calendar id", async () => {
+    const { url } = await call((o) => api.getCalendarPreview(o));
+    expect(url).not.toMatch(/calendars\/\d/);
+  });
+
+  it("waits longer than usual for the calls that fetch calendars from outside", async () => {
+    vi.useFakeTimers();
+    for (const start of [
+      (o: api.CallOptions) => api.addCalendar({ link: "https://x.test/a.ics" }, o),
+      (o: api.CallOptions) => api.updateCalendar(1, { link: "https://x.test/a.ics" }, o),
+      (o: api.CallOptions) => api.getCalendarPreview(o),
+    ]) {
+      let aborted = false;
+      const fetchImpl = vi.fn(
+        (_url: string, init: RequestInit) =>
+          new Promise<Response>((_resolve, reject) => {
+            init.signal?.addEventListener("abort", () => {
+              aborted = true;
+              reject(new DOMException("Aborted", "AbortError"));
+            });
+          }),
+      );
+      const pending = start({ baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) });
+      await vi.advanceTimersByTimeAsync(api.REQUEST_TIMEOUT_MS + 5000);
+      expect(aborted).toBe(false);
+      await vi.advanceTimersByTimeAsync(api.CALENDAR_REQUEST_TIMEOUT_MS);
+      expect(aborted).toBe(true);
+      await expect(pending).resolves.toEqual({ ok: false, kind: "offline" });
+    }
+    expect(api.CALENDAR_REQUEST_TIMEOUT_MS).toBeGreaterThanOrEqual(30000);
+  });
+
+  it("keeps the normal timeout for listing and removing", async () => {
+    vi.useFakeTimers();
+    let aborted = false;
+    const fetchImpl = vi.fn(
+      (_url: string, init: RequestInit) =>
+        new Promise<Response>((_resolve, reject) => {
+          init.signal?.addEventListener("abort", () => {
+            aborted = true;
+            reject(new DOMException("Aborted", "AbortError"));
+          });
+        }),
+    );
+    const pending = api.listCalendars({ baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) });
+    await vi.advanceTimersByTimeAsync(api.REQUEST_TIMEOUT_MS);
+    expect(aborted).toBe(true);
+    await pending;
+  });
+
+  it("returns the calendar list", async () => {
+    const list = { state: "ready", calendars: [] };
+    const result = await api.listCalendars({ baseUrl: "http://api.test", fetchImpl: asFetch(mockFetch(() => jsonResponse(list))) });
+    expect(result).toEqual({ ok: true, data: list });
+  });
+
+  it("returns 204 for a removed calendar", async () => {
+    const result = await api.deleteCalendar(1, { baseUrl: "http://api.test", fetchImpl: asFetch(mockFetch(() => new Response(null, { status: 204 }))) });
+    expect(result).toEqual({ ok: true, data: undefined });
+  });
+
+  it.each([
+    ["calendar_link_invalid", 400],
+    ["calendar_link_blocked", 400],
+    ["calendar_gone", 422],
+    ["calendar_unreachable", 502],
+    ["calendar_not_ics", 422],
+    ["calendar_too_large", 422],
+    ["calendar_limit", 409],
+    ["calendars_unavailable", 503],
+  ] as const)("understands the error code %s", async (code, status) => {
+    const fetchImpl = mockFetch(() => jsonResponse({ statusCode: status, error: "x", code }, status));
+    const result = await api.addCalendar({ link: "https://x.test/a.ics" }, { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) });
+    expect(result).toEqual({ ok: false, kind: "error", status, code });
+  });
+
+  it("keeps the field of a link problem", async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ statusCode: 400, error: "x", code: "validation", field: "link" }, 400));
+    const result = await api.addCalendar({ link: "" }, { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) });
+    expect(result).toEqual({ ok: false, kind: "error", status: 400, code: "validation", field: "link" });
+  });
+});

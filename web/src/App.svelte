@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import Admin from "./pages/Admin.svelte";
+  import Calendars from "./pages/Calendars.svelte";
   import Invite from "./pages/Invite.svelte";
   import Login from "./pages/Login.svelte";
   import NotFound from "./pages/NotFound.svelte";
@@ -31,6 +32,8 @@
     <PasswordReset token={route.token} />
   {:else if route.name === "profile"}
     {#if sessionState.user}<Profile />{:else}<Login />{/if}
+  {:else if route.name === "calendars"}
+    {#if sessionState.user}<Calendars />{:else}<Login />{/if}
   {:else if route.name === "admin"}
     {#if sessionState.user}<Admin />{:else}<Login />{/if}
   {:else}
