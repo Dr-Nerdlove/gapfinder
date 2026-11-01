@@ -15,6 +15,7 @@ What you get at the end:
   - **Debian** (the VM's operating system) and **Docker:** security updates are installed every day. New
     system versions take effect when the VM restarts, which happens every morning when the PC starts.
   - **Tailscale** updates itself.
+- A **backup** of the database every night, encrypted and copied to a folder in your OneDrive (step 9).
 
 You need:
 
@@ -179,6 +180,89 @@ you are logged in as admin; your friends' invite links you create in the app its
 
 If the link has expired or got lost, just run the second command again for a new one.
 
+## 9. Set up backups
+
+Every night at about 00:30 (before the PC switches off at 01:00) the VM makes a backup of the database. If the
+PC was off at that time, the backup is made a few minutes after it starts again. Each backup is:
+
+- **encrypted** with your own backup key. Only you have its secret half (it is not kept in the VM), so nobody
+  who gets hold of a backup file can read it. Without the key no backup can be restored: keep it safe.
+- **kept in the VM** (the newest 14) and **copied to a folder in your OneDrive** on the Windows PC (the newest
+  60). OneDrive uploads it to the cloud, so the backups survive a broken VM, a broken PC disk or a stolen PC.
+  A copy that failed (the PC's folder was not reachable) is caught up the next night.
+
+The backup is made while the server runs; the app keeps working. The files are small (a few hundred KB).
+
+### Part 1: the folder on Windows
+
+The VM writes into one shared folder on the PC, with its own Windows user that may do nothing else (it cannot
+log in on the PC, and it can only reach this one folder). Open **PowerShell as administrator** (as in step 2)
+and paste this whole block:
+
+```powershell
+$Folder   = Join-Path $env:OneDrive "Lückenfüller-Sicherung"
+$User     = "lueckenbackup"
+$Password = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ })
+
+# A Windows user only for the backups. It does not appear on the login screen.
+New-LocalUser -Name $User -Password (ConvertTo-SecureString $Password -AsPlainText -Force) -PasswordNeverExpires -UserMayNotChangePassword -Description "Lückenfüller backups from the VM"
+$Hide = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAccounts\UserList"
+New-Item -Path $Hide -Force | Out-Null
+New-ItemProperty -Path $Hide -Name $User -Value 0 -PropertyType DWord -Force | Out-Null
+
+# The folder in OneDrive, shared only with that user.
+New-Item -ItemType Directory -Force -Path $Folder | Out-Null
+icacls $Folder /grant "${User}:(OI)(CI)M" | Out-Null
+New-SmbShare -Name "lueckenfueller-backup" -Path $Folder -ChangeAccess $User | Out-Null
+
+# Let only the VM (through Hyper-V's "Default Switch") reach the shared folder, not the home network.
+New-NetFirewallRule -DisplayName "Lückenfüller backups from the VM" -Direction Inbound -Protocol TCP -LocalPort 445 -InterfaceAlias "vEthernet (Default Switch)" -Action Allow | Out-Null
+
+Write-Host "Folder:   $Folder"
+Write-Host "Password: $Password"
+```
+
+It shows the folder (it should be inside your OneDrive, e.g. `C:\Users\<you>\OneDrive\Lückenfüller-Sicherung`)
+and a password. **Keep the PowerShell window open**: you need the password in part 2. You do not have to write
+it down; if it is ever needed again, part 3 below makes a new one.
+
+If the first line fails or the folder is not in OneDrive (`$env:OneDrive` is empty when OneDrive is not set up
+for this Windows user), set `$Folder` by hand to a folder inside your OneDrive and run the block again.
+
+### Part 2: the VM
+
+Connect to the VM with `ssh` (step 4). If you set up the VM before backups existed, first run the setup again
+(see "When the files in `deploy/vm/` change"). Then:
+
+```bash
+sudo lueckenfueller-backup setup
+```
+
+It asks:
+
+1. **"If you already have a backup key, paste it now."** The first time, just press Enter. It then shows your
+   new **secret backup key**, a line starting with `AGE-SECRET-KEY-`. Copy it and save it **in your password
+   manager**, and also print it or write it down and keep that at home. To confirm, it asks for the key's last
+   6 characters.
+2. **The share and the Windows user**: press Enter twice (`lueckenfueller-backup` and `lueckenbackup`).
+3. **The password**: paste the password from the PowerShell window (nothing is shown while you paste) and
+   press Enter.
+
+It tests the connection and makes a first backup. It ends with `lueckenfueller-backup: done`. In Windows, the
+folder now holds a file like `lueckenfueller-2026-11-01-153012.sqlite.age`, and OneDrive shows it as synced.
+
+Now do the **trial restore** below once, to be sure that your saved key works.
+
+### Part 3: if something changes later
+
+- **New password for the Windows user** (forgotten, or changed): in PowerShell as administrator run the first
+  three lines of the block in part 1, then `Set-LocalUser -Name $User -Password (ConvertTo-SecureString
+  $Password -AsPlainText -Force)` and `Write-Host $Password`; then `sudo lueckenfueller-backup setup` in the VM
+  again (it keeps the key).
+- **The key is lost**: the old backups can no longer be opened. In the VM run
+  `sudo rm /opt/lueckenfueller/backup-settings/public-key.txt` and `sudo lueckenfueller-backup setup`; it creates
+  a new key. Backups from then on use the new key.
+
 ## Forgot your own admin password
 
 Friends who forget their password ask you; you make a new link for them in the admin area of the app. If you
@@ -196,6 +280,71 @@ sudo docker compose exec api node server/dist/cli.js password-link "Vincent R."
 Open the printed link on your phone **within 24 hours** and choose a new password. The link works only once, and
 all logins of this account end when you use it.
 
+## Restoring a backup
+
+All commands below run in the VM (connect with `ssh`, step 4). They ask for your **secret backup key**: paste
+it from your password manager (nothing is shown while you paste) and press Enter. The key is used only for
+this one command and not stored.
+
+### Trial restore (once after setting up, then about once a month)
+
+```bash
+sudo lueckenfueller-backup check
+```
+
+It takes the newest backup, opens it with your key and checks it, **without changing anything**; the server
+keeps running. It shows how many accounts the backup holds and when the last activity was, and ends with
+`trial restore passed`. If it says the key cannot open the backup, you have the wrong key: look for the right
+one now, while the server still runs fine.
+
+To try an older backup, add a part of its name, e.g. the date: `sudo lueckenfueller-backup check 2026-10-30`.
+
+### Which backups there are
+
+```bash
+sudo lueckenfueller-backup list
+```
+
+The names contain date and time, e.g. `lueckenfueller-2026-10-31-003012.sqlite.age` is from 31 October at
+00:30.
+
+### Restore
+
+This replaces the server's database with a backup. **Everything that happened after the backup is lost**
+(new accounts, changed passwords, ...). Use it only when the data is really broken or gone.
+
+```bash
+sudo lueckenfueller-backup restore
+```
+
+It restores the newest backup; to choose another one, add a part of its name, e.g.
+`sudo lueckenfueller-backup restore 2026-10-30`. It first checks the backup (as in the trial restore) and asks
+you to type `yes`. Then it stops the server for a moment, saves the current state as an extra backup (its
+name ends in `-before-restore`), puts the backup in place and starts the server again. At the end it prints
+the command to **undo** the restore, e.g.:
+
+```bash
+sudo lueckenfueller-backup restore 2026-11-01-142233-before-restore
+```
+
+The replaced database files also stay in `/opt/lueckenfueller/replaced-<date>`; you can delete that folder
+once everything works.
+
+### The VM is lost completely
+
+If the VM is broken or deleted, the backups are still in your OneDrive folder.
+
+1. Set up a new VM as in steps 2–6 (on the Tailscale admin page, remove the old machine `lueckenfueller` first,
+   so the new one gets the same address).
+2. Make sure the folder from "9. Set up backups", part 1, still exists and is shared (in PowerShell:
+   `Get-SmbShare lueckenfueller-backup`). If you set up Windows again too, run part 1 again and copy the
+   backup files from OneDrive into the new folder.
+3. In the VM run `sudo lueckenfueller-backup setup`. At the first question **paste your existing secret
+   backup key** (do not press Enter, that would create a new key). Then answer as in part 2. It finds the old
+   backups in the Windows folder and does not make a new backup yet.
+4. Right away run `sudo lueckenfueller-backup restore`. It downloads the newest backup from the Windows folder
+   and restores it. Everyone can log in again as before.
+
 ## Everyday operation
 
 Nothing to do. When the PC is off (01:00–07:00), the app says "Lückenfüller schläft gerade"; in the morning
@@ -209,6 +358,9 @@ To look at the server, connect with `ssh` (step 4) and use:
 | Last updates and their result           | `sudo journalctl -u lueckenfueller-update -n 30`                |
 | When the next update check runs         | `systemctl list-timers lueckenfueller-update.timer`             |
 | Update right now                        | `sudo lueckenfueller-update`                                    |
+| Last backups and their result           | `sudo journalctl -u lueckenfueller-backup -n 30`                |
+| Which backups there are                 | `sudo lueckenfueller-backup list`                               |
+| Back up right now                       | `sudo lueckenfueller-backup`                                    |
 | Server log                              | `cd /opt/lueckenfueller && sudo docker compose logs --tail 50`  |
 | Is Funnel on, and the address           | `tailscale funnel status`                                       |
 
@@ -217,7 +369,11 @@ Where things are in the VM:
 - `/opt/lueckenfueller/compose.yaml` – how the server container runs (from [`deploy/vm/compose.yaml`](../deploy/vm/compose.yaml)).
 - `/opt/lueckenfueller/.env` – the server's settings. Secrets added in later phases go here, never into the
   repository.
-- `/opt/lueckenfueller/data/` – the database. **This is the data to keep.** Backups follow in a later step.
+- `/opt/lueckenfueller/data/` – the database. **This is the data to keep**; the backups protect it.
+- `/opt/lueckenfueller/backups/` – the newest 14 backups (encrypted). `/opt/lueckenfueller/backup-settings/` –
+  the backup key's public half and the login for the Windows folder.
+- `/usr/local/sbin/lueckenfueller-backup` and the `lueckenfueller-backup` timer – the nightly backup
+  ([`deploy/vm/backup.sh`](../deploy/vm/backup.sh)).
 - `/usr/local/sbin/lueckenfueller-update` and the `lueckenfueller-update` timer – the hourly update
   ([`deploy/vm/update.sh`](../deploy/vm/update.sh)).
 
@@ -241,10 +397,15 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
 - **An update went back to the old version.** The update log (`sudo journalctl -u lueckenfueller-update`)
   says "is not healthy; going back". The app keeps working on the old version. Send the log to the AI assistant
   working on the project; the next fixed version is installed automatically.
+- **A backup failed.** `sudo journalctl -u lueckenfueller-backup -n 30` shows why. "cannot reach the Windows
+  folder" means the backup is safe in the VM and is copied the next night; if it keeps happening, check that
+  the shared folder still exists (`Get-SmbShare lueckenfueller-backup` in PowerShell) and run
+  `sudo lueckenfueller-backup setup` again. If Windows security ("Controlled folder access") blocks the
+  writes, allow them there.
 - **`ssh` does not connect.** The address changed: run `hostname -I` in the VM window.
 - **Start over completely.** In Hyper-V Manager turn the VM off and delete it, delete
   `lueckenfueller.vhdx`, remove the machine in the Tailscale admin page, and begin at step 2. This deletes the
-  database.
+  database in the VM; to bring it back, follow "The VM is lost completely" above.
 
 ## What this set-up does for security
 
@@ -254,5 +415,9 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
 - The server listens only on `127.0.0.1` inside the VM and runs in a container as a normal user with a
   read-only file system and no extra rights.
 - The server image is public (the code is AGPL anyway), so the VM needs no GitHub password.
+- Backups are encrypted with [age](https://age-encryption.org/) to a key whose secret half only the owner has;
+  the VM holds only the public half, so even someone who breaks into the VM cannot read the older backups in
+  OneDrive. The Windows user for the backups can only reach its one shared folder, and the firewall lets only
+  the VM's virtual network reach it.
 - The server trusts the visitor address that Tailscale passes on (`TRUST_PROXY=true` in `.env`), which is
   correct only because Funnel is the only way in. Do not publish port 8080 any other way.

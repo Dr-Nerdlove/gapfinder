@@ -17,6 +17,8 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
+      - name: Install age (the VM backup test encrypts with it, as the VM does)
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq age
       - run: npm run check
       - run: npm test
       - run: npm run build
@@ -31,7 +33,9 @@ jobs:
         # The service points at the installed script, so install it first, as setup.sh does.
         run: |
           sudo install -m 0755 deploy/vm/update.sh /usr/local/sbin/lueckenfueller-update
-          systemd-analyze verify deploy/vm/lueckenfueller-update.service deploy/vm/lueckenfueller-update.timer
+          sudo install -m 0755 deploy/vm/backup.sh /usr/local/sbin/lueckenfueller-backup
+          systemd-analyze verify deploy/vm/lueckenfueller-update.service deploy/vm/lueckenfueller-update.timer \
+            deploy/vm/lueckenfueller-backup.service deploy/vm/lueckenfueller-backup.timer
       - name: Check the VM compose file
         run: touch deploy/vm/.env && docker compose -f deploy/vm/compose.yaml config --quiet
 

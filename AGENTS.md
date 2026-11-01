@@ -170,6 +170,13 @@ missing, with a recommendation, and let the people choose.
     there.
   - The first admin account and an admin's own password reset come from the CLI in the VM
     (`server/dist/cli.js`, see `docs/server-setup.md`); the app itself never creates admins.
+  - Backups (`deploy/vm/backup.sh`, nightly timer): made by the server's CLI (`backup`, `check-backup` in
+    `server/src/backup.ts`) in a `docker compose run` container, encrypted with age to a public key; the secret
+    key exists only with the owner, so the VM can never decrypt (trial restore and restore ask for it). Copied
+    over SMB (`smbclient`) to a OneDrive folder on the Windows host, reached as the VM's default gateway
+    (Hyper-V Default Switch). `smbclient ls` with no match exits 1 (`NT_STATUS_NO_SUCH_FILE`): that is an
+    empty folder, not an error. Backup, restore and `update.sh` share `/opt/lueckenfueller/.maintenance.lock`.
+    `deploy/vm/test/backup.test.sh` runs the real CLI (via tsx) behind its fake `docker`.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.

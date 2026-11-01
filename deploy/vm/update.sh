@@ -50,6 +50,9 @@ wait_healthy() {
 }
 
 cd "$APP_DIR"
+# Wait while a backup or a restore (backup.sh) runs: a restore stops and starts the server itself.
+exec 9>>"$APP_DIR/.maintenance.lock"
+flock 9
 
 current="$(running_image)"
 # Not "docker compose pull": it skips services with pull_policy: never (compose.yaml), so it never downloads.

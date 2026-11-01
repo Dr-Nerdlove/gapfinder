@@ -1,0 +1,12 @@
+[Unit]
+Description=Back up the Lückenfüller database every night
+
+[Timer]
+# The PC is off from 01:00 to 07:00, so the backup runs before that. If the PC was off at 00:30, the
+# backup is made a few minutes after the VM starts again (Persistent).
+OnCalendar=*-*-* 00:30
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target
