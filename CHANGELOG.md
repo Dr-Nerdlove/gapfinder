@@ -7,6 +7,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Nightly backups of the database: encrypted with the owner's own key, kept in the VM and copied to a folder
+  in the owner's OneDrive on the Windows PC. A trial restore checks a backup and the key without changing
+  anything, and a restore puts a backup back (and can be undone). Step 9 and "Restoring a backup" in
+  `docs/server-setup.md` explain it. **The VM needs `setup.sh` once more** (see "When the files in `deploy/vm/`
+  change"), then `sudo lueckenfueller-backup setup`.
+
 - Phase 1c, accounts:
   - Friends join through a personal invite link from the admin. The link works once and for 14 days, and it
     already suggests the username (e.g. "Vincent R."); username and password are chosen by the person.

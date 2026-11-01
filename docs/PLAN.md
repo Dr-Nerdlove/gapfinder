@@ -36,7 +36,16 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   server as relay (costs money, a second server to maintain), VPN-only (no guests; browsers partly block a
   public site from calling private addresses), the owner's "mailbox" idea (works, but every action would wait
   for the next poll and still needs a third service).
-- **Database:** SQLite file inside the VM, nightly backup.
+- **Database:** SQLite file inside the VM, nightly backup (below).
+- **Backup:** every night at 00:30 (the PC is off from 01:00; a missed backup is made after the next start)
+  the server's own CLI writes a consistent copy (`VACUUM INTO`) while it runs. The copy is checked, encrypted
+  with [age](https://age-encryption.org/) to the owner's key, kept in the VM (newest 14) and copied over SMB
+  to a shared folder inside the owner's **OneDrive** on the Windows PC (newest 60), so it also reaches the
+  cloud. Chosen over a cloud storage account (one more outside account and key) and over a plain folder on the
+  PC (lost together with the PC's disk). The secret key is never stored in the VM: a break-in there cannot read
+  older backups, and the monthly trial restore also proves the owner still has the key. A dedicated Windows
+  user can reach only that folder; a firewall rule lets only the Hyper-V Default Switch reach port 445.
+  Restore and trial restore: `deploy/vm/backup.sh`, guide in `docs/server-setup.md`.
 - **Server off (01:00–07:00 or any outage):** the app shows a friendly notice ("Lückenfüller schläft gerade")
   plus the last loaded state, read-only. Voting resumes when the server is back. (Queueing votes offline is a
   possible later extension.)
@@ -189,4 +198,3 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
 ## Open points
 
 - How long old polls are kept.
-- Where the nightly backup is copied to (outside the VM).

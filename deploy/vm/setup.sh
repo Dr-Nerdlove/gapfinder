@@ -34,7 +34,8 @@ fetch() {
 step "System packages and automatic security updates"
 export DEBIAN_FRONTEND=noninteractive
 apt-get update -qq
-apt-get install -y -qq ca-certificates curl unattended-upgrades >/dev/null
+# age encrypts the backups, smbclient copies them to the Windows PC.
+apt-get install -y -qq ca-certificates curl unattended-upgrades age smbclient >/dev/null
 # Debian's security updates are installed automatically every day. Docker comes from Docker's own
 # package source (below), so it is added to the automatic updates explicitly.
 cat >/etc/apt/apt.conf.d/20auto-upgrades <<'EOF'
@@ -98,6 +99,20 @@ echo "Downloading and starting the server (this can take a few minutes) ..."
 systemctl start lueckenfueller-update.service || fail "The server did not start. Details:  journalctl -u lueckenfueller-update -n 50"
 curl -fsS http://127.0.0.1:8080/api/health && echo
 
+step "Nightly backups"
+fetch backup.sh /usr/local/sbin/lueckenfueller-backup
+chmod 0755 /usr/local/sbin/lueckenfueller-backup
+fetch lueckenfueller-backup.service /etc/systemd/system/lueckenfueller-backup.service
+fetch lueckenfueller-backup.timer /etc/systemd/system/lueckenfueller-backup.timer
+systemctl daemon-reload
+systemctl enable --now lueckenfueller-backup.timer >/dev/null
+if [[ -s "$APP_DIR/backup-settings/public-key.txt" && -f "$APP_DIR/backup-settings/windows-login" ]]; then
+  echo "Backups are set up. To change the Windows folder:  sudo lueckenfueller-backup setup"
+else
+  echo "Backups are not set up yet. Do the Windows part of \"Backups\" in the guide first, then run:"
+  echo "  sudo lueckenfueller-backup setup"
+fi
+
 step "Installing Tailscale"
 if ! command -v tailscale >/dev/null; then
   # Official installer: https://tailscale.com/download/linux
@@ -121,4 +136,5 @@ cat <<'EOF'
 The server runs and updates itself every hour.
 The address above that starts with https:// and ends in .ts.net is the server's address.
 Continue in the guide (docs/server-setup.md) with "Switch off key expiry" and "Tell the app the address".
+Backups: see "Backups" in the guide.
 EOF

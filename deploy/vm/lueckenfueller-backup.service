@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up the Lückenfüller database and copy it to the Windows PC
+Documentation=https://github.com/Dr-Nerdlove/gapfinder/blob/main/docs/server-setup.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/lueckenfueller-backup

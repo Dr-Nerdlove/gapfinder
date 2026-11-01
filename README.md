@@ -13,7 +13,8 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 updates, and there are accounts: friends join through a personal invite link from the admin, log in with username
 and password, and change their name, password and colour in their profile. The admin manages invites and accounts
 in "Verwaltung" and creates links for forgotten passwords. Calendars, gap search and voting follow in later phases.
-The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8).
+The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8). The database
+is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9 and "Restoring a backup").
 
 | Login                                    | Invite link                                | Start, logged in                                     |
 | ---------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
@@ -30,7 +31,7 @@ The first admin account is created in the VM ([`docs/server-setup.md`](docs/serv
 | `shared/` | The API contract: types, error codes and rules (usernames, durations) used by both sides.     |
 | `server/` | API server: Node.js, TypeScript, Fastify, SQLite (`node:sqlite`). Runs in Docker.            |
 | `web/`    | Frontend: Vite, Svelte 5, TypeScript, Material 3 look. Built as a static site.               |
-| `deploy/` | Files for the server VM: setup script, hourly update with rollback, systemd units.            |
+| `deploy/` | Files for the server VM: setup script, hourly update with rollback, nightly backup, systemd units. |
 | `docs/`   | Project plan and decisions, server setup guide.                                              |
 
 It is an npm workspaces monorepo; `shared` is compiled first because the other two import it.
@@ -66,7 +67,8 @@ npm test        # Vitest in all packages
 npm run build   # shared, then server (dist/) and web (web/dist/)
 ```
 
-`npm test` also runs the tests of the VM update script (`npm run test:vm`, needs bash). CI runs exactly these on
+`npm test` also runs the tests of the VM update and backup scripts (`npm run test:vm`, needs bash and
+[age](https://age-encryption.org/)). CI runs exactly these on
 every push and pull request, plus a build of the server's Docker image and checks of the VM files (shellcheck,
 systemd units, compose file).
 

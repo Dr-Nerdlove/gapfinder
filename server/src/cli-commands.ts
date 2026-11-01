@@ -3,6 +3,7 @@ import type { DatabaseSync } from "node:sqlite";
 import { createInvite } from "./accounts/invites.js";
 import { createPasswordReset } from "./accounts/resets.js";
 import { findUserByKey, listUsers } from "./accounts/users.js";
+import { createBackup, inspectBackup } from "./backup.js";
 import type { Config } from "./config.js";
 
 export const USAGE = `Usage: node server/dist/cli.js <command>
@@ -11,6 +12,8 @@ Commands:
   admin-link [full name]   Create a link to set up an admin account (valid once, for 14 days).
                            The name only suggests the username, e.g. "Vincent Richter" -> "Vincent R.".
   password-link <username> Create a link to set a new password for an existing account (valid once, 24 hours).
+  backup <file>            Write a consistent copy of the database to <file> (must not exist yet).
+  check-backup <file>      Check a backup file without changing it; fails when it is damaged.
 `;
 
 export interface CliDeps {
@@ -44,6 +47,10 @@ export function runCli(args: readonly string[], deps: CliDeps): number {
       return adminLink(rest, deps);
     case "password-link":
       return passwordLink(rest, deps);
+    case "backup":
+      return backup(rest, deps);
+    case "check-backup":
+      return checkBackup(rest, deps);
     default:
       deps.err(USAGE.trimEnd());
       return 1;
@@ -89,5 +96,43 @@ function passwordLink(args: readonly string[], { db, config, now, out, err }: Cl
   out(
     `The link works once and until ${describeExpiry(reset.expiresAt)}. All logins of this account end when it is used.`,
   );
+  return 0;
+}
+
+function backup(args: readonly string[], { db, out, err }: CliDeps): number {
+  if (args.length !== 1 || args[0] === "") {
+    err(USAGE.trimEnd());
+    return 1;
+  }
+  try {
+    createBackup(db, args[0]!);
+  } catch (error) {
+    err(`Backup failed: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+  out(`Backup written to ${args[0]}.`);
+  return 0;
+}
+
+function checkBackup(args: readonly string[], { out, err }: CliDeps): number {
+  if (args.length !== 1 || args[0] === "") {
+    err(USAGE.trimEnd());
+    return 1;
+  }
+  let info;
+  try {
+    info = inspectBackup(args[0]!);
+  } catch (error) {
+    err(`This is not a readable Lückenfüller backup: ${error instanceof Error ? error.message : String(error)}`);
+    return 1;
+  }
+  if (!info.intact || info.schemaVersion === 0) {
+    err(info.intact ? "This is not a Lückenfüller database." : "The backup is damaged (integrity check failed).");
+    return 1;
+  }
+  out("Backup is intact.");
+  out(`Accounts: ${info.accounts} (admins: ${info.admins})`);
+  out(`Last activity: ${info.lastActivity ? describeExpiry(info.lastActivity) : "none"}`);
+  out(`Database version: ${info.schemaVersion}`);
   return 0;
 }
