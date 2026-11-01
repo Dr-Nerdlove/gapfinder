@@ -20,7 +20,9 @@ cat >"$WORK/bin/docker" <<'EOF'
 set -euo pipefail
 f="$FAKE"
 case "$1 ${2:-}" in
-  "compose pull") cp "$f/remote" "$f/latest" ;;
+  # Like the real one: compose.yaml has pull_policy: never, so "compose pull" downloads nothing.
+  "compose pull") ;;
+  "pull --quiet") cp "$f/remote" "$f/latest" ;;
   "compose ps") [[ -f "$f/container" ]] && echo "cid" ;;
   "compose up")
     [[ -f "$f/latest" ]] || { echo "no such image" >&2; exit 1; }
