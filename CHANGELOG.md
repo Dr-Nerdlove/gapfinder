@@ -7,6 +7,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 2a, preparing the server for calendars: a key for storing calendar links encrypted, which every
+  nightly backup carries (encrypted with the backup key) and a restore puts back; and a firewall that lets the
+  server's container reach only the internet over HTTPS (and two public name servers), never the home network,
+  the PC, the VM or Tailscale. The trial restore also checks the calendar key. **The VM needs `setup.sh` once
+  more**, then a backup and a trial restore: step 10 in `docs/server-setup.md`. Nothing changes in the app yet.
 - Nightly backups of the database: encrypted with the owner's own key, kept in the VM and copied to a folder
   in the owner's OneDrive on the Windows PC. A trial restore checks a backup and the key without changing
   anything, and a restore puts a backup back (and can be undone). Step 9 and "Restoring a backup" in
