@@ -3,6 +3,8 @@ export const LOGIN_FAILURES_PER_USERNAME = 5;
 export const LOGIN_FAILURES_PER_IP = 20;
 export const PASSWORD_FAILURES_PER_USER = 5;
 export const TOKEN_FAILURES_PER_IP = 30;
+/** Outgoing checks of a calendar link (new calendar or new link) per person and window. */
+export const CALENDAR_LINK_CHECKS_PER_USER = 20;
 
 /**
  * Counts failed attempts per key within a sliding window, in memory (a restart forgets them, which is fine for

@@ -47,7 +47,7 @@ describe("migrations", () => {
     db.prepare("INSERT INTO meta (key, value) VALUES ('keep', 'me')").run();
     runMigrations(db);
 
-    expect(appliedIds(db)).toEqual([1, 2]);
+    expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
     const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
       (t) => t.name,
     );
@@ -72,6 +72,59 @@ describe("migrations", () => {
     db.prepare("DELETE FROM users WHERE id = 1").run();
     expect(db.prepare("SELECT COUNT(*) AS n FROM sessions").get()).toEqual({ n: 0 });
     expect(db.prepare("SELECT created_by FROM invites").get()).toEqual({ created_by: null });
+  });
+
+  it("migration 3 adds the calendars table to a database at migration 2 and keeps its data", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 2));
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', '2026-01-01T00:00:00.000Z')",
+    ).run();
+    db.prepare("INSERT INTO meta (key, value) VALUES ('keep', 'me')").run();
+    expect(appliedIds(db)).toEqual([1, 2]);
+
+    runMigrations(db);
+
+    expect(appliedIds(db)).toEqual([1, 2, 3]);
+    expect(db.prepare("SELECT username FROM users").all()).toEqual([{ username: "Anna" }]);
+    expect(db.prepare("SELECT value FROM meta WHERE key = 'keep'").get()).toEqual({ value: "me" });
+    const columns = (db.prepare("PRAGMA table_info(calendars)").all() as { name: string }[]).map((c) => c.name);
+    expect(columns).toEqual([
+      "id",
+      "user_id",
+      "name",
+      "provider",
+      "link_encrypted",
+      "counts_busy",
+      "is_default",
+      "status",
+      "created_at",
+      "updated_at",
+    ]);
+    const indexes = (db.prepare("PRAGMA index_list(calendars)").all() as { name: string }[]).map((i) => i.name);
+    expect(indexes).toContain("calendars_user_id");
+  });
+
+  it("migration 3: calendars belong to a user, keep an empty name, accept only ok/broken and go with the user", () => {
+    const db = openDatabase(":memory:");
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    const insert = db.prepare(
+      "INSERT INTO calendars (user_id, name, provider, link_encrypted, created_at, updated_at) VALUES (?, '', 'google', 'v1.x', 'a', 'a')",
+    );
+    insert.run(1);
+    expect(db.prepare("SELECT name, counts_busy, is_default, status FROM calendars").get()).toEqual({
+      name: "",
+      counts_busy: 1,
+      is_default: 0,
+      status: "ok",
+    });
+    expect(() => insert.run(999)).toThrow(/FOREIGN KEY/);
+    expect(() => db.prepare("UPDATE calendars SET status = 'weird'").run()).toThrow(/CHECK/);
+    db.prepare("DELETE FROM users WHERE id = 1").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM calendars").get()).toEqual({ n: 0 });
   });
 
   it("waits for a locked database instead of failing at once", () => {

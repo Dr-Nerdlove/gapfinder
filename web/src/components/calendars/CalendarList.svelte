@@ -2,7 +2,7 @@
   import type { Calendar } from "@lueckenfueller/shared";
   import { CALENDAR_NAME_MAX_LENGTH } from "@lueckenfueller/shared";
   import * as api from "../../lib/api";
-  import { looksLikeCalendarLink, providerLabel } from "../../lib/calendars";
+  import { calendarDisplayName, looksLikeCalendarLink, providerLabel } from "../../lib/calendars";
   import { ERROR_MESSAGES, errorMessage } from "../../lib/messages";
   import { session } from "../../lib/session.svelte";
   import Button from "../Button.svelte";
@@ -125,7 +125,7 @@
     {#each calendars as calendar (calendar.id)}
       <li id="calendar-{calendar.id}">
         <div class="head">
-          <strong>{calendar.name}</strong>
+          <strong>{calendarDisplayName(calendar)}</strong>
           {#if calendar.isDefault}<span class="badge">Standard</span>{/if}
         </div>
         <p class="provider">{providerLabel(calendar.provider)}</p>
@@ -186,7 +186,7 @@
 
 <ConfirmDialog
   open={removing !== null}
-  title="„{removing?.name ?? ''}“ entfernen?"
+  title="„{removing ? calendarDisplayName(removing) : ''}“ entfernen?"
   text="Der Kalender wird aus Lückenfüller entfernt. In deinem Kalender selbst ändert sich nichts."
   confirmLabel="Entfernen"
   {busy}

@@ -253,6 +253,22 @@ describe("problemNotices", () => {
     expect(notice!.text).toBe("„Ein Kalender“ konnte gerade nicht gelesen werden.");
   });
 
+  it("names a calendar without a name by its provider", () => {
+    const unnamed = [
+      { id: 1, name: "", provider: "google" as const },
+      { id: 2, name: " ", provider: "other" as const },
+    ];
+    const [first, second] = problemNotices(
+      [
+        { calendarId: 1, problem: "unreachable" },
+        { calendarId: 2, problem: "broken" },
+      ],
+      unnamed,
+    );
+    expect(first!.text).toBe("„Google“ konnte gerade nicht gelesen werden.");
+    expect(second!.text).toBe("Der Link von „Anderer Anbieter“ funktioniert nicht mehr.");
+  });
+
   it("gives nothing for no problems", () => {
     expect(problemNotices([], calendars)).toEqual([]);
   });

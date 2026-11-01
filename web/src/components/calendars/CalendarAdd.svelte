@@ -2,7 +2,7 @@
   import type { Calendar } from "@lueckenfueller/shared";
   import { CALENDAR_NAME_MAX_LENGTH, CALENDAR_LINK_MAX_LENGTH, CALENDARS_PER_USER } from "@lueckenfueller/shared";
   import * as api from "../../lib/api";
-  import { canAddCalendar, looksLikeCalendarLink } from "../../lib/calendars";
+  import { calendarDisplayName, canAddCalendar, looksLikeCalendarLink } from "../../lib/calendars";
   import { ERROR_MESSAGES, errorMessage } from "../../lib/messages";
   import { session } from "../../lib/session.svelte";
   import Button from "../Button.svelte";
@@ -42,7 +42,7 @@
     busy = false;
     if (result.ok) {
       link = name = "";
-      done = `„${result.data.name}“ ist verknüpft.`;
+      done = `„${calendarDisplayName(result.data)}“ ist verknüpft.`;
       onadded(result.data);
     } else if (result.kind === "error" && result.code === "validation" && result.field === "link") {
       linkError = errorMessage(result);

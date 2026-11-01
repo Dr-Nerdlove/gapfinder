@@ -1,7 +1,7 @@
 import type { Calendar } from "@lueckenfueller/shared";
 import { CALENDARS_PER_USER } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
-import { applyCalendarUpdate, brokenCount, calendarProblemsText, canAddCalendar, looksLikeCalendarLink, PROVIDER_LABELS, providerLabel } from "./calendars";
+import { applyCalendarUpdate, brokenCount, calendarDisplayName, calendarProblemsText, canAddCalendar, looksLikeCalendarLink, PROVIDER_LABELS, providerLabel } from "./calendars";
 
 const calendar = (id: number, extra: Partial<Calendar> = {}): Calendar => ({
   id,
@@ -25,6 +25,23 @@ describe("providerLabel", () => {
   it("has a label for every provider and falls back for a new one", () => {
     expect(Object.keys(PROVIDER_LABELS).sort()).toEqual(["apple", "google", "other", "outlook"]);
     expect(providerLabel("fax" as never)).toBe("Anderer Anbieter");
+  });
+});
+
+describe("calendarDisplayName", () => {
+  it("shows the calendar's own name", () => {
+    expect(calendarDisplayName(calendar(1, { name: "Familie" }))).toBe("Familie");
+  });
+
+  it("shows the provider when the name is empty or only spaces", () => {
+    expect(calendarDisplayName(calendar(1, { name: "", provider: "google" }))).toBe("Google");
+    expect(calendarDisplayName(calendar(1, { name: "  ", provider: "apple" }))).toBe("Apple iCloud");
+    expect(calendarDisplayName(calendar(1, { name: "", provider: "outlook" }))).toBe("Outlook");
+    expect(calendarDisplayName(calendar(1, { name: "", provider: "other" }))).toBe("Anderer Anbieter");
+  });
+
+  it("falls back to a general word when there is neither a name nor a provider", () => {
+    expect(calendarDisplayName({ name: "" })).toBe("Ein Kalender");
   });
 });
 

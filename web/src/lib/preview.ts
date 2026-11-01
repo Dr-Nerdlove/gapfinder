@@ -1,4 +1,5 @@
-import type { CalendarPreview, PreviewEvent } from "@lueckenfueller/shared";
+import type { CalendarPreview, CalendarProvider, PreviewEvent } from "@lueckenfueller/shared";
+import { calendarDisplayName } from "./calendars";
 
 // Groups the events of the preview by day in German time. All times are UTC instants from the server;
 // the day borders are German midnights, so a day can be 23 or 25 hours long (clock change).
@@ -205,10 +206,11 @@ export interface ProblemNotice {
 /** One notice per calendar that could not be read for the preview. */
 export function problemNotices(
   problems: CalendarPreview["problems"],
-  calendars: readonly { id: number; name: string }[],
+  calendars: readonly { id: number; name: string; provider?: CalendarProvider }[],
 ): ProblemNotice[] {
   return problems.map(({ calendarId, problem }) => {
-    const name = calendars.find((calendar) => calendar.id === calendarId)?.name ?? "Ein Kalender";
+    const calendar = calendars.find((c) => c.id === calendarId);
+    const name = calendar ? calendarDisplayName(calendar) : "Ein Kalender";
     const text =
       problem === "broken"
         ? `Der Link von „${name}“ funktioniert nicht mehr.`

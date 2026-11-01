@@ -131,6 +131,13 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     again; nothing else is lost.
   - The server starts without the key (calendars then report "not set up"): a new image that refused to start
     would be rolled back by the VM before the owner could rerun `setup.sh`.
+  - Settled while building 2b: the preview runs from **00:00 German time today** for 28 days (a day with a clock
+    change is 23 or 25 hours long); calendars are read for **a day back to 400 days ahead**, so the later gap
+    search needs no second read; **checking a link** (a new calendar, or a new link) is limited to **20 per
+    person and 15 minutes** (in memory); a calendar **without a name** (none given, none in the feed) is stored
+    with an empty name and the app shows the provider's name (Google, Apple iCloud, Outlook, Anderer Anbieter);
+    a stored link that cannot be decrypted counts as "not reachable", never as an error; the admin's user list
+    carries only the number of broken calendars.
   - Built as two pull requests: 2a the VM side (key, backups, firewall), 2b the calendars in the app.
 
 ### Finding gaps

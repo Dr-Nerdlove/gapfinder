@@ -6,6 +6,8 @@ import type { Writable } from "node:stream";
 import { purgeExpired } from "./accounts/cleanup.js";
 import { RateLimiter } from "./auth/rate-limit.js";
 import { prepareCalendarKey } from "./calendar-key.js";
+import { CalendarCache } from "./calendars/cache.js";
+import { fetchCalendarText, type FetchResult } from "./calendars/fetch.js";
 import type { Config } from "./config.js";
 import type { AppContext } from "./context.js";
 import { openDatabase } from "./db.js";
@@ -13,6 +15,7 @@ import { errorHandler, notFoundHandler } from "./errors.js";
 import { maskTokens } from "./log-masking.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAuthRoutes } from "./routes/auth.js";
+import { registerCalendarRoutes } from "./routes/calendars.js";
 import { registerInviteRoutes } from "./routes/invites.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerPasswordResetRoutes } from "./routes/password-resets.js";
@@ -26,6 +29,8 @@ export interface BuildAppOptions {
   db?: DatabaseSync;
   /** Where the log goes instead of standard output (tests). */
   logStream?: Writable;
+  /** Fetches calendar links instead of the real, network-using fetcher (tests never touch the network). */
+  fetchCalendarText?: (url: URL) => Promise<FetchResult>;
 }
 
 /** Builds the server without listening, so tests can use `app.inject`. */
@@ -64,7 +69,15 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   } else {
     app.log.error("CALENDAR_KEY does not match the key the stored calendar links were encrypted with");
   }
-  const ctx: AppContext = { config, db, now, limiter: new RateLimiter(now), calendarKeyStatus };
+  const ctx: AppContext = {
+    config,
+    db,
+    now,
+    limiter: new RateLimiter(now),
+    calendarKeyStatus,
+    calendarCache: new CalendarCache(now),
+    fetchCalendarText: options.fetchCalendarText ?? ((url) => fetchCalendarText(url)),
+  };
   purgeExpired(db, now());
 
   // A JSON content type without a body (e.g. logout) is an empty request, not a syntax error.
@@ -101,6 +114,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
 
   registerAuthRoutes(app, ctx);
   registerMeRoutes(app, ctx);
+  registerCalendarRoutes(app, ctx);
   registerInviteRoutes(app, ctx);
   registerPasswordResetRoutes(app, ctx);
   registerAdminRoutes(app, ctx);

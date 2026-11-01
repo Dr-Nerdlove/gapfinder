@@ -13,6 +13,16 @@ export function providerLabel(provider: CalendarProvider): string {
   return PROVIDER_LABELS[provider] ?? PROVIDER_LABELS.other;
 }
 
+/**
+ * What to show as the calendar's name: its own name, or - when it has none (the server stores an empty name
+ * when the person gave none and the feed has none either) - the provider's name.
+ */
+export function calendarDisplayName(calendar: { name: string; provider?: CalendarProvider }): string {
+  const name = calendar.name.trim();
+  if (name !== "") return name;
+  return calendar.provider === undefined ? "Ein Kalender" : providerLabel(calendar.provider);
+}
+
 /** How many of the calendars have a link that no longer works. */
 export function brokenCount(calendars: readonly Pick<Calendar, "status">[]): number {
   return calendars.filter((calendar) => calendar.status === "broken").length;

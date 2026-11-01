@@ -12,7 +12,10 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 **Phase 1c: foundation done.** The app is deployed automatically, the server runs on the home PC with automatic
 updates, and there are accounts: friends join through a personal invite link from the admin, log in with username
 and password, and change their name, password and colour in their profile. The admin manages invites and accounts
-in "Verwaltung" and creates links for forgotten passwords. Calendars, gap search and voting follow in later phases.
+in "Verwaltung" and creates links for forgotten passwords. **Phase 2: calendars.** Everyone links calendars through
+their subscription link (the server tries the link at once, stores it encrypted and never shows it again), sets
+which count as busy and which is the default, and sees a preview of their own next 4 weeks. Calendar contents
+are never stored. Gap search and voting follow in later phases.
 The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8). The database
 is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9 and "Restoring a backup").
 

@@ -2,6 +2,7 @@
   import type { Calendar, CalendarPreview } from "@lueckenfueller/shared";
   import { untrack } from "svelte";
   import * as api from "../../lib/api";
+  import { calendarDisplayName } from "../../lib/calendars";
   import { errorMessage } from "../../lib/messages";
   import { previewDays, problemNotices } from "../../lib/preview";
   import { session } from "../../lib/session.svelte";
@@ -43,7 +44,7 @@
     untrack(() => void load());
   });
 
-  const names = $derived(new Map(calendars.map((calendar) => [calendar.id, calendar.name])));
+  const names = $derived(new Map(calendars.map((calendar) => [calendar.id, calendarDisplayName(calendar)])));
   const days = $derived(preview ? previewDays(preview) : []);
   const notices = $derived(preview ? problemNotices(preview.problems, calendars) : []);
 </script>

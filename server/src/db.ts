@@ -61,6 +61,25 @@ export const migrations: readonly Migration[] = [
     ) STRICT;
     CREATE INDEX password_resets_user_id ON password_resets (user_id);`,
   },
+  {
+    id: 3,
+    name: "calendars",
+    // Additive only: an older server keeps running on this database and never touches the table. Only the
+    // encrypted link and the settings are stored, never the contents of a calendar.
+    sql: `CREATE TABLE calendars (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      link_encrypted TEXT NOT NULL,
+      counts_busy INTEGER NOT NULL DEFAULT 1,
+      is_default INTEGER NOT NULL DEFAULT 0,
+      status TEXT NOT NULL DEFAULT 'ok' CHECK (status IN ('ok', 'broken')),
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL
+    ) STRICT;
+    CREATE INDEX calendars_user_id ON calendars (user_id);`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */
