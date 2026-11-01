@@ -1,4 +1,5 @@
 import { argbFromHex, hexFromArgb, themeFromSourceColor } from "@material/material-color-utilities";
+import { normalizeSeedColor } from "@lueckenfueller/shared";
 
 export const SEED_COLOR = "#6750A4";
 
@@ -27,9 +28,20 @@ export function generateThemeVariables(seed: string): { light: Record<string, st
   };
 }
 
-/** Applies the colours to `<html>` and follows the phone's light/dark setting. Returns a function that stops it. */
-export function startTheme(seed: string = SEED_COLOR): () => void {
-  const variables = generateThemeVariables(seed);
+/** The seed to use: the given `#rrggbb` colour, or the app's default when there is none or it is not valid. */
+export function resolveSeed(seed: string | null | undefined): string {
+  return (seed ? normalizeSeedColor(seed) : null) ?? SEED_COLOR;
+}
+
+export interface ThemeHandle {
+  /** Switches to another seed colour (null = default) without a reload. */
+  setSeed(seed: string | null | undefined): void;
+  stop(): void;
+}
+
+/** Applies the colours to `<html>` and follows the phone's light/dark setting. */
+export function startTheme(seed?: string | null): ThemeHandle {
+  let variables = generateThemeVariables(resolveSeed(seed));
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   const root = document.documentElement;
 
@@ -43,5 +55,13 @@ export function startTheme(seed: string = SEED_COLOR): () => void {
 
   media.addEventListener("change", apply);
   apply();
-  return () => media.removeEventListener("change", apply);
+  return {
+    setSeed(next) {
+      variables = generateThemeVariables(resolveSeed(next));
+      apply();
+    },
+    stop() {
+      media.removeEventListener("change", apply);
+    },
+  };
 }

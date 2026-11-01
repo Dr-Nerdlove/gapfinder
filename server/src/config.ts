@@ -12,6 +12,11 @@ export interface Config {
   appVersion: string;
   /** Trust `X-Forwarded-*` headers. Only switch on behind a proxy you control. */
   trustProxy: boolean;
+  /**
+   * Address of the web app including its path, always ending with `/` (e.g. `https://user.github.io/gapfinder/`).
+   * Only the command line tool needs it, to print invite and password links.
+   */
+  appUrl: string;
   /** Pino log level; `silent` turns logging off (tests). */
   logLevel: LogLevel;
 }
@@ -36,6 +41,20 @@ function isOrigin(value: string): boolean {
     return (url.protocol === "http:" || url.protocol === "https:") && url.origin === value;
   } catch {
     return false;
+  }
+}
+
+/** The address with a trailing slash, or null when it is not an http(s) address without `#` and `?`. */
+function parseAppUrl(value: string): string | null {
+  try {
+    const url = new URL(value);
+    if ((url.protocol !== "http:" && url.protocol !== "https:") || url.hash !== "" || url.search !== "") {
+      return null;
+    }
+    if (value.includes("#") || value.includes("?")) return null;
+    return url.href.endsWith("/") ? url.href : `${url.href}/`;
+  } catch {
+    return null;
   }
 }
 
@@ -77,13 +96,21 @@ export function loadConfig(env: Env = process.env): Config {
     problems.push(`TRUST_PROXY must be "true" or "false" (got "${trustProxyText}")`);
   }
 
+  const appUrlText = get("APP_URL", "http://localhost:5173/");
+  const appUrl = parseAppUrl(appUrlText);
+  if (appUrl === null) {
+    problems.push(
+      `APP_URL must be the web app's address like https://example.github.io/gapfinder/ (http or https, no # or ?; got "${appUrlText}")`,
+    );
+  }
+
   const logLevelText = get("LOG_LEVEL", "info").toLowerCase();
   const logLevel = LOG_LEVELS.find((level) => level === logLevelText);
   if (!logLevel) {
     problems.push(`LOG_LEVEL must be one of ${LOG_LEVELS.join(", ")} (got "${logLevelText}")`);
   }
 
-  if (problems.length > 0 || !logLevel) {
+  if (problems.length > 0 || !logLevel || appUrl === null) {
     throw new ConfigError(problems);
   }
 
@@ -95,6 +122,7 @@ export function loadConfig(env: Env = process.env): Config {
     corsOrigins,
     appVersion,
     trustProxy: trustProxyText === "true",
+    appUrl,
     logLevel,
   };
 }

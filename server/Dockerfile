@@ -15,8 +15,11 @@ FROM node:24-slim AS runtime
 LABEL org.opencontainers.image.source="https://github.com/Dr-Nerdlove/gapfinder" \
       org.opencontainers.image.licenses="AGPL-3.0-only"
 ARG APP_VERSION=dev
+# Address of the web app (e.g. https://user.github.io/gapfinder/); empty = the server's built-in default.
+ARG APP_URL=
 ENV NODE_ENV=production \
     APP_VERSION=${APP_VERSION} \
+    APP_URL=${APP_URL} \
     DATA_DIR=/data \
     PORT=8080 \
     HOST=0.0.0.0

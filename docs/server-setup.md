@@ -152,6 +152,50 @@ Open the app (<https://dr-nerdlove.github.io/gapfinder/>): it should say that th
 The server address is not secret (it is visible in the published app anyway); still, there is no need to post
 it anywhere.
 
+## 8. Create your admin account
+
+Accounts only exist through personal invite links. The very first one, yours, you create in the VM. Connect to
+the VM with `ssh` (step 4). This works only once the server version with accounts is running in the VM: wait
+about an hour after it was merged (the VM checks hourly), or update right away with this command in the VM:
+
+```bash
+sudo systemctl start lueckenfueller-update
+```
+
+Then run these two commands. Replace "Vorname Nachname" with your own name; it is only used to suggest your
+username (e.g. "Vincent Richter" becomes "Vincent R."):
+
+```bash
+cd /opt/lueckenfueller
+```
+
+```bash
+sudo docker compose exec api node server/dist/cli.js admin-link "Vorname Nachname"
+```
+
+It prints a link that looks like `https://dr-nerdlove.github.io/gapfinder/#/einladung/...`. Copy it, open it on
+your phone **within 14 days** and choose your username and your password. The link works only once. Afterwards
+you are logged in as admin; your friends' invite links you create in the app itself.
+
+If the link has expired or got lost, just run the second command again for a new one.
+
+## Forgot your own admin password
+
+Friends who forget their password ask you; you make a new link for them in the admin area of the app. If you
+forget yours, create a link in the VM. Replace the name in quotes with your username exactly as the app shows
+it (upper and lower case do not matter):
+
+```bash
+cd /opt/lueckenfueller
+```
+
+```bash
+sudo docker compose exec api node server/dist/cli.js password-link "Vincent R."
+```
+
+Open the printed link on your phone **within 24 hours** and choose a new password. The link works only once, and
+all logins of this account end when you use it.
+
 ## Everyday operation
 
 Nothing to do. When the PC is off (01:00–07:00), the app says "Lückenfüller schläft gerade"; in the morning

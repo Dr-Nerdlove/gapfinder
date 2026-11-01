@@ -9,18 +9,25 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 
 ## Status
 
-**Phase 1b: foundation.** The project skeleton exists and is deployed automatically, and there is a guide for
-running the server on the home PC with automatic updates. The app can only show whether the server is reachable. Accounts, calendars, gap search and voting follow in later phases.
+**Phase 1c: foundation done.** The app is deployed automatically, the server runs on the home PC with automatic
+updates, and there are accounts: friends join through a personal invite link from the admin, log in with username
+and password, and change their name, password and colour in their profile. The admin manages invites and accounts
+in "Verwaltung" and creates links for forgotten passwords. Calendars, gap search and voting follow in later phases.
+The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8).
 
-| Server reachable (light mode)                          | Server off (dark mode)                                  |
-| ------------------------------------------------------ | ------------------------------------------------------- |
-| ![Start page, server reachable](docs/screenshots/start-online.png) | ![Start page, server asleep](docs/screenshots/start-offline.png) |
+| Login                                    | Invite link                                | Start, logged in                                     |
+| ---------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
+| ![Login page](docs/screenshots/login.png) | ![Invite page](docs/screenshots/invite.png) | ![Start page, logged in](docs/screenshots/start-logged-in.png) |
+
+| Profile (own colour)                         | Admin area (dark mode)                      | Server off                                                     |
+| -------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------- |
+| ![Profile page](docs/screenshots/profile.png) | ![Admin area](docs/screenshots/admin.png)   | ![Start page, server asleep](docs/screenshots/start-offline.png) |
 
 ## Repository layout
 
 | Folder    | What it is                                                                                   |
 | --------- | -------------------------------------------------------------------------------------------- |
-| `shared/` | TypeScript types and constants used by both sides (e.g. the `/api/health` answer).           |
+| `shared/` | The API contract: types, error codes and rules (usernames, durations) used by both sides.     |
 | `server/` | API server: Node.js, TypeScript, Fastify, SQLite (`node:sqlite`). Runs in Docker.            |
 | `web/`    | Frontend: Vite, Svelte 5, TypeScript, Material 3 look. Built as a static site.               |
 | `deploy/` | Files for the server VM: setup script, hourly update with rollback, systemd units.            |
@@ -40,6 +47,16 @@ npm run dev -w web      # frontend on http://localhost:5173
 
 The frontend finds the API through `VITE_API_URL` (default `http://localhost:8080`). The server allows calls from
 `http://localhost:5173` by default; see `.env.example` for all server settings.
+
+Accounts only come from invite links. For a first local admin account, build the server and create an admin link
+(it points to `APP_URL`, default `http://localhost:5173/`):
+
+```sh
+npm run build -w server
+cd server && node dist/cli.js admin-link "Vorname Nachname"   # uses ./data like the dev server
+```
+
+`node dist/cli.js password-link "<username>"` makes a password reset link the same way.
 
 ## Test and build
 
