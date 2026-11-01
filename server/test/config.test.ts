@@ -11,6 +11,7 @@ describe("loadConfig", () => {
       corsOrigins: ["http://localhost:5173"],
       appVersion: "dev",
       trustProxy: false,
+      appUrl: "http://localhost:5173/",
       logLevel: "info",
     });
     expect(config.databasePath).toMatch(/lueckenfueller\.sqlite$/);
@@ -40,9 +41,28 @@ describe("loadConfig", () => {
     [{ CORS_ORIGIN: "not a url" }, /CORS_ORIGIN/],
     [{ TRUST_PROXY: "maybe" }, /TRUST_PROXY/],
     [{ LOG_LEVEL: "loud" }, /LOG_LEVEL/],
+    [{ APP_URL: "ftp://example.com/app/" }, /APP_URL/],
+    [{ APP_URL: "not a url" }, /APP_URL/],
+    [{ APP_URL: "https://example.github.io/app/#/start" }, /APP_URL/],
+    [{ APP_URL: "https://example.github.io/app/#" }, /APP_URL/],
+    [{ APP_URL: "https://example.github.io/app/?x=1" }, /APP_URL/],
   ])("throws a clear error for invalid values %j", (env, message) => {
     expect(() => loadConfig(env)).toThrow(ConfigError);
     expect(() => loadConfig(env)).toThrow(message);
+  });
+
+  it("always ends APP_URL with a slash and keeps its path", () => {
+    expect(loadConfig({ APP_URL: "https://dr-nerdlove.github.io/gapfinder" }).appUrl).toBe(
+      "https://dr-nerdlove.github.io/gapfinder/",
+    );
+    expect(loadConfig({ APP_URL: "https://dr-nerdlove.github.io/gapfinder/" }).appUrl).toBe(
+      "https://dr-nerdlove.github.io/gapfinder/",
+    );
+    expect(loadConfig({ APP_URL: "http://localhost:5173" }).appUrl).toBe("http://localhost:5173/");
+  });
+
+  it("falls back to the default when APP_URL is empty (the Docker image sets it empty without a build argument)", () => {
+    expect(loadConfig({ APP_URL: "" }).appUrl).toBe("http://localhost:5173/");
   });
 
   it("lists every problem at once", () => {
