@@ -62,7 +62,8 @@ cli() {
   local opts=()
   while [[ "$1" != "--" ]]; do opts+=("$1"); shift; done
   shift
-  docker compose run --rm --no-deps -T "${opts[@]}" "$SERVICE" "${CLI[@]}" "$@"
+  # </dev/null: "run" would otherwise pass on what is typed (or piped) next, e.g. the "yes" of a restore.
+  docker compose run --rm --no-deps -T "${opts[@]}" "$SERVICE" "${CLI[@]}" "$@" </dev/null
 }
 
 # --- Windows folder ---------------------------------------------------------------------------------
@@ -263,6 +264,13 @@ cmd_setup() {
   setup_key
   setup_share
   echo >&2
+  # A new VM with the old backups still in Windows: a backup of its empty database would become the newest
+  # one, and "restore" would pick it. Leave that to the owner, who restores first.
+  if [[ -z "$(local_list)" && -n "$(remote_list)" ]]; then
+    log "the Windows folder already holds backups and this VM has none (a new VM?). No backup was made now."
+    log "to bring the newest one back:  sudo lueckenfueller-backup restore"
+    return 0
+  fi
   log "making a first backup now ..."
   cmd_run
 }
