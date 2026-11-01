@@ -18,6 +18,15 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   reset_invalid: "Dieser Link zum Zurücksetzen gilt nicht mehr. Bitte den Admin um einen neuen.",
   wrong_password: "Das aktuelle Passwort stimmt nicht.",
   cannot_delete_self: "Du kannst dein eigenes Konto nicht löschen.",
+  calendar_link_invalid: "Das ist kein gültiger Kalender-Link. Er muss mit https:// oder webcal:// beginnen.",
+  calendar_link_blocked: "Diesen Link darf Lückenfüller nicht abrufen. Bitte nimm den Abo-Link aus deinem Kalender.",
+  calendar_gone:
+    "Unter diesem Link gibt es keinen Kalender (mehr). Bitte kopiere den Link neu aus deinem Kalender.",
+  calendar_unreachable: "Der Kalenderanbieter antwortet gerade nicht. Versuch es gleich noch einmal.",
+  calendar_not_ics: "Unter diesem Link liegt kein Kalender. Bitte nimm die Adresse im iCal-Format.",
+  calendar_too_large: "Dieser Kalender ist zu groß (mehr als 10 MB).",
+  calendar_limit: "Du hast schon 10 Kalender verknüpft. Entferne erst einen.",
+  calendars_unavailable: "Kalender sind auf dem Server noch nicht eingerichtet. Sag dem Admin Bescheid.",
   error: "Das hat nicht geklappt. Bitte versuche es noch einmal.",
 };
 
@@ -40,6 +49,7 @@ const FIELD_NAMES: Record<string, string> = {
   newPassword: "Neues Passwort",
   name: "Name",
   seedColor: "Farbe",
+  link: "Kalender-Link",
 };
 
 /** "Zu viele Versuche. Bitte warte 3 Minuten." Rounds up, at least one minute. */

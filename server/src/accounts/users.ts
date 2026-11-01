@@ -15,8 +15,15 @@ export function toMe(user: UserRow): Me {
   return { id: user.id, username: user.username, isAdmin: user.is_admin === 1, seedColor: user.seed_color };
 }
 
-export function toAdminUser(user: UserRow): AdminUser {
-  return { id: user.id, username: user.username, isAdmin: user.is_admin === 1, createdAt: user.created_at };
+/** `calendarProblems`: how many of the person's calendars are broken (a count only, never more about them). */
+export function toAdminUser(user: UserRow, calendarProblems: number): AdminUser {
+  return {
+    id: user.id,
+    username: user.username,
+    isAdmin: user.is_admin === 1,
+    createdAt: user.created_at,
+    calendarProblems,
+  };
 }
 
 export function findUserById(db: DatabaseSync, id: number): UserRow | undefined {

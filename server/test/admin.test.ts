@@ -62,8 +62,9 @@ describe("GET /api/admin/users", () => {
       username: "Admin A.",
       isAdmin: true,
       createdAt: e.clock.now().toISOString(),
+      calendarProblems: 0,
     });
-    expect(Object.keys(users[1]!).sort()).toEqual(["createdAt", "id", "isAdmin", "username"]);
+    expect(Object.keys(users[1]!).sort()).toEqual(["calendarProblems", "createdAt", "id", "isAdmin", "username"]);
   });
 });
 

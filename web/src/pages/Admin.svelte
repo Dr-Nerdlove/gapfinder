@@ -62,7 +62,7 @@
       <OpenInvites {invites} onwithdrawn={(id) => (invites = invites.filter((i) => i.id !== id))} />
       <UserList
         {users}
-        onrenamed={(user) => (users = users.map((u) => (u.id === user.id ? user : u)).sort(byName))}
+        onrenamed={(user) => (users = users.map((u) => (u.id === user.id ? { ...u, ...user } : u)).sort(byName))}
         ondeleted={(id) => (users = users.filter((u) => u.id !== id))}
       />
     {/if}

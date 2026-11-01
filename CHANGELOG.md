@@ -7,6 +7,17 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 2b, calendars: everyone can link their calendars through the subscription link of Google, Apple iCloud
+  or Outlook ("Kalender" page). The server tries a new link at once and keeps it only when it works; the link
+  is stored encrypted and never shown again, only the provider and the name. Up to 10 calendars per person, one
+  of them the default one, and each can be switched to "counts as busy" or not (e.g. a birthday calendar). A
+  preview shows your own events of the next 4 weeks (from midnight today), with their titles that only you ever
+  see; calendar contents are only kept in the server's memory for 15 minutes and never written to disk or into
+  a backup. If a provider says a calendar is gone (e.g. Google's secret address was reset), it is marked
+  broken, the start page and the calendar list say so ("Link neu eintragen"), and nothing is deleted; the admin
+  only sees a count ("1 Kalender mit Problem"). A calendar without a name is shown under its provider's name.
+  Checking links is limited to 20 per person every 15 minutes. **The server image must be updated; the VM
+  needs `setup.sh` (phase 2a) first** or the calendars page says they are not set up yet.
 - Phase 2a, preparing the server for calendars: a key for storing calendar links encrypted, which every
   nightly backup carries (encrypted with the backup key) and a restore puts back; and a firewall that lets the
   server's container reach only the internet over HTTPS (and two public name servers), never the home network,

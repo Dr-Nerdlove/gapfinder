@@ -154,6 +154,9 @@ missing, with a recommendation, and let the people choose.
 - **Traps:**
   - GitHub Pages only serves static files and has no fallback for app routes (use hash routing). Nothing
     secret (calendar links, tokens, keys) may ever end up in the static site.
+  - Every outgoing request for a user's calendar link must go through `server/src/calendars/fetch.ts` (it
+    blocks private addresses); calendar contents stay in memory only (`server/src/calendars/cache.ts`), never
+    in the database, a log or a backup.
   - The home PC is off from 01:00 to 07:00: the app must cope with an unreachable server.
   - Frontend (`github.io`) and API (`ts.net`) are different sites: no login cookies, use a token header.
   - The frontend updates immediately on deploy, the server only when the owner updates the VM: keep the API

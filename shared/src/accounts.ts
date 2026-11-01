@@ -81,6 +81,11 @@ export interface AdminUser {
   username: string;
   isAdmin: boolean;
   createdAt: string;
+  /**
+   * How many of this person's calendars are marked broken: the admin sees only this count, never the calendars.
+   * Missing from servers older than the calendar feature.
+   */
+  calendarProblems?: number;
 }
 
 /** `PATCH /api/admin/users/:id` → `AdminUser`. */

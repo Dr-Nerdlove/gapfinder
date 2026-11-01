@@ -15,6 +15,7 @@ import { createInvite, deleteUnusedInvite, listOpenInvites, toAdminInvite } from
 import { createPasswordReset } from "../accounts/resets.js";
 import { deleteUser, findUserById, findUserByKey, listUsers, toAdminUser, updateUsername } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
+import { countBroken } from "../calendars/store.js";
 import { isUniqueViolation } from "../db.js";
 import type { AppContext } from "../context.js";
 import { ApiError, notFound, validation } from "../errors.js";
@@ -40,7 +41,9 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
     admin.addHook("onRequest", requireUser);
     admin.addHook("onRequest", requireAdmin);
 
-    admin.get("/api/admin/users", async (): Promise<AdminUser[]> => listUsers(ctx.db).map(toAdminUser));
+    admin.get("/api/admin/users", async (): Promise<AdminUser[]> =>
+      listUsers(ctx.db).map((user) => toAdminUser(user, countBroken(ctx.db, user.id))),
+    );
 
     admin.patch<{ Body: AdminRenameUserRequest }>(
       "/api/admin/users/:id",
@@ -57,7 +60,7 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
           if (isUniqueViolation(error)) throw new ApiError(409, "username_taken");
           throw error;
         }
-        return toAdminUser(findUserById(ctx.db, id)!);
+        return toAdminUser(findUserById(ctx.db, id)!, countBroken(ctx.db, id));
       },
     );
 

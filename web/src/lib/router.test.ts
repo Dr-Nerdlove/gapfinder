@@ -10,6 +10,9 @@ describe("parseRoute", () => {
     ["#/anmelden", { name: "login" }],
     ["#/anmelden/", { name: "login" }],
     ["#/profil", { name: "profile" }],
+    ["#/kalender", { name: "calendars" }],
+    ["#/kalender/", { name: "calendars" }],
+    ["#/kalender?x=1", { name: "calendars" }],
     ["#/verwaltung", { name: "admin" }],
     ["#/verwaltung?x=1", { name: "admin" }],
   ])("maps %j to its page", (hash, route) => {
@@ -43,7 +46,7 @@ describe("parseRoute", () => {
     expect(parseRoute(hash)).toEqual({ name: "not-found" });
   });
 
-  it.each(["#/gibt-es-nicht", "#/start/extra", "#nonsense", "#/profil/extra", "#/token/abc"])(
+  it.each(["#/gibt-es-nicht", "#/start/extra", "#nonsense", "#/profil/extra", "#/kalender/extra", "#/calendars", "#/token/abc"])(
     "maps %j to not-found",
     (hash) => {
       expect(parseRoute(hash)).toEqual({ name: "not-found" });

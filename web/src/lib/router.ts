@@ -4,6 +4,7 @@ export type Route =
   | { name: "invite"; token: string }
   | { name: "password-reset"; token: string }
   | { name: "profile" }
+  | { name: "calendars" }
   | { name: "admin" }
   | { name: "not-found" };
 
@@ -21,6 +22,8 @@ export function parseRoute(hash: string): Route {
       return { name: "login" };
     case "/profil":
       return { name: "profile" };
+    case "/kalender":
+      return { name: "calendars" };
     case "/verwaltung":
       return { name: "admin" };
   }
