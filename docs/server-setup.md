@@ -578,17 +578,24 @@ The Tailscale connection and the server address are the same in both directions.
    ```
 
 6. **Test with the VPN on.** Switch NordVPN **on** on the PC, then:
-   - On your phone over mobile data (Wi-Fi off) open the server address (`https://...ts.net`) and the app: both
-     must work.
-   - In the VM: `sudo journalctl -u tailscaled --since "-15 min" | grep -c "derp.Recv"` should stay at 0 or
-     close to it (before, it was about one per minute), and `tailscale netcheck` should work.
+   - On your phone over mobile data (Wi-Fi off) open the app and `https://...ts.net/api/health` (it shows
+     `ok`): both must work. The server address alone shows `{"statusCode":404,...}`: that is fine, the server
+     answers, it just has no page there.
+   - Wait 10 minutes with the VPN on. In the VM:
+     `sudo journalctl -u tailscaled --since "-10 min" | grep -c "derp.Recv"` and
+     `sudo journalctl -u tailscaled --since "-10 min" | grep -ci "connection reset"` should both be 0 or close
+     to it (before, there was about one per minute). In `tailscale netcheck` the line "IPv4: yes, ..." must
+     show your home connection's public address, not the VPN's.
    - Make a backup and check it again (step 5) with the VPN on.
 
    NordVPN has two settings that can cut the connection between the PC and the VM: **"Invisibility on LAN"**
    (the VM's backups to the PC are blocked) and the **kill switch**. Keep both off. If backups fail only while
    the VPN is on, look there first.
 
-   Optionally: `ssh` from another device at home (for example your phone in the Wi-Fi) must **not** connect.
+   Optionally: `ssh` from another device at home (for example your phone in the Wi-Fi, with an app such as
+   Termius or WolOn) must **not** connect. Use a wrong password and a harmless command such as `hostname`:
+   "not reachable" or a timeout is right; "authentication failed" means the VM answered and the SSH limit does
+   not work.
 
 ## If something goes wrong
 

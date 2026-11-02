@@ -239,7 +239,10 @@ missing, with a recommendation, and let the people choose.
     Default Switch: that one NATs through Windows, so a VPN on the PC (NordVPN, even with per-app split
     tunneling) carried the VM's traffic and broke Tailscale (DERP dropped every minute, Funnel unreachable;
     diagnosed 2026-11-02). Changes to network, address or switch must be done at the Hyper-V console, not over
-    ssh.
+    ssh. Moved and verified on 2026-11-02 with NordVPN on: app and `/api/health` reachable over mobile data,
+    0 DERP drops and 0 "connection reset" in 10 minutes, `tailscale netcheck` showed the home connection's
+    public IPv4 (not the VPN's), backup and trial restore worked, SSH from a phone in the home Wi-Fi did not
+    connect.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
