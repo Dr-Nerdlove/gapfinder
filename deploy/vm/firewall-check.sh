@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Checks from inside the server container that the firewall (firewall.nft) works: the server reaches the
-# internet, but not the Windows PC, the VM or Tailscale.
+# internet, but not the Windows PC, the home router, the VM or Tailscale.
 #
 # Installed by setup.sh as /usr/local/sbin/lueckenfueller-firewall-check; setup.sh runs it as its last step.
 # Run it by hand with:  sudo lueckenfueller-firewall-check
@@ -16,14 +16,16 @@ fail() { echo "lueckenfueller-firewall-check: ERROR: $*" >&2; exit 1; }
 
 [[ "$(id -u)" -eq 0 || -n "${LUECKENFUELLER_DIR:-}" ]] || fail "please run with sudo:  sudo lueckenfueller-firewall-check"
 
-# The Windows PC as seen from the VM: Hyper-V's "Default Switch" makes it the VM's default gateway.
-pc="$(ip route show default 2>/dev/null | awk '$1 == "default" { print $3; exit }')"
+# The Windows PC (its fixed address from setup.sh) and the home router (the VM's default gateway).
+pc="$(head -n 1 /etc/lueckenfueller/windows-pc 2>/dev/null || true)"
+router="$(ip route show default 2>/dev/null | awk '$1 == "default" { print $3; exit }')"
 # The VM's own Tailscale address (empty when Tailscale is not up).
 ts="$(tailscale ip -4 2>/dev/null | head -n 1 || true)"
 
-# Arguments: the PC's address, the VM's Tailscale address (each may be empty).
-# Must stay blocked: the PC (SMB), the container's own gateway = the VM on the Docker network (SSH), the
-# VM's Tailscale address (SSH). Must connect: a public website (DNS and internet work).
+# Arguments: the PC's address, the router's, the VM's Tailscale address (each may be empty).
+# Must stay blocked: the PC (SMB), the router (its web page), the container's own gateway = the VM on the
+# Docker network (SSH), the VM's Tailscale address (SSH).
+# Must connect: a public website (DNS and internet work).
 read -r -d '' js <<'JS' || true
 const net = require("node:net");
 const fs = require("node:fs");
@@ -51,9 +53,10 @@ const gateway = () => {
   return "";
 };
 (async () => {
-  const [pc, ts] = process.argv.slice(1);
+  const [pc, router, ts] = process.argv.slice(1);
   const checks = [];
   if (pc) checks.push({ what: "the Windows PC", host: pc, port: 445, want: false });
+  if (router) checks.push({ what: "the home router", host: router, port: 80, want: false });
   const gw = gateway();
   if (gw) checks.push({ what: "the VM (Docker network)", host: gw, port: 22, want: false });
   if (ts) checks.push({ what: "Tailscale (this VM)", host: ts, port: 22, want: false });
@@ -71,8 +74,8 @@ const gateway = () => {
 JS
 
 cd "$APP_DIR"
-if docker compose exec -T api node -e "$js" "$pc" "$ts"; then
-  echo "Firewall check passed: the server reaches the internet, but not the PC, the VM or Tailscale."
+if docker compose exec -T api node -e "$js" "$pc" "$router" "$ts"; then
+  echo "Firewall check passed: the server reaches the internet, but not the PC, the router, the VM or Tailscale."
 else
   echo "Firewall check FAILED: see the lines marked FAIL above (or the server is not running)." >&2
   exit 1

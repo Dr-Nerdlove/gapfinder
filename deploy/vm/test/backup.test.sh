@@ -13,6 +13,9 @@ REPO="$(cd "$HERE/../../.." && pwd)"
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
 export REPO
+# backup.sh reads the Windows PC's address from this file when windows-folder.conf has no host= line. Point it
+# at a file that does not exist, so a test can never read the real /etc/lueckenfueller/windows-pc.
+export WINDOWS_PC_FILE="$WORK/no-such-windows-pc"
 
 if ! command -v age >/dev/null || ! command -v age-keygen >/dev/null; then
   echo "age is not installed (needed to test the backups): sudo apt-get install age" >&2
@@ -67,6 +70,7 @@ EOF
 chmod +x "$WORK/bin/docker"
 
 # The fake smbclient: the share is the folder $FAKE/share; touch $FAKE/offline to make the PC unreachable.
+# Every call is logged: one line with the host in $FAKE/smb_hosts.
 cat >"$WORK/bin/smbclient" <<'EOF'
 #!/usr/bin/env bash
 set -uo pipefail
@@ -83,6 +87,7 @@ while (($# > 0)); do
   esac
 done
 host="${unc#//}"; host="${host%%/*}"
+echo "$host" >>"$f/smb_hosts"
 share="${unc#//*/}"
 if [[ -f "$f/offline" || "$host" != "127.0.0.1" ]]; then
   echo "do_connect: Connection to $host failed (Error NT_STATUS_CONNECTION_REFUSED)"
@@ -163,6 +168,7 @@ new_case() {
   APP="$LUECKENFUELLER_DIR"
   mkdir -p "$APP/data" "$FAKE/share"
   : >"$FAKE/calls"
+  : >"$FAKE/smb_hosts"
   : >"$FAKE/input"
   VM_KEY="$(make_calendar_key)"
   set_env_key "$VM_KEY"
@@ -197,6 +203,8 @@ seed_invite() {
 local_names() { find "$APP/backups" -maxdepth 1 -type f -name 'lueckenfueller-*.sqlite.age' -printf '%f\n' 2>/dev/null | sort; }
 share_names() { find "$FAKE/share" -maxdepth 1 -type f -name 'lueckenfueller-*.sqlite.age' -printf '%f\n' | sort; }
 count_lines() { grep -c . || true; }
+# only_called_with_localhost: the fake smbclient was called, and only ever with the host 127.0.0.1.
+only_called_with_localhost() { [[ -s "$FAKE/smb_hosts" ]] && ! grep -q -v -x '127.0.0.1' "$FAKE/smb_hosts"; }
 calls() { paste -sd ',' "$FAKE/calls"; }
 
 # invites_in <sqlite file>: number of rows in the table "invites".
@@ -531,6 +539,44 @@ expect "no copy of .env in replaced-*" [ -z "$(find "$APP" -path '*/replaced-*/.
 expect "log says the backup holds no key" grep -q 'holds no calendar key' "$FAKE/output"
 expect "database restored (1 invite)" [ "$(invites_in "$APP/data/lueckenfueller.sqlite")" == "1" ]
 finish "restore of a backup without a calendar key: the VM keeps its own .env"
+
+# --- 11. where the Windows PC's address comes from ---------------------------------------------------
+
+# Without a host= line, the address comes from the file setup.sh writes (WINDOWS_PC_FILE).
+new_case
+preconfigure
+printf 'share=backup\n' >"$APP/backup-settings/windows-folder.conf"
+printf '127.0.0.1\n' >"$FAKE/windows-pc"
+seed_invite Anna
+WINDOWS_PC_FILE="$FAKE/windows-pc" bk run
+expect "exit 0" [ "$status" -eq 0 ]
+expect "backup in the share" [ "$(share_names)" == "$(local_names)" ]
+expect "one backup in the share" [ "$(share_names | count_lines)" -eq 1 ]
+expect "smbclient only called with the address from the file" only_called_with_localhost
+finish "no host= line: the backup goes to the address in the windows-pc file"
+
+# Without a host= line and without the file there is no fallback (the router must not get the Windows login).
+new_case
+preconfigure
+printf 'share=backup\n' >"$APP/backup-settings/windows-folder.conf"
+seed_invite Anna
+WINDOWS_PC_FILE="$FAKE/missing-windows-pc" bk run
+expect "fails" [ "$status" -ne 0 ]
+expect "says the address is not set up" grep -q "the Windows PC's address is not set up" "$FAKE/output"
+expect "smbclient was never called (no gateway or other fallback)" [ ! -s "$FAKE/smb_hosts" ]
+expect "share is empty" [ "$(share_names | count_lines)" -eq 0 ]
+expect "backup is in the VM anyway" [ "$(local_names | count_lines)" -eq 1 ]
+finish "no host= line and no windows-pc file: the copy fails with a clear message, nobody is contacted"
+
+# host= in windows-folder.conf wins over the file.
+new_case
+preconfigure
+printf '192.0.2.99\n' >"$FAKE/windows-pc"
+seed_invite Anna
+WINDOWS_PC_FILE="$FAKE/windows-pc" bk run
+expect "exit 0" [ "$status" -eq 0 ]
+expect "smbclient only called with host= from the settings" only_called_with_localhost
+finish "host= line and windows-pc file: the host= line wins"
 
 if ((failures > 0)); then
   echo "$failures test(s) failed"

@@ -5,6 +5,18 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Server VM moves into the home network.** The VM now sits on a Hyper-V external switch, directly in the home
+  network like any other device, instead of Hyper-V's "Default Switch". Before, a VPN on the Windows PC
+  (NordVPN, even with split tunneling) also carried the VM's traffic, Tailscale's connection dropped every
+  minute and the app was unreachable from outside. Now a VPN on the PC no longer affects the server. In the VM,
+  SSH from the home network works only from the Windows PC (over Tailscale and at the Hyper-V console it works
+  as before), and the backups go to the PC's fixed home-network address, which the setup now asks for. The
+  firewall check also proves that the server cannot reach the router. **To do for the owner:** follow "Moving
+  the VM from the Default Switch to the home network" in `docs/server-setup.md` and rerun `setup.sh` (changes in
+  `deploy/vm/` reach the VM only then). Until then the old VM keeps working as before.
+
 ### Added
 
 - Phase 4b, polls on screen: in the search result, tap free times to choose them; "Abstimmung anlegen" opens a

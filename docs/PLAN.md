@@ -44,7 +44,7 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   cloud. Chosen over a cloud storage account (one more outside account and key) and over a plain folder on the
   PC (lost together with the PC's disk). The secret key is never stored in the VM: a break-in there cannot read
   older backups, and the monthly trial restore also proves the owner still has the key. A dedicated Windows
-  user can reach only that folder; a firewall rule lets only the Hyper-V Default Switch reach port 445.
+  user can reach only that folder; a firewall rule lets only the VM's fixed home-network address reach port 445.
   Restore and trial restore: `deploy/vm/backup.sh`, guide in `docs/server-setup.md`.
 - **Server off (01:00–07:00 or any outage):** the app shows a friendly notice ("Lückenfüller schläft gerade")
   plus the last loaded state, read-only. Voting resumes when the server is back. (Queueing votes offline is a

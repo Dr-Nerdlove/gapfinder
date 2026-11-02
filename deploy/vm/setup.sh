@@ -49,11 +49,31 @@ Unattended-Upgrade::Origins-Pattern {
 };
 EOF
 
+step "The Windows PC in the home network"
+# The VM sits directly in the home network (Hyper-V external switch). The backups copy to the Windows PC, and
+# only the PC may connect to SSH; both need its fixed address (reserved in the router).
+install -d -m 0755 /etc/lueckenfueller
+valid_ipv4() {
+  local part
+  [[ "$1" =~ ^(0|[1-9][0-9]{0,2})(\.(0|[1-9][0-9]{0,2})){3}$ ]] || return 1
+  for part in ${1//./ }; do ((part <= 255)) || return 1; done
+}
+pc_old="$(cat /etc/lueckenfueller/windows-pc 2>/dev/null || true)"
+pc="${LUECKENFUELLER_WINDOWS_PC:-}"
+while ! valid_ipv4 "$pc"; do
+  [[ -z "$pc" ]] || echo "\"$pc\" is not an address like 192.168.1.20."
+  read -r -p "Address of the Windows PC in the home network${pc_old:+ [$pc_old]}: " pc || fail "No address entered."
+  pc="${pc:-$pc_old}"
+done
+printf '%s\n' "$pc" >/etc/lueckenfueller/windows-pc
+printf '# Written by setup.sh from /etc/lueckenfueller/windows-pc: the only home device allowed to use SSH.\nadd element inet lueckenfueller ssh_from4 { %s }\n' "$pc" >/etc/lueckenfueller/windows-pc.nft
+chmod 0644 /etc/lueckenfueller/windows-pc /etc/lueckenfueller/windows-pc.nft
+echo "Windows PC: $pc (backups go there, and only it may connect with ssh)."
+
 step "Firewall for the server"
 # The server fetches calendar links from the internet, so its container may only reach the public internet:
 # not the Windows PC, this VM, Docker or Tailscale. Loaded before Docker and before the server starts.
-# Loaded again (restart) on every run, so that changed rules take effect.
-install -d -m 0755 /etc/lueckenfueller
+# Loaded again (restart) on every run, so that changed rules take effect. It also limits SSH to the PC.
 fetch firewall.nft /etc/lueckenfueller/firewall.nft
 chmod 0644 /etc/lueckenfueller/firewall.nft
 fetch lueckenfueller-firewall.service /etc/systemd/system/lueckenfueller-firewall.service

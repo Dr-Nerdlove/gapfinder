@@ -10,6 +10,11 @@
 # Compose creates) is treated the same way. Traffic of the VM itself (SMB backups to the Windows PC,
 # Tailscale, updates) never comes in through these bridges and is not touched by any rule here.
 #
+# The VM sits directly in the home network (Hyper-V external switch), so every device at home can reach it.
+# Its only service there is SSH, and that is for the owner's Windows PC alone: the address in the set
+# ssh_from4 below, which lueckenfueller-firewall.service fills from /etc/lueckenfueller/windows-pc.nft
+# (written by setup.sh). SSH over Tailscale and from the VM itself is not limited.
+#
 # Our own table next to Docker's: a packet that is accepted here still goes through Docker's rules, but a
 # packet dropped here is gone for good. The priority "filter - 10" runs these rules before Docker's.
 
@@ -31,7 +36,7 @@ table inet lueckenfueller {
       100.64.0.0/10,    # carrier-grade NAT range, used by Tailscale for its addresses
       127.0.0.0/8,      # loopback
       169.254.0.0/16,   # link-local (cloud metadata services, automatic addresses)
-      172.16.0.0/12,    # private network (Docker networks, Hyper-V's Default Switch)
+      172.16.0.0/12,    # private network (Docker networks, Hyper-V's internal switches)
       192.0.0.0/24,     # reserved for protocol assignments
       192.0.2.0/24,     # documentation range (TEST-NET-1)
       192.88.99.0/24,   # old 6to4 relay anycast
@@ -62,6 +67,11 @@ table inet lueckenfueller {
     }
   }
 
+  # The Windows PC, the only device at home that may connect to SSH. Empty until the service adds it.
+  set ssh_from4 {
+    type ipv4_addr
+  }
+
   # Packets that a container sends on to somewhere else (out to the internet).
   chain forward {
     type filter hook forward priority filter - 10; policy accept;
@@ -80,7 +90,7 @@ table inet lueckenfueller {
     iifname { "br-*", "docker0" } drop
   }
 
-  # Packets that a container sends to the VM itself.
+  # Packets that a container or the home network sends to the VM itself.
   chain input {
     type filter hook input priority filter - 10; policy accept;
 
@@ -88,5 +98,10 @@ table inet lueckenfueller {
     iifname { "br-*", "docker0" } ct state established,related accept
     # The VM's own services (SSH, Tailscale, Docker) are not for the container.
     iifname { "br-*", "docker0" } drop
+
+    # SSH from the home network: only from the Windows PC. Over IPv6 not at all (the PC connects to the
+    # VM's IPv4 address). Tailscale and the VM itself (lo) are not limited.
+    iifname != { "lo", "tailscale0" } tcp dport 22 ip saddr @ssh_from4 accept
+    iifname != { "lo", "tailscale0" } tcp dport 22 drop
   }
 }

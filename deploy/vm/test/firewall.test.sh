@@ -4,7 +4,8 @@
 #   ctr  (the server container)  --[br-lftest]--  vm  (the VM, forwards packets)  --[eth0]--  inet
 #
 # "inet" plays the internet (1.2.3.4, 1.1.1.1, 9.9.9.9) and the home network (192.168.178.1, 10.1.1.1,
-# 100.100.100.100 = Tailscale, 172.20.5.1) at once, behind the VM's second network card. The VM's bridge is
+# 100.100.100.100 = Tailscale, 172.20.5.1) at once, plus the Windows PC (192.168.178.20, the only home
+# address that may connect to SSH), behind the VM's second network card. The VM's bridge is
 # named like Docker's (br-*), which is what the rules look at.
 # Needs root, ip (iproute2), nft (nftables) and node. Run:  sudo bash deploy/vm/test/firewall.test.sh
 # FIREWALL_NFT=<file> tests another copy of the rules (for sabotage checks).
@@ -59,7 +60,8 @@ in_inet ip link set lo up
 in_inet ip route add 172.30.0.0/24 via 10.99.0.1
 PUBLIC=(1.2.3.4 1.1.1.1 9.9.9.9)
 HOME_NET=(192.168.178.1 10.1.1.1 100.100.100.100 172.20.5.1)
-for address in "${PUBLIC[@]}" "${HOME_NET[@]}"; do
+PC=192.168.178.20
+for address in "${PUBLIC[@]}" "${HOME_NET[@]}" "$PC"; do
   in_inet ip addr add "$address/32" dev lo
   in_vm ip route add "$address/32" via 10.99.0.2
 done
@@ -89,16 +91,17 @@ for (const p of ports) {
 }
 JS
 
-# Tries all targets (host:port, or udp:host:port) at the same time. Prints "<target> <result>" per target:
+# Tries all targets (host:port, or udp:host:port; "source@" in front of a TCP target sets the source address)
+# at the same time. Prints "<target> <result>" per target:
 # "reply" (connected, said hello, got the answer), "connected" (no answer) or "blocked" (anything else,
 # including "refused" and a timeout: only a working connection counts as reachable).
 cat >"$WORK/client.js" <<'JS'
 const net = require("node:net");
 const dgram = require("node:dgram");
 const TIMEOUT = 2000;
-const tcp = (host, port) => new Promise((resolve) => {
+const tcp = (host, port, localAddress) => new Promise((resolve) => {
   let state = "blocked";
-  const socket = net.connect({ host, port });
+  const socket = net.connect({ host, port, localAddress });
   const done = () => { socket.destroy(); resolve(state); };
   socket.setTimeout(TIMEOUT, done);
   socket.once("error", done);
@@ -117,8 +120,9 @@ const udp = (host, port) => new Promise((resolve) => {
 });
 Promise.all(process.argv.slice(2).map(async (t) => {
   const isUdp = t.startsWith("udp:");
-  const [host, port] = (isUdp ? t.slice(4) : t).split(":");
-  const result = await (isUdp ? udp : tcp)(host, Number(port));
+  const [source, destination] = t.includes("@") ? t.split("@") : [undefined, t];
+  const [host, port] = (isUdp ? destination.slice(4) : destination).split(":");
+  const result = await (isUdp ? udp : tcp)(host, Number(port), source);
   return `${t} ${result}`;
 })).then((lines) => console.log(lines.join("\n")));
 JS
@@ -146,6 +150,11 @@ first="$(in_vm nft list ruleset)"
 # Loading the file a second time must replace the table, not add the rules once more.
 in_vm nft -f "$RULES"
 second="$(in_vm nft list ruleset)"
+
+# What lueckenfueller-firewall.service does after loading the rules: add the Windows PC to the SSH set
+# (the file is /etc/lueckenfueller/windows-pc.nft, written by setup.sh).
+printf 'add element inet lueckenfueller ssh_from4 { %s }\n' "$PC" >"$WORK/windows-pc.nft"
+in_vm nft -f "$WORK/windows-pc.nft"
 
 # --- Checks -----------------------------------------------------------------------------------------
 
@@ -179,6 +188,20 @@ vm_targets=(1.2.3.4:443 1.2.3.4:25)
 for address in "${HOME_NET[@]}"; do vm_targets+=("$address:445" "$address:443"); done
 from_vm="$(in_vm node "$WORK/client.js" "${vm_targets[@]}")"
 
+# SSH and SMB on the VM's own address, as the home network sees them: only the Windows PC may use SSH.
+# Tailscale and the VM itself are not limited, but the test network has no tailscale0 interface, so only the
+# VM itself (lo) is tried here.
+from_home="$(in_inet node "$WORK/client.js" "$PC@10.99.0.1:22" "192.168.178.1@10.99.0.1:22" "10.99.0.2@10.99.0.1:22" \
+  "$PC@10.99.0.1:445" "192.168.178.1@10.99.0.1:445")"
+from_vm_self="$(in_vm node "$WORK/client.js" 10.99.0.1:22 127.0.0.1:22)"
+
+# Reloading the rules empties the set (the table is replaced): until the service adds the PC again, it is
+# blocked, so the service must add it after every load. Then the element is added again.
+in_vm nft -f "$RULES"
+after_reload="$(in_inet node "$WORK/client.js" "$PC@10.99.0.1:22")"
+in_vm nft -f "$WORK/windows-pc.nft"
+after_readd="$(in_inet node "$WORK/client.js" "$PC@10.99.0.1:22")"
+
 check "loading the rules a second time changes nothing (no doubled rules)" [ "$first" == "$second" ]
 check "there is one table, ours" [ "$(grep -c '^table ' <<<"$second")" -eq 1 ]
 check "container -> public address :443 connects and data goes both ways" result_is "$from_ctr" 1.2.3.4:443 reply
@@ -204,6 +227,16 @@ for address in "${HOME_NET[@]}"; do
   check "VM -> home address $address:445 still connects (backups)" result_is "$from_vm" "$address:445" reply
 done
 check "VM -> the Windows PC 192.168.178.1:445 still connects" result_is "$from_vm" 192.168.178.1:445 reply
+
+check "SSH: the Windows PC ($PC) -> the VM's address :22 connects" result_is "$from_home" "$PC@10.99.0.1:22" reply
+check "SSH: another home address (192.168.178.1) -> the VM :22 is blocked" result_is "$from_home" "192.168.178.1@10.99.0.1:22" blocked
+check "SSH: the inet side's own address (10.99.0.2) -> the VM :22 is blocked" result_is "$from_home" "10.99.0.2@10.99.0.1:22" blocked
+check "SMB: the Windows PC -> the VM :445 still connects" result_is "$from_home" "$PC@10.99.0.1:445" reply
+check "SMB: another home address -> the VM :445 still connects (only SSH is limited)" result_is "$from_home" "192.168.178.1@10.99.0.1:445" reply
+check "SSH: the VM itself -> its own address :22 connects" result_is "$from_vm_self" 10.99.0.1:22 reply
+check "SSH: the VM itself -> 127.0.0.1:22 connects" result_is "$from_vm_self" 127.0.0.1:22 reply
+check "SSH: after reloading the rules the set is empty, so the PC is blocked until it is added again" result_is "$after_reload" "$PC@10.99.0.1:22" blocked
+check "SSH: after adding the PC again it connects" result_is "$after_readd" "$PC@10.99.0.1:22" reply
 
 if ((failures > 0)); then
   echo "$failures check(s) failed"

@@ -9,8 +9,8 @@ services:
       - path: .env
         required: true
     # The firewall (firewall.nft) lets the container reach only these two public resolvers. The VM's own
-    # resolver is the Hyper-V gateway (the Windows PC) or Tailscale's 100.100.100.100 (MagicDNS): both are
-    # blocked for the container, and Tailscale names must not resolve inside the container anyway.
+    # resolver is the home router or Tailscale's 100.100.100.100 (MagicDNS): both are blocked for the
+    # container, and Tailscale names must not resolve inside the container anyway.
     dns:
       - 9.9.9.9
       - 1.1.1.1
