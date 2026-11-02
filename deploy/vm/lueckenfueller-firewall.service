@@ -14,6 +14,9 @@ Conflicts=shutdown.target
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/sbin/nft -f /etc/lueckenfueller/firewall.nft
+# The Windows PC's address for SSH (written by setup.sh). Without it, SSH from the home network stays shut;
+# the Hyper-V console and Tailscale still work.
+ExecStart=-/usr/sbin/nft -f /etc/lueckenfueller/windows-pc.nft
 ExecStop=/usr/sbin/nft delete table inet lueckenfueller
 
 [Install]

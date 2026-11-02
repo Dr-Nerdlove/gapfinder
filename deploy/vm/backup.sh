@@ -33,6 +33,7 @@ BACKUP_DIR="$APP_DIR/backups"
 SETTINGS_DIR="$APP_DIR/backup-settings"
 RECIPIENT_FILE="$SETTINGS_DIR/public-key.txt"
 SHARE_FILE="$SETTINGS_DIR/windows-folder.conf"
+WINDOWS_PC_FILE="${WINDOWS_PC_FILE:-/etc/lueckenfueller/windows-pc}"   # written by setup.sh
 CREDENTIALS_FILE="$SETTINGS_DIR/windows-login"   # smbclient's format; readable by root only
 KEEP_LOCAL="${KEEP_LOCAL:-14}"
 KEEP_REMOTE="${KEEP_REMOTE:-60}"
@@ -101,15 +102,18 @@ share_configured() { [[ -f "$SHARE_FILE" && -f "$CREDENTIALS_FILE" ]]; }
 
 setting() { sed -n "s/^$1=//p" "$SHARE_FILE" | tail -n 1; }
 
-# The Windows PC as seen from the VM: Hyper-V's "Default Switch" makes it the VM's gateway. Its address can
-# change when Windows restarts, so it is looked up each time unless windows-folder.conf names a fixed host.
+# The Windows PC's fixed address in the home network, which setup.sh asks for (windows-folder.conf can name
+# another host). Never guessed: the VM's gateway is the router, which must not get the Windows login.
 smb_host() {
   local host
   host="$(setting host)"
-  if [[ -z "$host" ]]; then
-    host="$(ip route show default 2>/dev/null | awk '$1 == "default" { print $3; exit }')"
+  if [[ -z "$host" && -f "$WINDOWS_PC_FILE" ]]; then
+    host="$(head -n 1 "$WINDOWS_PC_FILE")"
   fi
-  [[ -n "$host" ]] || { echo "lueckenfueller-backup: cannot find the Windows PC's address" >&2; return 1; }
+  [[ -n "$host" ]] || {
+    echo "lueckenfueller-backup: the Windows PC's address is not set up. Run the setup again (guide: \"When the files in deploy/vm/ change\")." >&2
+    return 1
+  }
   echo "$host"
 }
 
