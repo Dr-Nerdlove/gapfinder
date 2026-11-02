@@ -25,13 +25,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
   stays possible, also when the check itself fails), then the date is fixed. Later it can be changed to another
   proposal or taken back. Once a date is fixed, everybody with the link, guests too, sees it highlighted with
   three buttons: download the `.ics` file, "In Google Kalender eintragen" and "In Outlook eintragen" (private
-  Outlook accounts; people with a work account use the `.ics` file). The app builds both links itself; whole-day
-  dates end on the day after the last day. A fixed poll now says "Der Termin steht" instead of "Frist
+  Outlook accounts; people with a work account use the `.ics` file). The app builds both links itself; for whole-day
+  dates Google gets the day after the last day as the end and Outlook the last day. A fixed poll now says "Der Termin steht" instead of "Frist
   abgelaufen". In the profile, "Mein Lückenfüller-Kalender" switches the personal calendar feed on, shows and
   copies its link with short instructions for Google, Apple and Outlook (Google refreshes only every few hours),
   renews the link or switches it off. "Meine Abstimmungen" shows "Termin steht ✓". The buttons appear only once
   the server has the phase 5a update (up to an hour after the app), until then the app behaves as before.
-  Not verified on a real account: that Outlook reads the end of a whole-day date as the day after the last day.
 - Phase 5a, fixing the date on the server: the creator or the admin of a poll can fix one date as the final one,
   change it to another date later, or take it back. While a date is fixed the poll takes no more votes (taking
   it back opens the poll again, unless it was closed by hand or its deadline has passed). Before fixing, the
@@ -127,3 +126,8 @@ versions follow `vMAJOR.MINOR.PATCH`.
     settings for which websites may talk to it, and a Docker image for the home server.
   - Automatic checks and tests on every change, automatic publishing of the app to GitHub Pages and of the
     server image to the GitHub container registry.
+
+### Fixed
+
+- "In Outlook eintragen" put whole-day dates in Outlook one day too long (3.-4. Jan. became 3.-5. Jan.); now they
+  end on the right day.

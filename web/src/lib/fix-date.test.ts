@@ -80,11 +80,17 @@ describe("Outlook link", () => {
     expect(url.searchParams.get("body")).toBe("Hauptstr. 4, Ärger?");
   });
 
-  it("marks whole days as all-day with the day after the last day as the end", () => {
+  it("marks whole days as all-day with the last day as the end (Outlook counts it inclusively)", () => {
     const url = new URL(outlookCalendarUrl(eventOf(poll, DAYS)));
     expect(url.searchParams.get("allday")).toBe("true");
     expect(url.searchParams.get("startdt")).toBe("2026-12-30");
-    expect(url.searchParams.get("enddt")).toBe("2027-01-01");
+    expect(url.searchParams.get("enddt")).toBe("2026-12-31");
+  });
+
+  it("starts and ends on the same day for a single whole day", () => {
+    const url = new URL(outlookCalendarUrl(eventOf(poll, { id: 3, first: "2026-02-28", last: "2026-02-28" })));
+    expect(url.searchParams.get("startdt")).toBe("2026-02-28");
+    expect(url.searchParams.get("enddt")).toBe("2026-02-28");
   });
 
   it("leaves out an empty note", () => {
