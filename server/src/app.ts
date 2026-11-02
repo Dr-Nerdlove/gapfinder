@@ -19,6 +19,7 @@ import { registerCalendarRoutes } from "./routes/calendars.js";
 import { registerInviteRoutes } from "./routes/invites.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerPasswordResetRoutes } from "./routes/password-resets.js";
+import { registerSearchRoutes } from "./routes/searches.js";
 
 const BODY_LIMIT_BYTES = 64 * 1024;
 
@@ -115,6 +116,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   registerAuthRoutes(app, ctx);
   registerMeRoutes(app, ctx);
   registerCalendarRoutes(app, ctx);
+  registerSearchRoutes(app, ctx);
   registerInviteRoutes(app, ctx);
   registerPasswordResetRoutes(app, ctx);
   registerAdminRoutes(app, ctx);

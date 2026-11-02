@@ -1,4 +1,4 @@
-import type { AdminUser, Me } from "@lueckenfueller/shared";
+import type { AdminUser, Me, Person } from "@lueckenfueller/shared";
 import type { DatabaseSync } from "node:sqlite";
 
 export interface UserRow {
@@ -13,6 +13,11 @@ export interface UserRow {
 
 export function toMe(user: UserRow): Me {
   return { id: user.id, username: user.username, isAdmin: user.is_admin === 1, seedColor: user.seed_color };
+}
+
+/** What everybody with an account may see of everybody else: the name and the colour, nothing more. */
+export function toPerson(user: UserRow): Person {
+  return { id: user.id, username: user.username, seedColor: user.seed_color };
 }
 
 /** `calendarProblems`: how many of the person's calendars are broken (a count only, never more about them). */

@@ -180,6 +180,13 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     weekdays + duration (in a multi-day search the whole day is empty anyway); search range at most a year;
     at most 50 people per search and 30 searches per person every 15 minutes. A new list of all accounts (only
     username and colour) is visible to everyone with an account.
+  - Settled while building 3a: a multi-day period starts **tomorrow at the earliest** and always lies entirely
+    inside the search range; the range starts today at the earliest and ends at most 365 days ahead (calendars
+    are read 400 days ahead); a window that started yesterday and crosses midnight is not offered (the range
+    starts today); a wall time that does not exist on the spring change day counts as 03:xx, one that exists
+    twice in autumn as the earlier one; at most 8 calendars are read at the same time per search; invalid
+    searches do not count towards the limit. Routes: `GET /api/people`, `POST /api/searches` (types in
+    `shared/src/gaps.ts`, the pure search in `server/src/gaps/search.ts`).
   - Built as two pull requests: 3a the search and the server routes, 3b the screens.
 
 ### Sharing and voting

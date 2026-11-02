@@ -3,6 +3,7 @@ export const API_VERSION = 1;
 
 export * from "./accounts.js";
 export * from "./calendars.js";
+export * from "./gaps.js";
 
 /** Response of `GET /api/health`. */
 export interface HealthResponse {
