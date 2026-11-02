@@ -19,6 +19,11 @@ export interface PollRow {
   kind: PollKind;
   deadline: string | null;
   closed: number;
+  /** The proposal chosen as the final date, or null. */
+  fixed_proposal_id: number | null;
+  fixed_at: string | null;
+  /** Grows with every change of the fixed date (the SEQUENCE of the calendar event). */
+  fixed_sequence: number;
   created_at: string;
   updated_at: string;
   expires_at: string;
@@ -32,7 +37,7 @@ export interface NewProposal {
   lastDate: string | null;
 }
 
-interface ProposalRow {
+export interface ProposalRow {
   id: number;
   starts_at: string | null;
   ends_at: string | null;
@@ -54,9 +59,9 @@ export function generateShareToken(): string {
   return randomBytes(16).toString("base64url");
 }
 
-/** Votes are accepted: not closed by hand and the deadline (if any) has not been reached yet. */
+/** Votes are accepted: not closed by hand, no date fixed, and the deadline (if any) has not been reached yet. */
 export function isOpen(poll: PollRow, now: Date): boolean {
-  return poll.closed === 0 && (poll.deadline === null || poll.deadline > now.toISOString());
+  return poll.closed === 0 && poll.fixed_proposal_id === null && (poll.deadline === null || poll.deadline > now.toISOString());
 }
 
 // An expired poll behaves as if it did not exist, whether or not `purgeExpired` has deleted its rows yet.
@@ -141,6 +146,32 @@ export function updatePoll(db: DatabaseSync, id: number, changes: PollChanges, n
   );
 }
 
+/**
+ * Fixes `proposalId` (a proposal of this poll) as the final date, or changes the fixed date to it. Fixing the
+ * proposal that is already fixed changes nothing but `updated_at`.
+ */
+export function fixProposal(db: DatabaseSync, poll: PollRow, proposalId: number, now: Date): void {
+  const iso = now.toISOString();
+  if (poll.fixed_proposal_id === proposalId) {
+    touchPoll(db, poll.id, now);
+    return;
+  }
+  db.prepare(
+    "UPDATE polls SET fixed_proposal_id = ?, fixed_at = ?, fixed_sequence = fixed_sequence + 1, updated_at = ? WHERE id = ?",
+  ).run(proposalId, iso, iso, poll.id);
+}
+
+/** Removes the fixed date. A poll that has none changes nothing but `updated_at`. */
+export function unfixProposal(db: DatabaseSync, poll: PollRow, now: Date): void {
+  if (poll.fixed_proposal_id === null) {
+    touchPoll(db, poll.id, now);
+    return;
+  }
+  db.prepare(
+    "UPDATE polls SET fixed_proposal_id = NULL, fixed_at = NULL, fixed_sequence = fixed_sequence + 1, updated_at = ? WHERE id = ?",
+  ).run(now.toISOString(), poll.id);
+}
+
 export function replaceShareToken(db: DatabaseSync, id: number, now: Date): string {
   const token = generateShareToken();
   db.prepare("UPDATE polls SET share_token = ?, updated_at = ? WHERE id = ?").run(token, now.toISOString(), id);
@@ -162,6 +193,23 @@ export function proposalIdsOf(db: DatabaseSync, pollId: number): number[] {
     id: number;
   }[];
   return rows.map((row) => row.id);
+}
+
+/** The poll's proposals as stored, in the order the creator chose them. */
+export function proposalRowsOf(db: DatabaseSync, pollId: number): ProposalRow[] {
+  return db
+    .prepare("SELECT id, starts_at, ends_at, first_date, last_date FROM poll_proposals WHERE poll_id = ? ORDER BY position")
+    .all(pollId) as unknown as ProposalRow[];
+}
+
+/** The people of the poll (the creator included), sorted by username without regard to case. */
+export function participantsOf(db: DatabaseSync, pollId: number): UserRow[] {
+  return db
+    .prepare(
+      `SELECT u.* FROM poll_participants pp JOIN users u ON u.id = pp.user_id
+       WHERE pp.poll_id = ? ORDER BY u.username_key, u.id`,
+    )
+    .all(pollId) as unknown as UserRow[];
 }
 
 export function countGuestVotes(db: DatabaseSync, pollId: number): number {
@@ -286,6 +334,7 @@ export function listPollSummaries(db: DatabaseSync, userId: number, now: Date): 
     voteCount: row.vote_count,
     deadline: row.deadline,
     open: isOpen(row, now),
+    fixedProposalId: row.fixed_proposal_id,
     createdAt: row.created_at,
     expiresAt: row.expires_at,
     voted: row.voted === 1,
@@ -298,10 +347,7 @@ function creatorOf(db: DatabaseSync, poll: PollRow): PollView["creator"] {
 }
 
 function proposalsOf(db: DatabaseSync, poll: PollRow): Proposal[] {
-  const rows = db
-    .prepare("SELECT id, starts_at, ends_at, first_date, last_date FROM poll_proposals WHERE poll_id = ? ORDER BY position")
-    .all(poll.id) as unknown as ProposalRow[];
-  return rows.map((row) =>
+  return proposalRowsOf(db, poll.id).map((row) =>
     poll.kind === "timed"
       ? { id: row.id, start: row.starts_at!, end: row.ends_at! }
       : { id: row.id, first: row.first_date!, last: row.last_date! },
@@ -349,12 +395,7 @@ function votesOf(db: DatabaseSync, pollId: number): VoteView[] {
 
 /** The poll as everybody with the link sees it; `viewer` (when logged in) fills `myVoteId` and `canManage`. */
 export function buildPollView(db: DatabaseSync, poll: PollRow, viewer: UserRow | null, now: Date): PollView {
-  const participants = db
-    .prepare(
-      `SELECT u.* FROM poll_participants pp JOIN users u ON u.id = pp.user_id
-       WHERE pp.poll_id = ? ORDER BY u.username_key, u.id`,
-    )
-    .all(poll.id) as unknown as UserRow[];
+  const participants = participantsOf(db, poll.id);
   const myVote = viewer ? findAccountVote(db, poll.id, viewer.id) : undefined;
   return {
     id: poll.id,
@@ -369,6 +410,8 @@ export function buildPollView(db: DatabaseSync, poll: PollRow, viewer: UserRow |
     deadline: poll.deadline,
     closed: poll.closed === 1,
     open: isOpen(poll, now),
+    fixedProposalId: poll.fixed_proposal_id,
+    fixedAt: poll.fixed_proposal_id === null ? null : poll.fixed_at,
     createdAt: poll.created_at,
     expiresAt: poll.expires_at,
     myVoteId: myVote?.id ?? null,

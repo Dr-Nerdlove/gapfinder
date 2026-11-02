@@ -16,6 +16,7 @@ import { maskTokens } from "./log-masking.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerCalendarRoutes } from "./routes/calendars.js";
+import { registerFeedRoutes } from "./routes/feeds.js";
 import { registerInviteRoutes } from "./routes/invites.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerPasswordResetRoutes } from "./routes/password-resets.js";
@@ -41,7 +42,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   const serverOptions: FastifyServerOptions = {
     logger: {
       level: config.logLevel,
-      // Never log invite, password reset or poll share tokens (they are in the URL), headers or bodies.
+      // Never log invite, password reset, poll share or calendar feed tokens (they are in the URL), headers or bodies.
       serializers: {
         req: (request) => ({
           method: request.method,
@@ -119,6 +120,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   registerCalendarRoutes(app, ctx);
   registerSearchRoutes(app, ctx);
   registerPollRoutes(app, ctx);
+  registerFeedRoutes(app, ctx);
   registerInviteRoutes(app, ctx);
   registerPasswordResetRoutes(app, ctx);
   registerAdminRoutes(app, ctx);
