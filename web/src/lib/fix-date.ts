@@ -78,15 +78,15 @@ function outlookStamp(iso: string): string {
  * official Microsoft description; the format is taken from the maintained add-to-calendar notes
  * (https://github.com/InteractionDesignFoundation/add-event-to-calendar-docs/blob/master/services/outlook-web.md,
  * last checked there 2026-08-19): `path`, `rru=addevent`, `subject`, `startdt`, `enddt`, optional `body`,
- * `allday=true` with plain dates. Whether `enddt` of an all-day event is exclusive is not documented anywhere;
- * it is sent exclusive (the day after the last day) like in Google Calendar and in the `.ics` file, and has to be
- * tried once with a real account.
+ * `allday=true` with plain dates. Tried by the owner on 2026-11-02 on outlook.live.com: with the day after the
+ * last day as `enddt`, Outlook showed one day too many (3.-4. Jan. became 3-5 Jan, "3 Tage"), so Outlook reads
+ * `enddt` of an all-day event as the last day (inclusive), unlike Google and the `.ics` file.
  */
 export function outlookCalendarUrl(event: CalendarEvent): string {
   const when =
     event.kind === "timed"
       ? [`startdt=${enc(outlookStamp(event.start))}`, `enddt=${enc(outlookStamp(event.end))}`]
-      : [`startdt=${event.first}`, `enddt=${addDays(event.last, 1)}`, `allday=true`];
+      : [`startdt=${event.first}`, `enddt=${event.last}`, `allday=true`];
   const parts = [`path=${enc("/calendar/action/compose")}`, `rru=addevent`, `subject=${enc(event.title)}`, ...when];
   if (event.note !== "") parts.push(`body=${enc(event.note)}`);
   return `https://outlook.live.com/calendar/0/deeplink/compose?${parts.join("&")}`;

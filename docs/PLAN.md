@@ -290,8 +290,8 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   `calendar.google.com/calendar/render?action=TEMPLATE&text&dates&details`, timed as UTC
   `YYYYMMDDTHHmmssZ/…`, whole days `YYYYMMDD/YYYYMMDD` with the day after the last day as the end; Outlook
   `outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject&startdt&enddt&body`,
-  `allday=true` with plain dates. Whether Outlook treats `enddt` of a whole-day event as exclusive is documented
-  nowhere; it is sent exclusive and still has to be tried once with a real account. "Meine Abstimmungen" shows
+  `allday=true` with plain dates. Tried by the owner on 2026-11-02: Outlook reads `enddt` of a whole-day event as
+  the last day (inclusive), so the app sends the last day there (Google and `.ics` stay exclusive). "Meine Abstimmungen" shows
   only "Termin steht ✓", not the date (`PollSummary` carries no times).
   Built in `web/src/lib/fix-date.ts` (fixed proposal, links, check review), `calendar-feed.ts`, new calls in
   `api.ts` (the `.ics` is fetched by the app, so a sleeping server shows a message and not the browser's error
@@ -364,4 +364,3 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
   because `PollSummary` has only `fixedProposalId`. The server would have to send the fixed proposal's times too
   (additive field in `shared/src/polls.ts` and `server/src/routes/polls.ts`); then the app shows the date in the
   list and treats a missing field as before. Server first, app after the VM has updated.
-- Try the Outlook link with a whole-day date on a real private account and note the result here.
