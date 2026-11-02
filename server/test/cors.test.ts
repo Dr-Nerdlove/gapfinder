@@ -44,4 +44,19 @@ describe("CORS", () => {
     expect(response.statusCode).toBe(200);
     expect(response.headers["access-control-allow-origin"]).toBeUndefined();
   });
+
+  it("answers the preflight for the guest vote key header", async () => {
+    app = await buildApp(testConfig());
+    const response = await app.inject({
+      method: "OPTIONS",
+      url: "/api/poll-links/x/votes/1",
+      headers: {
+        origin: allowed,
+        "access-control-request-method": "PUT",
+        "access-control-request-headers": "x-vote-key,content-type",
+      },
+    });
+    expect(response.statusCode).toBe(204);
+    expect(String(response.headers["access-control-allow-headers"]).toLowerCase()).toContain("x-vote-key");
+  });
 });

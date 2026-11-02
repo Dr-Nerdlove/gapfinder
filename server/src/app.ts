@@ -19,6 +19,7 @@ import { registerCalendarRoutes } from "./routes/calendars.js";
 import { registerInviteRoutes } from "./routes/invites.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerPasswordResetRoutes } from "./routes/password-resets.js";
+import { registerPollRoutes } from "./routes/polls.js";
 import { registerSearchRoutes } from "./routes/searches.js";
 
 const BODY_LIMIT_BYTES = 64 * 1024;
@@ -40,7 +41,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   const serverOptions: FastifyServerOptions = {
     logger: {
       level: config.logLevel,
-      // Never log invite or password reset tokens (they are in the URL), headers or bodies.
+      // Never log invite, password reset or poll share tokens (they are in the URL), headers or bodies.
       serializers: {
         req: (request) => ({
           method: request.method,
@@ -96,7 +97,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   await app.register(cors, {
     origin: config.corsOrigins,
     methods: ["GET", "HEAD", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Authorization", "Content-Type"],
+    allowedHeaders: ["Authorization", "Content-Type", "X-Vote-Key"],
     maxAge: 600,
     exposedHeaders: ["Retry-After"],
   });
@@ -117,6 +118,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   registerMeRoutes(app, ctx);
   registerCalendarRoutes(app, ctx);
   registerSearchRoutes(app, ctx);
+  registerPollRoutes(app, ctx);
   registerInviteRoutes(app, ctx);
   registerPasswordResetRoutes(app, ctx);
   registerAdminRoutes(app, ctx);
