@@ -7,6 +7,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- **Server guide corrected.** The password change for the backup user now names the right lines of the script, step 5 warns to check the PC's address with `ipconfig` (a wrong one cuts the SSH window), and the list of files in the VM is complete. `setup.sh` only has two reworded hints (rerun `setup.sh` to get them; nothing else changes).
 - **Server VM moves into the home network.** The VM now sits on a Hyper-V external switch, directly in the home
   network like any other device, instead of Hyper-V's "Default Switch". Before, a VPN on the Windows PC
   (NordVPN, even with split tunneling) also carried the VM's traffic, Tailscale's connection dropped every

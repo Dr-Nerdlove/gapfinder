@@ -161,7 +161,10 @@ everything; it prints a heading for each part. It stops three times and waits fo
 
 1. **"Address of the Windows PC in the home network"** – type the PC's reserved address from step 4 (e.g.
    `192.168.178.20`) and press Enter. The backups go there, and only this PC may then connect to the VM with
-   `ssh`.
+   `ssh`. **Check the address first**: in PowerShell on the PC, `ipconfig` shows it under the adapter you use
+   (the cable, or the Wi-Fi if you have no cable), never the one of a VPN. With a wrong address, this SSH window
+   stops working in the middle of the setup, and the setup stays unfinished. Then open the VM in the Hyper-V
+   window, log in there and run the two lines above again with the right address.
 2. **"To authenticate, visit: https://login.tailscale.com/a/..."** – open that link (copy it from the window),
    log in to Tailscale and confirm the new machine `lueckenfueller`.
 3. **Funnel** – if Tailscale has not yet allowed Funnel for your account, a second link appears. Open it and
@@ -210,8 +213,9 @@ it anywhere.
 ## 8. Create your admin account
 
 Accounts only exist through personal invite links. The very first one, yours, you create in the VM. Connect to
-the VM with `ssh` (step 4). This works only once the server version with accounts is running in the VM: wait
-about an hour after it was merged (the VM checks hourly), or update right away with this command in the VM:
+the VM with `ssh` (step 4). The setup in step 5 already installs the newest server. If a newer version was
+released since, the VM picks it up within an hour (it checks hourly), or you update right away with this
+command in the VM:
 
 ```bash
 sudo systemctl start lueckenfueller-update
@@ -325,7 +329,7 @@ Now do the **trial restore** below once, to be sure that your saved key works.
 ### Part 3: if something changes later
 
 - **New password for the Windows user** (forgotten, or changed): in PowerShell as administrator run the first
-  three lines of the block in part 1, then `Set-LocalUser -Name $User -Password (ConvertTo-SecureString
+  five lines of the block in part 1 (`$Vm` to `$Password`), then `Set-LocalUser -Name $User -Password (ConvertTo-SecureString
   $Password -AsPlainText -Force)` and `Write-Host $Password`; then `sudo lueckenfueller-backup setup` in the VM
   again (it keeps the key).
 - **The key is lost**: the old backups can no longer be opened. In the VM run
@@ -488,7 +492,11 @@ Where things are in the VM:
 - `/opt/lueckenfueller/backups/` – the newest 14 backups (encrypted). `/opt/lueckenfueller/backup-settings/` –
   the backup key's public half and the login for the Windows folder.
 - `/etc/lueckenfueller/windows-pc` – the Windows PC's address from the setup: backups go there, and only it may
-  connect with `ssh`.
+  connect with `ssh`. `/etc/lueckenfueller/windows-pc.nft` is the same address in the form the firewall loads.
+  `/opt/lueckenfueller/backup-settings/windows-folder.conf` may contain a `host=` line that names another
+  computer for the backups.
+- `/opt/lueckenfueller/.maintenance.lock` – an empty file that stops backup, restore and update from running at
+  the same time.
 - `/usr/local/sbin/lueckenfueller-backup` and the `lueckenfueller-backup` timer – the nightly backup
   ([`deploy/vm/backup.sh`](../deploy/vm/backup.sh)).
 - `/usr/local/sbin/lueckenfueller-update` and the `lueckenfueller-update` timer – the hourly update

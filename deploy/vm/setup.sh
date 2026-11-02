@@ -164,7 +164,7 @@ systemctl enable --now lueckenfueller-backup.timer >/dev/null
 if [[ -s "$APP_DIR/backup-settings/public-key.txt" && -f "$APP_DIR/backup-settings/windows-login" ]]; then
   echo "Backups are set up. To change the Windows folder:  sudo lueckenfueller-backup setup"
 else
-  echo "Backups are not set up yet. Do the Windows part of \"Backups\" in the guide first, then run:"
+  echo "Backups are not set up yet. Do the Windows part of \"9. Set up backups\" in the guide first, then run:"
   echo "  sudo lueckenfueller-backup setup"
 fi
 
@@ -197,5 +197,5 @@ cat <<'EOF'
 The server runs and updates itself every hour.
 The address above that starts with https:// and ends in .ts.net is the server's address.
 Continue in the guide (docs/server-setup.md) with "Switch off key expiry" and "Tell the app the address".
-Backups: see "Backups" in the guide.
+Backups: see "9. Set up backups" in the guide.
 EOF
