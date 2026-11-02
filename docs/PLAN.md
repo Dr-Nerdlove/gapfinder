@@ -365,10 +365,9 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
 - **Better message while the server sleeps (built 2026-11-02, decided by the owner the same day):** a poll link opened
   between 01:00 and 07:00 shows only "Die Abstimmung kann gerade nicht geladen werden". Plan: a clearer text
   ("Ab 7 Uhr kannst du abstimmen ...") and a button that adds a reminder at 07:00 as a calendar entry (`.ics`
-  made in the app, with the poll link; works on every phone, no permission, no server change). Built in
-  `web/src/lib/reminder.ts` and `Poll.svelte`: between 01:00 and 06:59 (phone's local time) the waiting card
-  shows the new text and the button; at other times the old neutral text. The entry is a floating-time 07:00
-  event with an alarm. Not yet tried on a real iPhone/Android. Rejected for now:
+  made in the app). The reminder button was built and then removed on the owner's wish the same day (nobody
+  would use it). Built in `web/src/lib/server-night.ts` and `Poll.svelte`: between 01:00 and 06:59 (phone's
+  local time) the waiting card shows the new text; at other times the old neutral text. Rejected for now:
   - An offline vote queue: the poll comes from the server, so at night there is no form to fill in. It would
     need the poll kept on the device (names and votes of others stored anew), would not help someone opening a
     link for the first time at night, and needs rules for votes that arrive after the poll changed.
