@@ -80,6 +80,69 @@ export const migrations: readonly Migration[] = [
     ) STRICT;
     CREATE INDEX calendars_user_id ON calendars (user_id);`,
   },
+  {
+    id: 4,
+    name: "polls",
+    // Additive only (new tables, no old table is touched): the VM rolls back to the previous image when a new
+    // one is not healthy, and that older server then runs on this already migrated database. The share token is
+    // stored as is (the creator must be able to open the link again); guest vote keys only as a hash. A guest
+    // vote has no user (`user_id` NULL) but a name; an account vote has a user and no name.
+    sql: `CREATE TABLE polls (
+      id INTEGER PRIMARY KEY,
+      share_token TEXT NOT NULL UNIQUE,
+      creator_id INTEGER REFERENCES users (id) ON DELETE SET NULL,
+      title TEXT NOT NULL,
+      note TEXT NOT NULL DEFAULT '',
+      kind TEXT NOT NULL CHECK (kind IN ('timed', 'days')),
+      deadline TEXT,
+      closed INTEGER NOT NULL DEFAULT 0,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      expires_at TEXT NOT NULL
+    ) STRICT;
+    CREATE INDEX polls_creator_id ON polls (creator_id);
+    CREATE INDEX polls_expires_at ON polls (expires_at);
+    CREATE TABLE poll_proposals (
+      id INTEGER PRIMARY KEY,
+      poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
+      position INTEGER NOT NULL,
+      starts_at TEXT,
+      ends_at TEXT,
+      first_date TEXT,
+      last_date TEXT
+    ) STRICT;
+    CREATE INDEX poll_proposals_poll_id ON poll_proposals (poll_id);
+    CREATE TABLE poll_participants (
+      poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
+      user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      PRIMARY KEY (poll_id, user_id)
+    ) STRICT;
+    CREATE INDEX poll_participants_user_id ON poll_participants (user_id);
+    CREATE TABLE poll_votes (
+      id INTEGER PRIMARY KEY,
+      poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
+      user_id INTEGER REFERENCES users (id) ON DELETE CASCADE,
+      guest_name TEXT,
+      guest_name_key TEXT,
+      key_hash TEXT,
+      created_at TEXT NOT NULL,
+      updated_at TEXT NOT NULL,
+      CHECK (
+        (user_id IS NOT NULL AND guest_name IS NULL AND guest_name_key IS NULL AND key_hash IS NULL) OR
+        (user_id IS NULL AND guest_name IS NOT NULL AND guest_name_key IS NOT NULL AND key_hash IS NOT NULL)
+      )
+    ) STRICT;
+    CREATE UNIQUE INDEX poll_votes_account ON poll_votes (poll_id, user_id) WHERE user_id IS NOT NULL;
+    CREATE UNIQUE INDEX poll_votes_guest_name ON poll_votes (poll_id, guest_name_key) WHERE guest_name_key IS NOT NULL;
+    CREATE INDEX poll_votes_user_id ON poll_votes (user_id);
+    CREATE TABLE poll_vote_answers (
+      vote_id INTEGER NOT NULL REFERENCES poll_votes (id) ON DELETE CASCADE,
+      proposal_id INTEGER NOT NULL REFERENCES poll_proposals (id) ON DELETE CASCADE,
+      answer TEXT NOT NULL CHECK (answer IN ('yes', 'maybe', 'no')),
+      PRIMARY KEY (vote_id, proposal_id)
+    ) STRICT;
+    CREATE INDEX poll_vote_answers_proposal_id ON poll_vote_answers (proposal_id);`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

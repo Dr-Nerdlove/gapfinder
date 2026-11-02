@@ -1,0 +1,198 @@
+// Polls (phase 4): proposals chosen from a gap search, shared through a link, voted on with yes / maybe / no.
+//
+// Two kinds of routes:
+// - `/api/polls…` need a login (`Authorization: Bearer <token>`): create, list, and manage a poll by its id
+//   (only its creator or an admin).
+// - `/api/poll-links/:shareToken…` need only the share link. Everyone with the link sees the poll and can vote:
+//   a logged-in account votes as itself (one vote per account, from any device), a guest votes with a name and
+//   gets a secret vote key that only their device keeps; the key is sent as the `X-Vote-Key` header to change
+//   or withdraw that vote.
+//
+// All instants are ISO 8601 in UTC; all calendar days are German days ("YYYY-MM-DD"). The server stores the
+// share token so the creator and the participants can open the link again; vote keys are stored only as hashes.
+
+/** At most this many proposals per poll. */
+export const POLL_MAX_PROPOSALS = 20;
+/** At most this many guest votes per poll (account votes do not count). */
+export const POLL_MAX_GUEST_VOTES = 100;
+/** A person can have at most this many polls that are not yet deleted. */
+export const POLLS_PER_USER = 20;
+/** At most this many other people as participants (the same limit as a search). */
+export const POLL_MAX_PARTICIPANTS = 50;
+export const POLL_TITLE_MAX_LENGTH = 80;
+export const POLL_NOTE_MAX_LENGTH = 500;
+export const VOTE_NAME_MAX_LENGTH = 40;
+/** A poll is deleted this many days after its last proposal has ended. */
+export const POLL_KEPT_DAYS_AFTER_LAST_PROPOSAL = 30;
+/** Guest vote writes (cast, change, withdraw) per address and 15 minutes. Every write counts. */
+export const GUEST_VOTE_WRITES_PER_IP = 30;
+/** Longest timed proposal. */
+export const POLL_MAX_TIMED_MINUTES = 24 * 60;
+/** Longest proposal of whole days. */
+export const POLL_MAX_DAYS = 31;
+/** Proposals and the deadline lie at most this many days ahead. */
+export const POLL_MAX_DAYS_AHEAD = 365;
+
+/** `timed`: proposals with a start and end time (from an hours search). `days`: runs of whole days. */
+export type PollKind = "timed" | "days";
+
+export type VoteAnswer = "yes" | "maybe" | "no";
+
+/** A proposal with times: start and end on 15 minutes, start in the future, at most 24 hours long. */
+export interface TimedProposalInput {
+  start: string;
+  end: string;
+}
+
+/** A proposal of whole German days, both ends included: tomorrow at the earliest, at most 31 days. */
+export interface DaysProposalInput {
+  first: string;
+  last: string;
+}
+
+interface CreatePollBase {
+  /** 1 to `POLL_TITLE_MAX_LENGTH` characters after trimming. */
+  title: string;
+  /** Optional place or note, up to `POLL_NOTE_MAX_LENGTH` characters; empty means none. */
+  note?: string;
+  /**
+   * The other people of the search (account ids). The creator is always a participant; unknown ids (e.g. an
+   * account deleted since the search) and duplicates are ignored.
+   */
+  participants: number[];
+  /** After this instant nobody can vote. In the future, at most `POLL_MAX_DAYS_AHEAD` days ahead; null = none. */
+  deadline?: string | null;
+}
+
+/**
+ * `POST /api/polls` (login) → `PollView` (201). 1 to `POLL_MAX_PROPOSALS` proposals, no two the same. Fails with
+ * `poll_limit` (409) when the creator already has `POLLS_PER_USER` polls.
+ */
+export type CreatePollRequest =
+  | (CreatePollBase & { kind: "timed"; proposals: TimedProposalInput[] })
+  | (CreatePollBase & { kind: "days"; proposals: DaysProposalInput[] });
+
+/** `PATCH /api/polls/:id` (creator or admin) → `PollView`. Only the given fields change; proposals never do. */
+export interface UpdatePollRequest {
+  title?: string;
+  note?: string;
+  /** A new deadline in the future, or null to remove it. */
+  deadline?: string | null;
+  /** Closed by hand: nobody can vote until it is opened again. */
+  closed?: boolean;
+}
+
+/** `POST /api/polls/:id/share-link` (creator or admin): a new share token; the old link stops working. */
+export interface NewShareLink {
+  shareToken: string;
+}
+
+export type Proposal = { id: number } & (TimedProposalInput | DaysProposalInput);
+
+/** A person with an account as shown in a poll: only the name and colour. */
+export interface PollPerson {
+  id: number;
+  username: string;
+  seedColor: string | null;
+}
+
+export interface VoteView {
+  id: number;
+  /** The guest's name, or the account's current username. */
+  name: string;
+  /** Set for a vote of an account (shown with a check mark), null for a guest. */
+  personId: number | null;
+  /** One answer for every proposal, in the order of `PollView.proposals`. */
+  answers: { proposalId: number; answer: VoteAnswer }[];
+  updatedAt: string;
+}
+
+/**
+ * `GET /api/poll-links/:shareToken` → `PollView`, for everyone with the link. Sends the login token too, when
+ * there is one: then `myVoteId` and `canManage` are filled in.
+ */
+export interface PollView {
+  id: number;
+  shareToken: string;
+  title: string;
+  /** Empty when there is none. */
+  note: string;
+  kind: PollKind;
+  /** In the order the creator chose them. */
+  proposals: Proposal[];
+  /** Null when the creator's account has been deleted (then only an admin can manage the poll). */
+  creator: PollPerson | null;
+  /** The people of the search, the creator included, sorted by username without regard to case. */
+  participants: PollPerson[];
+  /** Account votes first (sorted by username), then guest votes in the order they were cast. */
+  votes: VoteView[];
+  deadline: string | null;
+  /** Closed by hand (`UpdatePollRequest.closed`). */
+  closed: boolean;
+  /** Votes are accepted: not closed by hand and the deadline (if any) has not passed. */
+  open: boolean;
+  createdAt: string;
+  /** When the poll will be deleted (`POLL_KEPT_DAYS_AFTER_LAST_PROPOSAL` after the last proposal ends). */
+  expiresAt: string;
+  /** The logged-in caller's own account vote, or null (also for guests). */
+  myVoteId: number | null;
+  /** The logged-in caller is the creator or an admin. */
+  canManage: boolean;
+}
+
+/** One poll in `GET /api/polls` (login): every poll the caller created, takes part in, or voted in. */
+export interface PollSummary {
+  id: number;
+  shareToken: string;
+  title: string;
+  kind: PollKind;
+  creator: PollPerson | null;
+  proposalCount: number;
+  voteCount: number;
+  deadline: string | null;
+  open: boolean;
+  createdAt: string;
+  expiresAt: string;
+  /** The caller has an account vote in it. */
+  voted: boolean;
+}
+
+/** `GET /api/polls`: newest first. */
+export interface PollList {
+  polls: PollSummary[];
+}
+
+/** One answer per proposal of the poll, each exactly once. */
+export interface VoteAnswersInput {
+  answers: { proposalId: number; answer: VoteAnswer }[];
+}
+
+/** `PUT /api/poll-links/:shareToken/my-vote` (login) → `PollView`: casts or replaces the account's vote. */
+export type AccountVoteRequest = VoteAnswersInput;
+
+/**
+ * `POST /api/poll-links/:shareToken/votes` (guest, no login needed) → `GuestVoteCreated` (201).
+ * `PUT /api/poll-links/:shareToken/votes/:voteId` with `X-Vote-Key` → `PollView`: changes name and answers.
+ * The name: 1 to `VOTE_NAME_MAX_LENGTH` characters after trimming; it may be neither an account's username
+ * nor another guest's name in this poll (compared without case) → `vote_name_taken` (409).
+ */
+export interface GuestVoteRequest extends VoteAnswersInput {
+  name: string;
+}
+
+/** The device keeps `voteKey` (with the poll's share token) to change or withdraw the vote later. */
+export interface GuestVoteCreated {
+  voteId: number;
+  voteKey: string;
+  poll: PollView;
+}
+
+// Further routes, all → `PollView`:
+// - `DELETE /api/poll-links/:shareToken/my-vote` (login): withdraws the account's vote.
+// - `DELETE /api/poll-links/:shareToken/votes/:voteId` with `X-Vote-Key`: a guest withdraws their vote.
+// - `DELETE /api/polls/:id/votes/:voteId` (creator or admin): removes any vote (e.g. nonsense from a stranger).
+// - `DELETE /api/polls/:id` (creator or admin) → 204: deletes the poll with all votes.
+//
+// Errors: an unknown or replaced share link → `poll_invalid` (404, counts against the address like a wrong invite
+// link); voting while not `open` → `poll_closed` (409); more than `POLL_MAX_GUEST_VOTES` → `poll_full` (409);
+// a wrong vote key or a vote that is not this guest's → `not_found` (404, also counted).

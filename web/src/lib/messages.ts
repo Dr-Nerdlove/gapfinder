@@ -27,6 +27,11 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   calendar_too_large: "Dieser Kalender ist zu groß (mehr als 10 MB).",
   calendar_limit: "Du hast schon 10 Kalender verknüpft. Entferne erst einen.",
   calendars_unavailable: "Kalender sind auf dem Server noch nicht eingerichtet. Sag dem Admin Bescheid.",
+  poll_invalid: "Diese Abstimmung gibt es nicht (mehr). Vielleicht wurde der Link erneuert – frag nach dem neuen.",
+  poll_closed: "Die Abstimmung ist beendet. Abstimmen geht nicht mehr.",
+  poll_full: "Bei dieser Abstimmung haben schon 100 Gäste abgestimmt. Mehr geht nicht.",
+  poll_limit: "Du hast schon 20 Abstimmungen. Lösche erst eine alte.",
+  vote_name_taken: "Diesen Namen gibt es hier schon. Bitte nimm einen anderen, z. B. mit Nachnamen.",
   error: "Das hat nicht geklappt. Bitte versuche es noch einmal.",
 };
 

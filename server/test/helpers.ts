@@ -100,14 +100,14 @@ export async function addUserWithSession(
 
 export function call(
   env: TestEnv,
-  method: "GET" | "POST" | "PATCH" | "DELETE",
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE",
   url: string,
-  options: { token?: string; body?: unknown; ip?: string } = {},
+  options: { token?: string; body?: unknown; ip?: string; headers?: Record<string, string> } = {},
 ): Promise<LightMyRequestResponse> {
   return env.app.inject({
     method,
     url,
-    ...(options.token ? { headers: { authorization: `Bearer ${options.token}` } } : {}),
+    headers: { ...options.headers, ...(options.token ? { authorization: `Bearer ${options.token}` } : {}) },
     ...(options.body !== undefined ? { payload: options.body as object } : {}),
     ...(options.ip ? { remoteAddress: options.ip } : {}),
   });

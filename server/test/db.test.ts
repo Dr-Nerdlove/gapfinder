@@ -84,7 +84,7 @@ describe("migrations", () => {
     db.prepare("INSERT INTO meta (key, value) VALUES ('keep', 'me')").run();
     expect(appliedIds(db)).toEqual([1, 2]);
 
-    runMigrations(db);
+    runMigrations(db, migrations.slice(0, 3));
 
     expect(appliedIds(db)).toEqual([1, 2, 3]);
     expect(db.prepare("SELECT username FROM users").all()).toEqual([{ username: "Anna" }]);
@@ -125,6 +125,65 @@ describe("migrations", () => {
     expect(() => db.prepare("UPDATE calendars SET status = 'weird'").run()).toThrow(/CHECK/);
     db.prepare("DELETE FROM users WHERE id = 1").run();
     expect(db.prepare("SELECT COUNT(*) AS n FROM calendars").get()).toEqual({ n: 0 });
+  });
+
+  it("migration 4 adds the poll tables to a database at migration 3 and keeps its data", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 3));
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    const before = db.prepare("SELECT sql FROM sqlite_master WHERE name IN ('users', 'calendars') ORDER BY name").all();
+
+    runMigrations(db);
+
+    expect(appliedIds(db)).toEqual([1, 2, 3, 4]);
+    expect(db.prepare("SELECT sql FROM sqlite_master WHERE name IN ('users', 'calendars') ORDER BY name").all()).toEqual(
+      before,
+    );
+    expect(db.prepare("SELECT username FROM users").all()).toEqual([{ username: "Anna" }]);
+    const tables = (db.prepare("SELECT name FROM sqlite_master WHERE type = 'table'").all() as { name: string }[]).map(
+      (t) => t.name,
+    );
+    expect(tables).toEqual(
+      expect.arrayContaining(["polls", "poll_proposals", "poll_participants", "poll_votes", "poll_vote_answers"]),
+    );
+  });
+
+  it("migration 4: a vote is either an account vote or a guest vote, once per account and per guest name", () => {
+    const db = openDatabase(":memory:");
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    db.prepare(
+      "INSERT INTO polls (share_token, creator_id, title, kind, created_at, updated_at, expires_at) VALUES ('t', 1, 'x', 'days', 'a', 'a', 'z')",
+    ).run();
+    const account = db.prepare("INSERT INTO poll_votes (poll_id, user_id, created_at, updated_at) VALUES (1, ?, 'a', 'a')");
+    const guest = db.prepare(
+      "INSERT INTO poll_votes (poll_id, guest_name, guest_name_key, key_hash, created_at, updated_at) VALUES (1, ?, ?, 'h', 'a', 'a')",
+    );
+    expect(() => db.prepare("INSERT INTO poll_votes (poll_id, created_at, updated_at) VALUES (1, 'a', 'a')").run()).toThrow(
+      /CHECK/,
+    );
+    account.run(1);
+    expect(() => account.run(1)).toThrow(/UNIQUE/);
+    guest.run("Mia", "mia");
+    expect(() => guest.run("MIA", "mia")).toThrow(/UNIQUE/);
+    expect(() =>
+      db
+        .prepare(
+          "INSERT INTO poll_votes (poll_id, user_id, guest_name, guest_name_key, key_hash, created_at, updated_at) VALUES (1, 1, 'x', 'x', 'h', 'a', 'a')",
+        )
+        .run(),
+    ).toThrow(/CHECK/);
+
+    // The account's vote goes with the account, the poll stays without a creator.
+    db.prepare("DELETE FROM users WHERE id = 1").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM poll_votes").get()).toEqual({ n: 1 });
+    expect(db.prepare("SELECT creator_id FROM polls").get()).toEqual({ creator_id: null });
+    db.prepare("DELETE FROM polls").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM poll_votes").get()).toEqual({ n: 0 });
   });
 
   it("waits for a locked database instead of failing at once", () => {

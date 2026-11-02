@@ -88,6 +88,11 @@ const KNOWN_CODES: Record<ErrorCode, true> = {
   calendar_too_large: true,
   calendar_limit: true,
   calendars_unavailable: true,
+  poll_invalid: true,
+  poll_closed: true,
+  poll_full: true,
+  poll_limit: true,
+  vote_name_taken: true,
   error: true,
 };
 

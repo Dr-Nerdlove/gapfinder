@@ -208,9 +208,9 @@ missing, with a recommendation, and let the people choose.
   - `docker compose pull` skips services with `pull_policy: never` (set in `deploy/vm/compose.yaml`), so
     `deploy/vm/update.sh` downloads with `docker pull`. The fake `docker` in `deploy/vm/test/` must behave like
     the real one, or the test passes against a broken script.
-  - Fastify logs every request URL, and invite and password reset links carry their token in the URL: the
-    request log masks them (`server/src/log-masking.ts`). New routes with a secret in the path must be added
-    there.
+  - Fastify logs every request URL, and invite, password reset and poll share links carry their token in the
+    URL: the request log masks them (`server/src/log-masking.ts`). New routes with a secret in the path must be
+    added there. Guest vote keys travel in the `X-Vote-Key` header (allowed in CORS), never in the URL.
   - The first admin account and an admin's own password reset come from the CLI in the VM
     (`server/dist/cli.js`, see `docs/server-setup.md`); the app itself never creates admins.
   - Backups (`deploy/vm/backup.sh`, nightly timer): made by the server's CLI (`backup`, `check-backup` in

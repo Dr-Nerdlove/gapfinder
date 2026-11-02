@@ -4,6 +4,7 @@ export const API_VERSION = 1;
 export * from "./accounts.js";
 export * from "./calendars.js";
 export * from "./gaps.js";
+export * from "./polls.js";
 
 /** Response of `GET /api/health`. */
 export interface HealthResponse {
@@ -57,6 +58,16 @@ export type ErrorCode =
   | "calendar_limit"
   /** Calendars cannot be used: the server has no or the wrong key for the stored links (admin must set it up). */
   | "calendars_unavailable"
+  /** The poll share link is unknown, was replaced by a new one, or the poll has been deleted. */
+  | "poll_invalid"
+  /** The poll does not take votes: closed by hand or past its deadline. */
+  | "poll_closed"
+  /** The poll already has the most guest votes allowed (`POLL_MAX_GUEST_VOTES`). */
+  | "poll_full"
+  /** The person already has the most polls allowed (`POLLS_PER_USER`). */
+  | "poll_limit"
+  /** A guest's name is an account's username or another guest's name in this poll. */
+  | "vote_name_taken"
   /** Anything else (server errors, unknown routes). */
   | "error";
 

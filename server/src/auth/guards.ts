@@ -28,6 +28,15 @@ function bearerToken(request: FastifyRequest): string | null {
   return match?.[1] ?? null;
 }
 
+/**
+ * The logged-in user of a request that may or may not carry a login (routes open to everyone with a link). A
+ * missing, wrong or expired token means "not logged in", never an error.
+ */
+export function optionalUser(ctx: AppContext, request: FastifyRequest): UserRow | null {
+  const token = bearerToken(request);
+  return token === null ? null : (findSessionUser(ctx.db, token, ctx.now())?.user ?? null);
+}
+
 /** Hooks (`onRequest`) that reject requests without a valid session, or from non-admins. */
 export function createGuards(ctx: AppContext): {
   requireUser: (request: FastifyRequest) => Promise<void>;
