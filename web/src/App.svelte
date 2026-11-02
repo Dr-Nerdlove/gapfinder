@@ -7,6 +7,7 @@
   import NotFound from "./pages/NotFound.svelte";
   import PasswordReset from "./pages/PasswordReset.svelte";
   import Profile from "./pages/Profile.svelte";
+  import Search from "./pages/Search.svelte";
   import Start from "./pages/Start.svelte";
   import { navigate, type Route, watchRoute } from "./lib/router";
   import { sessionState } from "./lib/session.svelte";
@@ -34,6 +35,8 @@
     {#if sessionState.user}<Profile />{:else}<Login />{/if}
   {:else if route.name === "calendars"}
     {#if sessionState.user}<Calendars />{:else}<Login />{/if}
+  {:else if route.name === "search"}
+    {#if sessionState.user}<Search />{:else}<Login />{/if}
   {:else if route.name === "admin"}
     {#if sessionState.user}<Admin />{:else}<Login />{/if}
   {:else}

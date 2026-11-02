@@ -7,6 +7,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 3b, gap search screens: a new page "Lücken suchen" (button on the start page). On one page you choose
+  the friends, the kind of search (hours on weekdays with a time window and buffer, or several days in a row,
+  optionally starting on a weekday) and the range (30 or 90 days, half a year, a year, or whole months). The
+  result lists the days when everyone is free, a second list "Fast alle" names the one person who is missing,
+  and a notice says who was left out because their calendar is missing or cannot be read. Ten lines are shown
+  at a time. The device remembers the last settings (and the chosen friends). While the server sleeps at night
+  the settings stay and the search waits. The server is unchanged (it needs the phase 3a image).
 - Phase 3a, gap search on the server: a list of everyone with an account (only name and colour) to choose
   whom to search with, and the search itself. The server finds the times when everyone is free, either for a
   given number of hours on chosen weekdays (optionally in a time window, even across midnight, and with a buffer

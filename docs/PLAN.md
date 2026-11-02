@@ -188,6 +188,14 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     searches do not count towards the limit. Routes: `GET /api/people`, `POST /api/searches` (types in
     `shared/src/gaps.ts`, the pure search in `server/src/gaps/search.ts`).
   - Built as two pull requests: 3a the search and the server routes, 3b the screens.
+  - Settled with the owner before building 3b (preview mock-up): **one page** `#/suche` (settings on top, result
+    below, no steps); the device remembers the last settings and the chosen people (a person without an account
+    any more is dropped quietly; new accounts are not preselected); a custom range is "from month – to month"
+    (this month and the next twelve; the start never lies in the past, the end is cut off 365 days ahead); each
+    list shows 10 lines, then "Mehr anzeigen"; people who were left out are named in a notice above the lists.
+    While the server sleeps the people list cannot load, so the form waits (the settings are kept); the search
+    request waits up to 90 seconds because the server reads calendars fresh. Logic and tests:
+    `web/src/lib/gap-search.ts`.
 
 ### Sharing and voting
 

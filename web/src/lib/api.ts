@@ -18,6 +18,9 @@ import type {
   LoginRequest,
   Me,
   PasswordResetInfo,
+  PeopleList,
+  SearchRequest,
+  SearchResult,
   SessionResponse,
   UpdateCalendarRequest,
   UpdateMeRequest,
@@ -215,3 +218,13 @@ export const deleteCalendar = (id: number, o: CallOptions = {}) =>
 
 export const getCalendarPreview = (o: CallOptions = {}) =>
   request<CalendarPreview>("/api/calendars/preview", { timeoutMs: CALENDAR_REQUEST_TIMEOUT_MS, ...o });
+
+// Gap search (`shared/src/gaps.ts`). The server reads the calendars fresh, up to 8 at a time, so it can take long.
+
+/** Generous: 50 people with up to 10 calendars each are read 8 at a time, each up to about 25 seconds. */
+export const SEARCH_REQUEST_TIMEOUT_MS = 90000;
+
+export const listPeople = (o: CallOptions = {}) => request<PeopleList>("/api/people", o);
+
+export const searchGaps = (body: SearchRequest, o: CallOptions = {}) =>
+  request<SearchResult>("/api/searches", { timeoutMs: SEARCH_REQUEST_TIMEOUT_MS, ...o, method: "POST", body });
