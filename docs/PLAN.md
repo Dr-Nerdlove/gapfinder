@@ -291,8 +291,9 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   `YYYYMMDDTHHmmssZ/…`, whole days `YYYYMMDD/YYYYMMDD` with the day after the last day as the end; Outlook
   `outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject&startdt&enddt&body`,
   `allday=true` with plain dates. Tried by the owner on 2026-11-02: Outlook reads `enddt` of a whole-day event as
-  the last day (inclusive), so the app sends the last day there (Google and `.ics` stay exclusive). "Meine Abstimmungen" shows
-  only "Termin steht ✓", not the date (`PollSummary` carries no times).
+  the last day (inclusive), so the app sends the last day there (Google and `.ics` stay exclusive). The owner
+  confirmed the corrected Outlook link on 2026-11-02 (3–4 Jan. shows as 2 days). "Meine Abstimmungen" shows
+  only "Termin steht ✓", not the date, until the follow-up below is built.
   Built in `web/src/lib/fix-date.ts` (fixed proposal, links, check review), `calendar-feed.ts`, new calls in
   `api.ts` (the `.ics` is fetched by the app, so a sleeping server shows a message and not the browser's error
   page), screens `components/polls/FixDate.svelte`, `FixedDate.svelte`, `components/CalendarFeed.svelte`.
@@ -360,7 +361,9 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
 
 ## Open points
 
-- **Show the fixed date in "Meine Abstimmungen"** (to do, asked by the owner): the list only says "Termin steht ✓"
-  because `PollSummary` has only `fixedProposalId`. The server would have to send the fixed proposal's times too
-  (additive field in `shared/src/polls.ts` and `server/src/routes/polls.ts`); then the app shows the date in the
-  list and treats a missing field as before. Server first, app after the VM has updated.
+- **Show the fixed date in "Meine Abstimmungen"** (asked by the owner, built as two pull requests like 5a/5b):
+  the list only says "Termin steht ✓". Step 1 (server, done): `PollSummary.fixedProposal` in
+  `shared/src/polls.ts`, filled in `listPollSummaries` (`server/src/polls/store.ts`), same shape as an entry of
+  `PollView.proposals`, null while nothing is fixed. Additive; `fixedProposalId` stays. Step 2 (app, to do after
+  the VM has updated, up to an hour after the merge): the list shows "Termin steht: <date>" in the writing of the
+  poll page and keeps "Termin steht ✓" when the field is missing (old server).

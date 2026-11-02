@@ -157,6 +157,11 @@ export interface PollSummary {
   open: boolean;
   /** The proposal chosen as the final date, or null. */
   fixedProposalId: number | null;
+  /**
+   * The times of the fixed proposal (same shape as in `PollView.proposals`), or null while no date is fixed.
+   * Added later: an older server does not send it, so the app must cope with it missing.
+   */
+  fixedProposal: Proposal | null;
   createdAt: string;
   expiresAt: string;
   /** The caller has an account vote in it. */

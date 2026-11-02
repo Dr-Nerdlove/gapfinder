@@ -286,6 +286,7 @@ describe("listing polls", () => {
       deadline: null,
       open: true,
       fixedProposalId: null,
+      fixedProposal: null,
       createdAt: "2026-11-01T10:05:00.000Z",
       expiresAt: "2026-12-08T19:00:00.000Z",
       voted: false,
