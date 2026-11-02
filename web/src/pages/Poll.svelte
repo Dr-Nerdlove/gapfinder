@@ -6,6 +6,7 @@
   import { fixedProposal, reviewCheck, serverCanFix, type CheckReview } from "../lib/fix-date";
   import { guestVoteFor, lastGuestName, liveGuestVote } from "../lib/guest-votes";
   import { buildPollLink } from "../lib/links";
+  import { buildReminderIcs, downloadIcs, isServerNight } from "../lib/reminder";
   import { errorMessage } from "../lib/messages";
   import { submitVote, withdrawVote } from "../lib/poll-actions";
   import { nextScreen, statusText, updatedText, type AnswerMap, type PollScreen } from "../lib/poll-view";
@@ -148,6 +149,11 @@
   const fix = (proposalId: number): Promise<void> => changeFixed(() => session.run((o) => api.fixPoll(poll!.id, { proposalId }, o)));
   const unfix = (): Promise<void> => changeFixed(() => session.run((o) => api.unfixPoll(poll!.id, o)));
 
+  /** Offers a calendar entry for 07:00 with the poll link. */
+  function remind(): void {
+    downloadIcs(buildReminderIcs(buildPollLink(token), "Lückenfüller-Abstimmung"));
+  }
+
   async function removeVote(): Promise<void> {
     const target = removing;
     removing = null;
@@ -163,7 +169,12 @@
     <Card><p aria-live="polite">Einen Moment …</p></Card>
   {:else if screen.phase === "waiting"}
     <Card title="Die Abstimmung kann gerade nicht geladen werden">
-      <p>Der Server schläft (nachts von 1 bis 7 Uhr). Diese Seite versucht es alle 30 Sekunden von selbst noch einmal.</p>
+      {#if isServerNight(new Date())}
+        <p>Lückenfüller schläft nachts von 1 bis 7 Uhr. Ab 7 Uhr kannst du abstimmen – dann ist alles wieder da. Lass diese Seite offen, sie versucht es von selbst noch einmal, oder lass dich erinnern:</p>
+        <div><Button variant="tonal" onclick={remind}>Um 7 Uhr erinnern</Button></div>
+      {:else}
+        <p>Der Server antwortet gerade nicht (nachts von 1 bis 7 Uhr schläft er). Diese Seite versucht es alle 30 Sekunden von selbst noch einmal.</p>
+      {/if}
     </Card>
   {:else if screen.phase === "gone"}
     <Card title="Diese Abstimmung gibt es nicht mehr">
