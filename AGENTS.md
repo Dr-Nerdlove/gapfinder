@@ -187,6 +187,9 @@ missing, with a recommendation, and let the people choose.
   itself hourly from GHCR and rolls back an image that is not healthy (`deploy/vm/update.sh`, guide
   `docs/server-setup.md`). Changes to `deploy/vm/` reach the VM only when the owner reruns `setup.sh`: say so
   in the release notes.
+  Measured wait: the Deploy run takes about 2 minutes (run #17: 08:27:22 to 08:29:08), and `icon.png` was
+  reachable on GitHub Pages right after it. Tell the owner "about 2 minutes after the merge" and check the live
+  page yourself.
 - **Traps:**
   - GitHub Pages only serves static files and has no fallback for app routes (use hash routing). Nothing
     secret (calendar links, tokens, keys) may ever end up in the static site.

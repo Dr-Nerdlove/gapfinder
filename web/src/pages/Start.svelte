@@ -32,7 +32,7 @@
 
 <header>
   <h1>Lückenfüller</h1>
-  <p class="subtitle">Gemeinsame freie Zeit finden</p>
+  <p class="subtitle">Nie wieder „Wann hast du Zeit?“</p>
 </header>
 
 <div class="stack">
