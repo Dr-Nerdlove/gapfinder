@@ -4,6 +4,7 @@
   import * as api from "../lib/api";
   import {
     REQUEST_PROBLEM_TEXTS,
+    type PollPick,
     berlinToday,
     buildRequest,
     keepKnownPeople,
@@ -16,6 +17,8 @@
     type ResultView,
   } from "../lib/gap-search";
   import { errorMessage } from "../lib/messages";
+  import { MAX_PICKS, pollSource, selectionLabel, togglePick } from "../lib/poll-draft";
+  import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
   import Button from "../components/Button.svelte";
   import Card from "../components/Card.svelte";
@@ -44,7 +47,10 @@
     notices: string[];
     view: ResultView;
     nearMissesPossible: boolean;
+    /** What a poll made from this answer needs to know about the search. */
+    source: { durationMinutes: number; periodDays: number; participants: number[] };
   }
+  let selected = $state<PollPick[]>([]);
   let answer = $state<Answer | null>(null);
 
   const others = $derived(user ? everyone.filter((p) => p.id !== user.id) : []);
@@ -94,13 +100,29 @@
         notices: skippedNotices(skipped, everyone, user.id),
         view: resultView(result.data, everyone, user.id),
         nearMissesPossible: readablePeople(request.people.length, skipped) >= NEAR_MISS_MIN_PEOPLE,
+        source: {
+          durationMinutes: request.mode === "hours" ? request.durationMinutes : 0,
+          periodDays: request.mode === "days" ? request.days : 1,
+          participants: [...request.people],
+        },
       };
+      selected = []; // the chosen times belong to the old answer
       await tick();
       resultBox?.scrollIntoView({ behavior: "smooth", block: "start" });
     } else if (result.kind === "error") {
       problem = errorMessage(result);
     }
     // Offline: the notice above explains it; the last result stays and the settings are not lost.
+  }
+
+  function toggle(pick: PollPick): void {
+    selected = togglePick(selected, pick);
+  }
+
+  function makePoll(): void {
+    if (!answer || selected.length === 0) return;
+    pollSource.set({ picks: [...selected], summary: answer.summary, ...answer.source });
+    navigate("#/abstimmung-neu");
   }
 </script>
 
@@ -130,13 +152,36 @@
           nearMisses={answer.view.nearMisses}
           nearMissesPossible={answer.nearMissesPossible}
           stale={searching}
+          chosen={selected.map((p) => p.id)}
+          ontoggle={toggle}
         />
+      </div>
+    {/if}
+    {#if selected.length > 0}
+      <div class="bar" role="region" aria-label="Auswahl für eine Abstimmung">
+        <span aria-live="polite">{selectionLabel(selected.length)}{selected.length >= MAX_PICKS ? " (mehr geht nicht)" : ""}</span>
+        <Button onclick={makePoll}>Abstimmung anlegen</Button>
       </div>
     {/if}
   {/if}
 </Page>
 
 <style>
+  .bar {
+    position: sticky;
+    bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 8px 8px 8px 20px;
+    border-radius: var(--radius-card);
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
+    box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
+    font-weight: 600;
+  }
+
   .scroll-target {
     scroll-margin-top: 16px;
   }

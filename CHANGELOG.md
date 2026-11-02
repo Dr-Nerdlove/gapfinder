@@ -7,6 +7,14 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 4b, polls on screen: in the search result, tap free times to choose them; "Abstimmung anlegen" opens a
+  page with title, note, deadline and the exact start and end of each date (suggested: the searched duration
+  from the start of the gap). The poll page (`#/abstimmung/<link>`) works for guests and friends: name (guests
+  only), yes / maybe / no per date, a table with sums, the best date highlighted and "Noch nicht abgestimmt".
+  It refreshes every 30 seconds and keeps showing the last state while the server sleeps (1-7 o'clock). A
+  guest's device remembers the vote key. Creator and admin can change the deadline, close and reopen, delete a
+  vote, renew the link and delete the poll. New list "Meine Abstimmungen" (`#/abstimmungen`) and a button on
+  the start page. The server is unchanged.
 - Phase 4a, polls on the server: from the results of a gap search, a person with an account can make a poll
   with 1 to 20 proposed dates (exact times, or whole days from a multi-day search), a title, an optional note
   and an optional deadline. The poll gets a share link: everyone with it sees the state and votes yes / maybe /

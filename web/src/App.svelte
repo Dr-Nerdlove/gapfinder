@@ -6,6 +6,9 @@
   import Login from "./pages/Login.svelte";
   import NotFound from "./pages/NotFound.svelte";
   import PasswordReset from "./pages/PasswordReset.svelte";
+  import Poll from "./pages/Poll.svelte";
+  import PollNew from "./pages/PollNew.svelte";
+  import Polls from "./pages/Polls.svelte";
   import Profile from "./pages/Profile.svelte";
   import Search from "./pages/Search.svelte";
   import Start from "./pages/Start.svelte";
@@ -37,6 +40,12 @@
     {#if sessionState.user}<Calendars />{:else}<Login />{/if}
   {:else if route.name === "search"}
     {#if sessionState.user}<Search />{:else}<Login />{/if}
+  {:else if route.name === "polls"}
+    {#if sessionState.user}<Polls />{:else}<Login />{/if}
+  {:else if route.name === "poll-new"}
+    {#if sessionState.user}<PollNew />{:else}<Login />{/if}
+  {:else if route.name === "poll"}
+    <Poll token={route.token} />
   {:else if route.name === "admin"}
     {#if sessionState.user}<Admin />{:else}<Login />{/if}
   {:else}

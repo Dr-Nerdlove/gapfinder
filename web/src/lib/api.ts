@@ -4,26 +4,34 @@ import type {
   AdminRenameUserRequest,
   AdminUser,
   AddCalendarRequest,
+  AccountVoteRequest,
   ApiErrorBody,
   Calendar,
   CalendarList,
   CalendarPreview,
   ChangePasswordRequest,
   CompletePasswordResetRequest,
+  CreatePollRequest,
   CreateInviteRequest,
   CreatedInvite,
   CreatedPasswordReset,
   ErrorCode,
+  GuestVoteCreated,
+  GuestVoteRequest,
   InviteInfo,
   LoginRequest,
   Me,
   PasswordResetInfo,
+  NewShareLink,
   PeopleList,
+  PollList,
+  PollView,
   SearchRequest,
   SearchResult,
   SessionResponse,
   UpdateCalendarRequest,
   UpdateMeRequest,
+  UpdatePollRequest,
 } from "@lueckenfueller/shared";
 import { API_URL } from "./config";
 
@@ -60,10 +68,12 @@ export interface CallOptions {
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
   baseUrl?: string;
+  /** A guest's secret vote key, sent as `X-Vote-Key`. */
+  voteKey?: string;
 }
 
 export interface RequestOptions extends CallOptions {
-  method?: "GET" | "POST" | "PATCH" | "DELETE";
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: unknown;
 }
 
@@ -123,9 +133,10 @@ export function isSessionExpired(result: ApiResult<unknown>): boolean {
 
 /** One request to the API. Never throws. 204 gives `data: undefined`. */
 export async function request<T>(path: string, options: RequestOptions = {}): Promise<ApiResult<T>> {
-  const { method = "GET", body, token, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl = fetch, baseUrl = API_URL } = options;
+  const { method = "GET", body, token, timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl = fetch, baseUrl = API_URL, voteKey } = options;
   const headers: Record<string, string> = { Accept: "application/json" };
   if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (voteKey) headers["X-Vote-Key"] = voteKey;
   if (body !== undefined) headers["Content-Type"] = "application/json";
 
   const controller = new AbortController();
@@ -233,3 +244,41 @@ export const listPeople = (o: CallOptions = {}) => request<PeopleList>("/api/peo
 
 export const searchGaps = (body: SearchRequest, o: CallOptions = {}) =>
   request<SearchResult>("/api/searches", { timeoutMs: SEARCH_REQUEST_TIMEOUT_MS, ...o, method: "POST", body });
+
+// Polls (`shared/src/polls.ts`). The routes under `/api/poll-links` need only the share link (a login is optional);
+// a guest changes or withdraws their vote with the key their device kept (`voteKey` in the call options).
+
+export const createPoll = (body: CreatePollRequest, o: CallOptions = {}) =>
+  request<PollView>("/api/polls", { ...o, method: "POST", body });
+
+export const listPolls = (o: CallOptions = {}) => request<PollList>("/api/polls", o);
+
+export const updatePoll = (id: number, body: UpdatePollRequest, o: CallOptions = {}) =>
+  request<PollView>(`/api/polls/${segment(id)}`, { ...o, method: "PATCH", body });
+
+export const deletePoll = (id: number, o: CallOptions = {}) =>
+  request<void>(`/api/polls/${segment(id)}`, { ...o, method: "DELETE" });
+
+export const newPollShareLink = (id: number, o: CallOptions = {}) =>
+  request<NewShareLink>(`/api/polls/${segment(id)}/share-link`, { ...o, method: "POST" });
+
+export const removePollVote = (pollId: number, voteId: number, o: CallOptions = {}) =>
+  request<PollView>(`/api/polls/${segment(pollId)}/votes/${segment(voteId)}`, { ...o, method: "DELETE" });
+
+export const getPollByLink = (shareToken: string, o: CallOptions = {}) =>
+  request<PollView>(`/api/poll-links/${segment(shareToken)}`, o);
+
+export const castAccountVote = (shareToken: string, body: AccountVoteRequest, o: CallOptions = {}) =>
+  request<PollView>(`/api/poll-links/${segment(shareToken)}/my-vote`, { ...o, method: "PUT", body });
+
+export const withdrawAccountVote = (shareToken: string, o: CallOptions = {}) =>
+  request<PollView>(`/api/poll-links/${segment(shareToken)}/my-vote`, { ...o, method: "DELETE" });
+
+export const castGuestVote = (shareToken: string, body: GuestVoteRequest, o: CallOptions = {}) =>
+  request<GuestVoteCreated>(`/api/poll-links/${segment(shareToken)}/votes`, { ...o, method: "POST", body });
+
+export const changeGuestVote = (shareToken: string, voteId: number, body: GuestVoteRequest, o: CallOptions = {}) =>
+  request<PollView>(`/api/poll-links/${segment(shareToken)}/votes/${segment(voteId)}`, { ...o, method: "PUT", body });
+
+export const withdrawGuestVote = (shareToken: string, voteId: number, o: CallOptions = {}) =>
+  request<PollView>(`/api/poll-links/${segment(shareToken)}/votes/${segment(voteId)}`, { ...o, method: "DELETE" });

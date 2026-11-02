@@ -17,3 +17,8 @@ export function buildInviteLink(token: string, where: LocationLike = window.loca
 export function buildPasswordResetLink(token: string, where: LocationLike = window.location): string {
   return link("passwort", token, where);
 }
+
+/** Link everyone with it can open to see a poll and vote (guests too). */
+export function buildPollLink(shareToken: string, where: LocationLike = window.location): string {
+  return link("abstimmung", shareToken, where);
+}
