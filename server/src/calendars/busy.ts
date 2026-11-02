@@ -1,0 +1,77 @@
+// Reading the calendars of several people for their busy times: shared by the gap search and the check before
+// a poll's date is fixed. Never returns or logs anything of a calendar but the busy times.
+import { SEARCHES_PER_USER, type SkippedPerson } from "@lueckenfueller/shared";
+import type { AppContext } from "../context.js";
+import { rateLimited } from "../errors.js";
+import type { Interval, SearchPersonInput } from "../gaps/search.js";
+import { readStoredCalendar } from "./service.js";
+import { listCalendars } from "./store.js";
+
+/** At most this many calendars are read at the same time across one whole search. */
+const MAX_CONCURRENT_READS = 8;
+
+/**
+ * Every search and every check before fixing a date counts, not only failed ones: reading calendars is the
+ * expensive part. Both share one bucket per person. Throws `rate_limited` when the person is over the limit.
+ */
+export function countCalendarReads(ctx: AppContext, userId: number): void {
+  const limitKey = `search:${userId}`;
+  const wait = ctx.limiter.blockedFor(limitKey, SEARCHES_PER_USER);
+  if (wait !== null) throw rateLimited(wait);
+  ctx.limiter.recordFailure(limitKey);
+}
+
+/** Runs `work` for every item, at most `limit` at a time. `work` must not throw. */
+async function runPool<T>(items: T[], limit: number, work: (item: T) => Promise<void>): Promise<void> {
+  let next = 0;
+  const worker = async (): Promise<void> => {
+    while (next < items.length) await work(items[next++]!);
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+}
+
+/**
+ * Reads the calendars of everybody and tells who can be searched. Never returns or logs anything of a calendar
+ * but the busy times; a person with no calendar, or with any calendar that cannot be read completely, is left
+ * out (they would look free when they are not).
+ */
+export async function collectBusyTimes(
+  ctx: AppContext,
+  personIds: number[],
+): Promise<{ readable: SearchPersonInput[]; skipped: SkippedPerson[] }> {
+  const busy: Interval[][] = personIds.map(() => []);
+  const unreadable = personIds.map(() => false);
+  const noCalendar = personIds.map(() => false);
+  const reads: { person: number; row: ReturnType<typeof listCalendars>[number] }[] = [];
+  personIds.forEach((id, person) => {
+    const rows = listCalendars(ctx.db, id);
+    if (rows.length === 0) noCalendar[person] = true;
+    for (const row of rows) reads.push({ person, row });
+  });
+
+  await runPool(reads, MAX_CONCURRENT_READS, async ({ person, row }) => {
+    if (unreadable[person]) return;
+    try {
+      const read = await readStoredCalendar(ctx, row);
+      if (!read.ok || read.calendar.truncated) {
+        unreadable[person] = true;
+        return;
+      }
+      if (row.counts_busy !== 1) return;
+      for (const event of read.calendar.events) {
+        if (event.busy) busy[person]!.push({ start: event.start, end: event.end });
+      }
+    } catch {
+      unreadable[person] = true;
+    }
+  });
+
+  const readable: SearchPersonInput[] = [];
+  const skipped: SkippedPerson[] = [];
+  personIds.forEach((id, person) => {
+    if (noCalendar[person]) skipped.push({ personId: id, reason: "no_calendar" });
+    else if (unreadable[person]) skipped.push({ personId: id, reason: "unreadable" });
+    else readable.push({ id, busy: busy[person]! });
+  });
+  return { readable, skipped };
+}

@@ -136,7 +136,7 @@ describe("migrations", () => {
     ).run();
     const before = db.prepare("SELECT sql FROM sqlite_master WHERE name IN ('users', 'calendars') ORDER BY name").all();
 
-    runMigrations(db);
+    runMigrations(db, migrations.slice(0, 4));
 
     expect(appliedIds(db)).toEqual([1, 2, 3, 4]);
     expect(db.prepare("SELECT sql FROM sqlite_master WHERE name IN ('users', 'calendars') ORDER BY name").all()).toEqual(
@@ -184,6 +184,53 @@ describe("migrations", () => {
     expect(db.prepare("SELECT creator_id FROM polls").get()).toEqual({ creator_id: null });
     db.prepare("DELETE FROM polls").run();
     expect(db.prepare("SELECT COUNT(*) AS n FROM poll_votes").get()).toEqual({ n: 0 });
+  });
+
+  it("migration 5 adds the fixed-date columns and the feed table to a database at migration 4 and keeps its data", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 4));
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    db.prepare(
+      "INSERT INTO polls (share_token, creator_id, title, kind, created_at, updated_at, expires_at) VALUES ('t', 1, 'x', 'days', 'a', 'a', 'z')",
+    ).run();
+
+    runMigrations(db);
+
+    expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
+    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5]);
+    // The old poll is not fixed and still readable.
+    expect(db.prepare("SELECT title, fixed_proposal_id, fixed_at, fixed_sequence FROM polls").get()).toEqual({
+      title: "x",
+      fixed_proposal_id: null,
+      fixed_at: null,
+      fixed_sequence: 0,
+    });
+    db.prepare("INSERT INTO calendar_feeds (user_id, token, created_at) VALUES (1, 'tok', 'a')").run();
+    expect(() => db.prepare("INSERT INTO calendar_feeds (user_id, token, created_at) VALUES (1, 'other', 'a')").run()).toThrow(
+      /UNIQUE|PRIMARY/,
+    );
+  });
+
+  it("migration 5: the fixed proposal is forgotten with the proposal, the feed goes with the account", () => {
+    const db = openDatabase(":memory:");
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    db.prepare(
+      "INSERT INTO polls (share_token, creator_id, title, kind, created_at, updated_at, expires_at) VALUES ('t', 1, 'x', 'days', 'a', 'a', 'z')",
+    ).run();
+    db.prepare("INSERT INTO poll_proposals (poll_id, position, first_date, last_date) VALUES (1, 0, 'a', 'b')").run();
+    expect(() => db.prepare("UPDATE polls SET fixed_proposal_id = 99").run()).toThrow(/FOREIGN KEY/);
+    db.prepare("UPDATE polls SET fixed_proposal_id = 1").run();
+    db.prepare("DELETE FROM poll_proposals WHERE id = 1").run();
+    expect(db.prepare("SELECT fixed_proposal_id FROM polls").get()).toEqual({ fixed_proposal_id: null });
+
+    db.prepare("INSERT INTO calendar_feeds (user_id, token, created_at) VALUES (1, 'tok', 'a')").run();
+    db.prepare("DELETE FROM users WHERE id = 1").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM calendar_feeds").get()).toEqual({ n: 0 });
   });
 
   it("waits for a locked database instead of failing at once", () => {

@@ -60,8 +60,10 @@ export type ErrorCode =
   | "calendars_unavailable"
   /** The poll share link is unknown, was replaced by a new one, or the poll has been deleted. */
   | "poll_invalid"
-  /** The poll does not take votes: closed by hand or past its deadline. */
+  /** The poll does not take votes: closed by hand, past its deadline, or its date is fixed. */
   | "poll_closed"
+  /** The poll has no fixed date (yet), so there is nothing to download as a calendar file. */
+  | "poll_not_fixed"
   /** The poll already has the most guest votes allowed (`POLL_MAX_GUEST_VOTES`). */
   | "poll_full"
   /** The person already has the most polls allowed (`POLLS_PER_USER`). */

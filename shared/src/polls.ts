@@ -129,8 +129,12 @@ export interface PollView {
   deadline: string | null;
   /** Closed by hand (`UpdatePollRequest.closed`). */
   closed: boolean;
-  /** Votes are accepted: not closed by hand and the deadline (if any) has not passed. */
+  /** Votes are accepted: not closed by hand, not fixed, and the deadline (if any) has not passed. */
   open: boolean;
+  /** The proposal chosen as the final date (`FixPollRequest`), or null while no date is fixed. */
+  fixedProposalId: number | null;
+  /** When the date was fixed (or changed to another proposal), or null. */
+  fixedAt: string | null;
   createdAt: string;
   /** When the poll will be deleted (`POLL_KEPT_DAYS_AFTER_LAST_PROPOSAL` after the last proposal ends). */
   expiresAt: string;
@@ -151,6 +155,8 @@ export interface PollSummary {
   voteCount: number;
   deadline: string | null;
   open: boolean;
+  /** The proposal chosen as the final date, or null. */
+  fixedProposalId: number | null;
   createdAt: string;
   expiresAt: string;
   /** The caller has an account vote in it. */
@@ -185,6 +191,57 @@ export interface GuestVoteCreated {
   voteId: number;
   voteKey: string;
   poll: PollView;
+}
+
+/**
+ * Fixing the date (phase 5a). The creator or an admin chooses one proposal as the final date; the poll then does
+ * not take votes any more (`PollView.open` is false, voting fails with `poll_closed`). `closed` stays a separate
+ * flag: un-fixing opens the poll again unless it was closed by hand or its deadline has passed.
+ *
+ * - `PUT /api/polls/:id/fixed` (creator or admin) body `FixPollRequest` → `PollView`: fixes the proposal, or
+ *   changes the fixed date to another proposal. Fixing the proposal that is already fixed changes nothing.
+ *   A `proposalId` that is not a proposal of this poll → `validation` with field `proposalId`.
+ * - `DELETE /api/polls/:id/fixed` (creator or admin) → `PollView`: removes the fixed date (fine when there is none).
+ */
+export interface FixPollRequest {
+  proposalId: number;
+}
+
+/**
+ * `POST /api/polls/:id/fix-check` (creator or admin) body `FixPollRequest` → `FixCheck`: reads the calendars of
+ * the poll's participants again and tells who would be busy during that proposal. A warning for the screen only;
+ * fixing is never blocked by it. Counts against the same limit as a search (`SEARCHES_PER_USER`, bucket of the
+ * caller) and needs the calendar key (`calendars_unavailable` otherwise). Never contains titles or times.
+ */
+export interface FixCheck {
+  proposalId: number;
+  /** Participants with a busy time that overlaps the proposal (all-day busy events count for whole German days). */
+  busy: PollPerson[];
+  /** Participants of whom at least one calendar could not be read completely: nothing is known about them. */
+  unreadable: PollPerson[];
+  /** Participants who have not added a calendar: nothing is known about them either. */
+  noCalendar: PollPerson[];
+}
+
+/**
+ * The fixed date as a calendar file, for everyone with the share link (guests too):
+ * `GET /api/poll-links/:shareToken/event.ics` → `text/calendar`, sent as a download (`termin.ics`). A poll without
+ * a fixed date → `poll_not_fixed` (409). An unknown link behaves like `GET /api/poll-links/:shareToken`.
+ *
+ * Personal calendar feed, for subscribing from a calendar app. The link contains a secret token and is shown in
+ * the profile, so it is stored as is, like the share token:
+ * - `GET /api/me/calendar-feed` (login) → `CalendarFeed`: the current token, or null when the feed is off.
+ * - `POST /api/me/calendar-feed` (login) → `CalendarFeed`: switches the feed on, or renews the token (the old link
+ *   stops working).
+ * - `DELETE /api/me/calendar-feed` (login) → 204: switches the feed off.
+ * - `GET /api/calendar-feeds/:token` (no login; `:token.ics` works too) → `text/calendar`: the fixed date of every
+ *   poll the person created, takes part in, or voted in, except polls where the person's own vote on the fixed
+ *   proposal is "no". Polls disappear from it when they are deleted. An unknown token → `not_found` (404).
+ *
+ * The events carry no link to the poll: the server does not know the address of the app's pages.
+ */
+export interface CalendarFeed {
+  token: string | null;
 }
 
 // Further routes, all → `PollView`:

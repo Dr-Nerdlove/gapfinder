@@ -257,6 +257,28 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     their calendar by themselves (note: Google refreshes subscribed calendars only every few hours, sometimes
     once a day).
 - Entering a date without confirmation needs the OAuth extension; not part of the first version.
+- Decided 2026-11-02 with the owner before building 5a:
+  - The creator or an admin fixes one proposal as the final date; it can later be changed to another proposal or
+    taken back. Fixing makes the poll not accept votes (`open` is false); taking it back opens it again unless
+    it is closed by hand (`closed` stays a separate flag) or past its deadline.
+  - The check before fixing is a warning only and never blocks fixing. It lists who is busy, whose calendar
+    cannot be read and who has no calendar, never titles or times, and counts like a search in the same
+    rate-limit bucket.
+  - Everyone with the share link (guests too) can download the fixed date as `.ics`.
+  - The personal feed has one secret link per account (stored as is, renewable, can be switched off). It holds
+    the fixed date of every poll where the person is creator, participant, or has an account vote, except polls
+    where the person's own account vote says "no" to the fixed proposal.
+  - Old dates vanish with the poll (deleted 30 days after the last proposal; `expires_at` is unchanged).
+  - The `.ics` files carry no link to the poll: the server does not know the app's page address. The frontend
+    (5b) builds the "In Google Kalender eintragen" / "In Outlook eintragen" buttons itself.
+  - Where it lives (5a, server): migration 5 in `server/src/db.ts` (`polls.fixed_proposal_id`, `fixed_at`,
+    `fixed_sequence`, table `calendar_feeds`); types `FixPollRequest`, `FixCheck`, `CalendarFeed` and the
+    `poll_not_fixed` code in `shared/src/polls.ts` and `index.ts`; routes `PUT/DELETE /api/polls/:id/fixed`,
+    `POST /api/polls/:id/fix-check`, `GET /api/poll-links/:shareToken/event.ics` in `server/src/routes/polls.ts`
+    and `GET/POST/DELETE /api/me/calendar-feed`, `GET /api/calendar-feeds/:token` in `server/src/routes/feeds.ts`;
+    the calendar file writer is `server/src/calendars/ics-write.ts`, the shared calendar reading
+    `server/src/calendars/busy.ts`, the feed contents `server/src/polls/feed.ts`. A wrong feed token is not
+    counted in the per-address bucket (calendar services share addresses; the token cannot be guessed).
 
 ### Look
 

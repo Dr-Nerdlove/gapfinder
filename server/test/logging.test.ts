@@ -30,6 +30,12 @@ describe("maskTokens", () => {
     ["/api/poll-links/SECRET", "/api/poll-links/***"],
     ["/api/poll-links/SECRET/votes/5", "/api/poll-links/***/votes/5"],
     ["/api/poll-links/SECRET/my-vote?x=1", "/api/poll-links/***/my-vote?x=1"],
+    ["/api/poll-links/SECRET/event.ics", "/api/poll-links/***/event.ics"],
+    ["/api/calendar-feeds/SECRET", "/api/calendar-feeds/***"],
+    ["/api/calendar-feeds/SECRET.ics", "/api/calendar-feeds/***"],
+    ["/api/calendar-feeds/SECRET.ics?x=1", "/api/calendar-feeds/***?x=1"],
+    ["/api/me/calendar-feed", "/api/me/calendar-feed"],
+    ["/api/polls/5/fixed", "/api/polls/5/fixed"],
     ["/api/polls/5/votes/7", "/api/polls/5/votes/7"],
     ["/api/admin/invites/5", "/api/admin/invites/5"],
     ["/api/admin/users/5/password-reset", "/api/admin/users/5/password-reset"],
@@ -76,6 +82,38 @@ describe("request log", () => {
       "wrong-token-1",
       "Bearer",
     ]) {
+      expect(text).not.toContain(secret);
+    }
+  });
+
+  it("never contains a poll share token or a calendar feed token, also for the calendar file routes", async () => {
+    const log = captureLog();
+    env = await createTestEnv({ logLevel: "info" }, { logStream: log.stream });
+    const me = await addUserWithSession(env, "Vincent R.");
+    const created = (
+      await call(env, "POST", "/api/polls", {
+        token: me.token,
+        body: {
+          title: "Spieleabend",
+          kind: "timed",
+          proposals: [{ start: "2026-11-07T17:00:00.000Z", end: "2026-11-07T19:00:00.000Z" }],
+          participants: [],
+        },
+      })
+    ).json<{ id: number; shareToken: string; proposals: { id: number }[] }>();
+    await call(env, "PUT", `/api/polls/${created.id}/fixed`, { token: me.token, body: { proposalId: created.proposals[0]!.id } });
+    const feed = (await call(env, "POST", "/api/me/calendar-feed", { token: me.token })).json<{ token: string }>();
+
+    const download = await call(env, "GET", `/api/poll-links/${created.shareToken}/event.ics`);
+    const subscribed = await call(env, "GET", `/api/calendar-feeds/${feed.token}.ics`);
+    await call(env, "GET", "/api/calendar-feeds/wrong-feed-token");
+    expect(download.statusCode).toBe(200);
+    expect(subscribed.statusCode).toBe(200);
+
+    const text = log.text();
+    expect(text).toContain("/api/poll-links/***/event.ics");
+    expect(text).toContain("/api/calendar-feeds/***");
+    for (const secret of [created.shareToken, feed.token, "wrong-feed-token", me.token]) {
       expect(text).not.toContain(secret);
     }
   });

@@ -100,6 +100,7 @@ const KNOWN_CODES: Record<ErrorCode, true> = {
   calendars_unavailable: true,
   poll_invalid: true,
   poll_closed: true,
+  poll_not_fixed: true,
   poll_full: true,
   poll_limit: true,
   vote_name_taken: true,

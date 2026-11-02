@@ -6,6 +6,8 @@ import {
   POLLS_PER_USER,
   type AccountVoteRequest,
   type CreatePollRequest,
+  type FixCheck,
+  type FixPollRequest,
   type GuestVoteCreated,
   type GuestVoteRequest,
   type NewShareLink,
@@ -14,10 +16,13 @@ import {
   type UpdatePollRequest,
 } from "@lueckenfueller/shared";
 import type { FastifyInstance, FastifyRequest } from "fastify";
-import { findUserById, findUserByKey, type UserRow } from "../accounts/users.js";
+import { findUserById, findUserByKey, toPerson, type UserRow } from "../accounts/users.js";
 import { authOf, createGuards, optionalUser } from "../auth/guards.js";
 import { TOKEN_FAILURES_PER_IP } from "../auth/rate-limit.js";
 import { generateToken, hashToken } from "../auth/tokens.js";
+import { collectBusyTimes, countCalendarReads } from "../calendars/busy.js";
+import { writeCalendar } from "../calendars/ics-write.js";
+import { requireCalendarKey } from "../calendars/service.js";
 import type { AppContext } from "../context.js";
 import { inTransaction, isUniqueViolation } from "../db.js";
 import { ApiError, forbidden, notFound, validation } from "../errors.js";
@@ -31,15 +36,19 @@ import {
   findGuestVote,
   findPollById,
   findPollByToken,
+  fixProposal,
   guestNameInUse,
   insertGuestVote,
   insertPoll,
   isOpen,
   listPollSummaries,
+  participantsOf,
   proposalIdsOf,
+  proposalRowsOf,
   replaceShareToken,
   saveAccountVote,
   touchPoll,
+  unfixProposal,
   updateGuestVote,
   updatePoll,
   type PollRow,
@@ -54,6 +63,8 @@ import {
   checkedTitle,
   type RawCreatePoll,
 } from "../polls/validation.js";
+import { fixedEventOfPoll } from "../polls/feed.js";
+import { isBusyDuring, proposalSpan } from "../polls/fix-check.js";
 import { clientKey, enforceLimits, idParam } from "./shared.js";
 
 const instant = { type: "string", maxLength: 40 } as const;
@@ -97,6 +108,12 @@ const updateBody = {
     deadline: { type: ["string", "null"], maxLength: 40 },
     closed: { type: "boolean" },
   },
+} as const;
+
+const fixBody = {
+  type: "object",
+  required: ["proposalId"],
+  properties: { proposalId: { type: "integer" } },
 } as const;
 
 const accountVoteBody = {
@@ -218,6 +235,62 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
     return reply.status(204).send();
   });
 
+  /** The proposal of this poll with this id; anything else is a `validation` error for `proposalId`. */
+  function proposalOrFail(poll: PollRow, proposalId: number) {
+    const proposal = proposalRowsOf(ctx.db, poll.id).find((row) => row.id === proposalId);
+    if (!proposal) throw validation("proposalId");
+    return proposal;
+  }
+
+  // The date of a poll is fixed (and changed, and taken back) by the creator or an admin; see `FixPollRequest`.
+  app.put<{ Body: FixPollRequest }>(
+    "/api/polls/:id/fixed",
+    { onRequest: requireUser, schema: { body: fixBody } },
+    async (request): Promise<PollView> => {
+      const { poll, user } = manageablePollOrFail(request);
+      const proposal = proposalOrFail(poll, request.body.proposalId);
+      fixProposal(ctx.db, poll, proposal.id, ctx.now());
+      return viewFor(poll.id, user);
+    },
+  );
+
+  app.delete("/api/polls/:id/fixed", { onRequest: requireUser }, async (request): Promise<PollView> => {
+    const { poll, user } = manageablePollOrFail(request);
+    unfixProposal(ctx.db, poll, ctx.now());
+    return viewFor(poll.id, user);
+  });
+
+  // A warning for the screen before fixing: who is busy during the proposal. It never blocks fixing.
+  app.post<{ Body: FixPollRequest }>(
+    "/api/polls/:id/fix-check",
+    { onRequest: requireUser, schema: { body: fixBody } },
+    async (request): Promise<FixCheck> => {
+      const { poll, user } = manageablePollOrFail(request);
+      const proposal = proposalOrFail(poll, request.body.proposalId);
+      requireCalendarKey(ctx);
+      countCalendarReads(ctx, user.id);
+
+      const participants = participantsOf(ctx.db, poll.id);
+      const { readable, skipped } = await collectBusyTimes(
+        ctx,
+        participants.map((participant) => participant.id),
+      );
+      const span = proposalSpan(poll.kind, proposal);
+      const busyIds = new Set(readable.filter((person) => isBusyDuring(person.busy, span)).map((person) => person.id));
+      const skippedFor = (reason: "unreadable" | "no_calendar") =>
+        new Set(skipped.filter((person) => person.reason === reason).map((person) => person.personId));
+      const unreadableIds = skippedFor("unreadable");
+      const noCalendarIds = skippedFor("no_calendar");
+      const peopleIn = (ids: Set<number>) => participants.filter((participant) => ids.has(participant.id)).map(toPerson);
+      return {
+        proposalId: proposal.id,
+        busy: peopleIn(busyIds),
+        unreadable: peopleIn(unreadableIds),
+        noCalendar: peopleIn(noCalendarIds),
+      };
+    },
+  );
+
   // The creator or an admin removes any vote, also while the poll is closed.
   app.delete("/api/polls/:id/votes/:voteId", { onRequest: requireUser }, async (request): Promise<PollView> => {
     const { poll, user } = manageablePollOrFail(request);
@@ -271,6 +344,18 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
   app.get("/api/poll-links/:shareToken", async (request): Promise<PollView> => {
     const poll = pollByLinkOrFail(request);
     return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now());
+  });
+
+  // The fixed date as a calendar file, for everyone with the link (guests too).
+  app.get("/api/poll-links/:shareToken/event.ics", async (request, reply) => {
+    const poll = pollByLinkOrFail(request);
+    const event = fixedEventOfPoll(ctx.db, poll);
+    if (!event) throw new ApiError(409, "poll_not_fixed");
+    return reply
+      .header("Content-Type", "text/calendar; charset=utf-8")
+      .header("Content-Disposition", 'attachment; filename="termin.ics"')
+      .header("Cache-Control", "no-store")
+      .send(writeCalendar([event], { feed: false }));
   });
 
   app.put<{ Body: AccountVoteRequest }>(

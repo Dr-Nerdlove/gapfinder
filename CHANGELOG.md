@@ -19,6 +19,17 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 5a, fixing the date on the server: the creator or the admin of a poll can fix one date as the final one,
+  change it to another date later, or take it back. While a date is fixed the poll takes no more votes (taking
+  it back opens the poll again, unless it was closed by hand or its deadline has passed). Before fixing, the
+  server can read the participants' calendars again and tell who would be busy, who has no calendar and whose
+  calendar cannot be read; it is only a warning and never stops anyone from fixing (it counts like a search
+  against the limit of 30 per 15 minutes). Everybody with the poll link, guests too, can download the fixed
+  date as a calendar file (`.ics`). Every person with an account can switch on a personal calendar feed with a
+  secret link, renew it (the old link stops working) or switch it off; subscribed in a calendar app, it shows
+  the fixed date of every poll the person created, takes part in or voted in, except polls where the person
+  voted "no" for the fixed date. Old dates disappear with their poll, 30 days after its last date. There are no
+  screens yet (phase 5b). The server updates itself; nothing has to be set up again.
 - Phase 4b, polls on screen: in the search result, tap free times to choose them; "Abstimmung anlegen" opens a
   page with title, note, deadline and the exact start and end of each date (suggested: the searched duration
   from the start of the gap). The poll page (`#/abstimmung/<link>`) works for guests and friends: name (guests

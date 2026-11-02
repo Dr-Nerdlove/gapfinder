@@ -143,6 +143,22 @@ export const migrations: readonly Migration[] = [
     ) STRICT;
     CREATE INDEX poll_vote_answers_proposal_id ON poll_vote_answers (proposal_id);`,
   },
+  {
+    id: 5,
+    name: "fixed poll dates and calendar feeds",
+    // Additive only (new columns with defaults, one new table): an older server keeps running on this database
+    // and ignores them. `fixed_sequence` only ever grows; it is the SEQUENCE of the event in calendar files, so
+    // a calendar app sees that the event changed. The feed token is stored as is (the profile shows the link
+    // again), like the poll share token.
+    sql: `ALTER TABLE polls ADD COLUMN fixed_proposal_id INTEGER REFERENCES poll_proposals (id) ON DELETE SET NULL;
+    ALTER TABLE polls ADD COLUMN fixed_at TEXT;
+    ALTER TABLE polls ADD COLUMN fixed_sequence INTEGER NOT NULL DEFAULT 0;
+    CREATE TABLE calendar_feeds (
+      user_id INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+      token TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL
+    ) STRICT;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

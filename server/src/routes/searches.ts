@@ -5,25 +5,21 @@ import {
   SEARCH_MAX_PEOPLE,
   SEARCH_MAX_PERIOD_DAYS,
   SEARCH_MAX_RANGE_DAYS,
-  SEARCHES_PER_USER,
   type PeopleList,
   type SearchResult,
-  type SkippedPerson,
   type TimeWindow,
   type Weekday,
 } from "@lueckenfueller/shared";
 import type { FastifyInstance } from "fastify";
 import { findUserById, listUsers, toPerson } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
-import { requireCalendarKey, readStoredCalendar } from "../calendars/service.js";
-import { listCalendars } from "../calendars/store.js";
+import { collectBusyTimes, countCalendarReads } from "../calendars/busy.js";
+import { requireCalendarKey } from "../calendars/service.js";
 import type { AppContext } from "../context.js";
-import { rateLimited, validation } from "../errors.js";
-import { clockMinutes, searchDays, searchHours, type Interval, type SearchPersonInput } from "../gaps/search.js";
+import { validation } from "../errors.js";
+import { clockMinutes, searchDays, searchHours } from "../gaps/search.js";
 import { berlinDateOf, dayNumber, parseDateParts, type DateParts } from "../time.js";
 
-/** At most this many calendars are read at the same time across one whole search. */
-const MAX_CONCURRENT_READS = 8;
 /** The calendars are read up to 400 days ahead; a search may end a year from today at the latest. */
 const MAX_DAYS_AHEAD = 365;
 const CLOCK_PATTERN = /^(?:[01]\d|2[0-3]):(?:00|15|30|45)$/;
@@ -133,61 +129,6 @@ function checkedSearch(ctx: AppContext, callerId: number, raw: RawSearch): Check
   };
 }
 
-/** Runs `work` for every item, at most `limit` at a time. `work` must not throw. */
-async function runPool<T>(items: T[], limit: number, work: (item: T) => Promise<void>): Promise<void> {
-  let next = 0;
-  const worker = async (): Promise<void> => {
-    while (next < items.length) await work(items[next++]!);
-  };
-  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
-}
-
-/**
- * Reads the calendars of everybody and tells who can be searched. Never returns or logs anything of a calendar
- * but the busy times; a person with no calendar, or with any calendar that cannot be read completely, is left
- * out (they would look free when they are not).
- */
-async function collectBusyTimes(
-  ctx: AppContext,
-  personIds: number[],
-): Promise<{ readable: SearchPersonInput[]; skipped: SkippedPerson[] }> {
-  const busy: Interval[][] = personIds.map(() => []);
-  const unreadable = personIds.map(() => false);
-  const noCalendar = personIds.map(() => false);
-  const reads: { person: number; row: ReturnType<typeof listCalendars>[number] }[] = [];
-  personIds.forEach((id, person) => {
-    const rows = listCalendars(ctx.db, id);
-    if (rows.length === 0) noCalendar[person] = true;
-    for (const row of rows) reads.push({ person, row });
-  });
-
-  await runPool(reads, MAX_CONCURRENT_READS, async ({ person, row }) => {
-    if (unreadable[person]) return;
-    try {
-      const read = await readStoredCalendar(ctx, row);
-      if (!read.ok || read.calendar.truncated) {
-        unreadable[person] = true;
-        return;
-      }
-      if (row.counts_busy !== 1) return;
-      for (const event of read.calendar.events) {
-        if (event.busy) busy[person]!.push({ start: event.start, end: event.end });
-      }
-    } catch {
-      unreadable[person] = true;
-    }
-  });
-
-  const readable: SearchPersonInput[] = [];
-  const skipped: SkippedPerson[] = [];
-  personIds.forEach((id, person) => {
-    if (noCalendar[person]) skipped.push({ personId: id, reason: "no_calendar" });
-    else if (unreadable[person]) skipped.push({ personId: id, reason: "unreadable" });
-    else readable.push({ id, busy: busy[person]! });
-  });
-  return { readable, skipped };
-}
-
 /** `GET /api/people` and `POST /api/searches`: choosing whom to search with, and the search. */
 export function registerSearchRoutes(app: FastifyInstance, ctx: AppContext): void {
   const { requireUser } = createGuards(ctx);
@@ -205,10 +146,7 @@ export function registerSearchRoutes(app: FastifyInstance, ctx: AppContext): voi
       requireCalendarKey(ctx);
 
       // Every search counts, not only failed ones: reading calendars is the expensive part.
-      const limitKey = `search:${user.id}`;
-      const wait = ctx.limiter.blockedFor(limitKey, SEARCHES_PER_USER);
-      if (wait !== null) throw rateLimited(wait);
-      ctx.limiter.recordFailure(limitKey);
+      countCalendarReads(ctx, user.id);
 
       const { readable, skipped } = await collectBusyTimes(ctx, search.personIds);
       const now = ctx.now().getTime();
