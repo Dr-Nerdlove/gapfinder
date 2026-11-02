@@ -7,6 +7,7 @@ import {
   answersOfVote,
   bestProposalIds,
   checkGuestName,
+  fixedTag,
   formatInstant,
   highlightedProposalIds,
   needsVote,
@@ -229,5 +230,23 @@ describe("nextScreen", () => {
       phase: "failed",
       message: "Das hat nicht geklappt. Bitte versuche es noch einmal.",
     });
+  });
+});
+
+describe("fixedTag", () => {
+  it("shows the date of a fixed time", () => {
+    const fixedProposal: Proposal = { id: 1, start: "2026-12-12T12:00:00.000Z", end: "2026-12-12T14:00:00.000Z" };
+    expect(fixedTag({ fixedProposal })).toBe("Termin steht: Sa 12.12., 13:00–15:00");
+  });
+
+  it("shows the days of a whole-day run", () => {
+    const fixedProposal: Proposal = { id: 2, first: "2027-02-14", last: "2027-02-28" };
+    expect(fixedTag({ fixedProposal })).toBe(`Termin steht: ${proposalLabel(fixedProposal)}`);
+    expect(fixedTag({ fixedProposal })).toContain("Feb.");
+  });
+
+  it("keeps the short text when there is no date or the server sends no field", () => {
+    expect(fixedTag({ fixedProposal: null })).toBe("Termin steht ✓");
+    expect(fixedTag({})).toBe("Termin steht ✓");
   });
 });
