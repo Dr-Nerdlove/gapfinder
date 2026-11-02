@@ -204,6 +204,36 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   are marked with a check mark.
 - Votes: **Ja / Vielleicht / Nein**; optional voting deadline.
 - Everyone sees the current state of the vote.
+- Decided 2026-11-02 with the owner before building 4a (all recommendations taken):
+  - **Proposals:** 1 to 20 per poll. A proposal is an **exact time** (start and end on 15 minutes, at most 24
+    hours, chosen inside a free time of an hours search; the screen suggests the searched duration from the start
+    of the gap) or, from a multi-day search, a run of **whole days** (tomorrow at the earliest, at most 31 days).
+    Rejected: the whole free window with the time fixed later (phase 5 needs an exact time for `.ics` anyway).
+    Proposals cannot be changed after creating the poll (the votes would no longer fit); a new poll instead.
+  - **Changing a vote:** an account votes as itself (one vote, from any device). A guest's device gets a secret
+    vote key when voting and keeps it; with it the vote can be changed or withdrawn on that device. Another
+    device or cleared browser data means a new vote (the creator can remove the old one). Rejected: matching by
+    name (anyone could change other people's votes) and no changes at all.
+  - **Lifetime:** a poll is deleted automatically **30 days after its last proposal ends**; the link then stops
+    working. Rejected: 90 days after creating, never.
+  - **Managing:** the **creator and the admin** can change title, note and deadline, close and reopen the poll,
+    remove single votes, make a **new share link** (the old one stops working) and delete the poll. When the
+    creator's account is deleted, the poll stays and only the admin manages it.
+  - **Abuse limits:** only account holders create polls, at most 20 each that are not yet deleted; the share link
+    is a random 128-bit secret, masked in the request log; at most 100 guest votes per poll; 30 guest vote
+    writes per address in 15 minutes; wrong share links count like wrong invite links (30 per address). Guest
+    names are 1–40 characters and may be neither an account's username nor another guest's name in the same
+    poll, so nobody can pose as "Vincent R.". Trade-off: whoever has a link can probe whether a username exists;
+    usernames are not secret among the friends.
+  - **Visibility:** everyone with the link sees each voter's name and answers, and the participants (the people
+    of the search, so the screen can show "noch nicht abgestimmt"; phase 5 re-checks their calendars). Rejected:
+    sums only for guests.
+  - Settled while building 4a: the share token is stored as it is (the creator and the participants can open the
+    link again; it is meant to be passed on), guest vote keys only as hashes. A logged-in caller sees their polls
+    in a list (created, taking part, or voted). The state is refreshed by asking again (every 30 seconds while the
+    page is open), not pushed. Every voter answers every proposal. Routes and types: `shared/src/polls.ts`,
+    server in `server/src/routes/polls.ts` and `server/src/polls/`.
+  - Built as two pull requests: 4a the server, 4b the screens.
 
 ### Fixing the date
 
@@ -277,4 +307,4 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
 
 ## Open points
 
-- How long old polls are kept.
+- None at the moment.

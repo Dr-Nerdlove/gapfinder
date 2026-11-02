@@ -7,6 +7,16 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 4a, polls on the server: from the results of a gap search, a person with an account can make a poll
+  with 1 to 20 proposed dates (exact times, or whole days from a multi-day search), a title, an optional note
+  and an optional deadline. The poll gets a share link: everyone with it sees the state and votes yes / maybe /
+  no on every date. Friends vote with their account (marked with a check mark, changeable from any device),
+  guests with their name; a guest's device keeps a secret key to change or withdraw the vote later. Guests
+  cannot use a friend's username. The creator and the admin can change the deadline, close and reopen the
+  poll, remove votes, renew the link (the old one stops working) and delete the poll. A poll is deleted 30 days
+  after its last date. Limits against strangers: 20 polls per person, 100 guest votes per poll, 30 guest votes
+  per address every 15 minutes, and wrong links are blocked like wrong invite links. There are no screens yet
+  (phase 4b). The server updates itself; nothing has to be set up again.
 - Phase 3b, gap search screens: a new page "Lücken suchen" (button on the start page). On one page you choose
   the friends, the kind of search (hours on weekdays with a time window and buffer, or several days in a row,
   optionally starting on a weekday) and the range (30 or 90 days, half a year, a year, or whole months). The
