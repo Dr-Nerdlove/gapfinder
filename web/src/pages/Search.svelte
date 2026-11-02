@@ -1,0 +1,143 @@
+<script lang="ts">
+  import { NEAR_MISS_MIN_PEOPLE, type Person, type SearchRequest, type SkippedPerson } from "@lueckenfueller/shared";
+  import { tick, untrack } from "svelte";
+  import * as api from "../lib/api";
+  import {
+    REQUEST_PROBLEM_TEXTS,
+    berlinToday,
+    buildRequest,
+    keepKnownPeople,
+    loadSettings,
+    readablePeople,
+    requestSummary,
+    resultView,
+    saveSettings,
+    skippedNotices,
+    type ResultView,
+  } from "../lib/gap-search";
+  import { errorMessage } from "../lib/messages";
+  import { session, sessionState } from "../lib/session.svelte";
+  import Button from "../components/Button.svelte";
+  import Card from "../components/Card.svelte";
+  import Message from "../components/Message.svelte";
+  import OfflineNotice from "../components/OfflineNotice.svelte";
+  import Page from "../components/Page.svelte";
+  import SearchForm from "../components/search/SearchForm.svelte";
+  import SearchResults from "../components/search/SearchResults.svelte";
+
+  const user = $derived(sessionState.user);
+  const locked = $derived(sessionState.offline);
+  const today = berlinToday();
+
+  let settings = $state(loadSettings(today));
+  let everyone = $state<Person[]>([]);
+  let loadingPeople = $state(true);
+  let peopleLoaded = $state(false);
+  let loadError = $state("");
+
+  let searching = $state(false);
+  let problem = $state("");
+  let latest = 0;
+  let resultBox = $state<HTMLElement>();
+  interface Answer {
+    summary: string;
+    notices: string[];
+    view: ResultView;
+    nearMissesPossible: boolean;
+  }
+  let answer = $state<Answer | null>(null);
+
+  const others = $derived(user ? everyone.filter((p) => p.id !== user.id) : []);
+
+  async function loadPeople(): Promise<void> {
+    loadingPeople = true;
+    loadError = "";
+    const result = await session.run((o) => api.listPeople(o));
+    loadingPeople = false;
+    if (result.ok) {
+      everyone = result.data.people;
+      peopleLoaded = true;
+      if (user) settings.people = keepKnownPeople(settings.people, everyone, user.id);
+    } else if (result.kind === "error") {
+      loadError = errorMessage(result);
+    }
+    // Offline: the notice explains it; the chosen people stay as the device remembers them.
+  }
+
+  $effect(() => {
+    if (user) untrack(() => void loadPeople());
+  });
+
+  // The device remembers the last settings (also what was chosen but not searched yet).
+  $effect(() => {
+    saveSettings($state.snapshot(settings));
+  });
+
+  async function search(): Promise<void> {
+    if (!user || searching) return;
+    problem = "";
+    const built = buildRequest($state.snapshot(settings), berlinToday());
+    if (!built.ok) {
+      problem = REQUEST_PROBLEM_TEXTS[built.problem];
+      return;
+    }
+    const request: SearchRequest = built.request;
+    const mine = ++latest;
+    searching = true;
+    const result = await session.run((o) => api.searchGaps(request, o));
+    if (mine !== latest) return;
+    searching = false;
+    if (result.ok) {
+      const skipped: SkippedPerson[] = result.data.skipped;
+      answer = {
+        summary: requestSummary(request),
+        notices: skippedNotices(skipped, everyone, user.id),
+        view: resultView(result.data, everyone, user.id),
+        nearMissesPossible: readablePeople(request.people.length, skipped) >= NEAR_MISS_MIN_PEOPLE,
+      };
+      await tick();
+      resultBox?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else if (result.kind === "error") {
+      problem = errorMessage(result);
+    }
+    // Offline: the notice above explains it; the last result stays and the settings are not lost.
+  }
+</script>
+
+<Page title="Lücken suchen" subtitle="Wann haben alle Zeit?">
+  <OfflineNotice onretry={() => (peopleLoaded ? undefined : loadPeople())} />
+  {#if !user}
+    <!-- Only reached while logging out. -->
+  {:else if loadError}
+    <Card>
+      <Message text={loadError} />
+      <div><Button variant="tonal" onclick={loadPeople}>Erneut versuchen</Button></div>
+    </Card>
+  {:else if loadingPeople && !peopleLoaded}
+    <Card><p aria-live="polite">Einen Moment …</p></Card>
+  {:else if !peopleLoaded}
+    <Card title="Personen können gerade nicht geladen werden">
+      <p>Sobald der Server wieder wach ist, kannst du hier Freunde auswählen. Deine letzte Auswahl bleibt erhalten.</p>
+    </Card>
+  {:else}
+    <SearchForm bind:settings {others} {today} {searching} {locked} {problem} onsearch={search} />
+    {#if answer}
+      <div bind:this={resultBox} class="scroll-target">
+        <SearchResults
+          summary={answer.summary}
+          notices={answer.notices}
+          everyone={answer.view.everyone}
+          nearMisses={answer.view.nearMisses}
+          nearMissesPossible={answer.nearMissesPossible}
+          stale={searching}
+        />
+      </div>
+    {/if}
+  {/if}
+</Page>
+
+<style>
+  .scroll-target {
+    scroll-margin-top: 16px;
+  }
+</style>

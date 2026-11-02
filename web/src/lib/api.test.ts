@@ -284,3 +284,38 @@ describe("calendar endpoints", () => {
     expect(result).toEqual({ ok: false, kind: "error", status: 400, code: "validation", field: "link" });
   });
 });
+
+describe("gap search endpoints", () => {
+  async function call(fn: (o: api.CallOptions) => Promise<unknown>) {
+    const fetchImpl = mockFetch(() => jsonResponse({}));
+    await fn({ baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl), token: "t" });
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    return { url, method: init.method, body: init.body };
+  }
+
+  it("uses the paths and methods of the contract", async () => {
+    expect(await call((o) => api.listPeople(o))).toMatchObject({ url: "http://api.test/api/people", method: "GET" });
+    expect(
+      await call((o) => api.searchGaps({ mode: "days", people: [2], from: "2026-12-01", to: "2026-12-31", days: 3 }, o)),
+    ).toMatchObject({
+      url: "http://api.test/api/searches",
+      method: "POST",
+      body: '{"mode":"days","people":[2],"from":"2026-12-01","to":"2026-12-31","days":3}',
+    });
+  });
+
+  it("waits longer than the usual request for a search", async () => {
+    vi.useFakeTimers();
+    const fetchImpl = vi.fn((_url: string, init: RequestInit) =>
+      new Promise<Response>((_resolve, reject) => init.signal?.addEventListener("abort", () => reject(new Error("aborted")))),
+    );
+    let done = false;
+    const pending = api
+      .searchGaps({ mode: "days", people: [], from: "2026-12-01", to: "2026-12-02", days: 1 }, { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) })
+      .then((r) => ((done = true), r));
+    await vi.advanceTimersByTimeAsync(api.REQUEST_TIMEOUT_MS + 1000);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(api.SEARCH_REQUEST_TIMEOUT_MS);
+    expect(await pending).toEqual({ ok: false, kind: "offline" });
+  });
+});

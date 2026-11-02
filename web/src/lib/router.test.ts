@@ -13,6 +13,9 @@ describe("parseRoute", () => {
     ["#/kalender", { name: "calendars" }],
     ["#/kalender/", { name: "calendars" }],
     ["#/kalender?x=1", { name: "calendars" }],
+    ["#/suche", { name: "search" }],
+    ["#/suche/", { name: "search" }],
+    ["#/suche?x=1", { name: "search" }],
     ["#/verwaltung", { name: "admin" }],
     ["#/verwaltung?x=1", { name: "admin" }],
   ])("maps %j to its page", (hash, route) => {

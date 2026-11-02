@@ -15,7 +15,7 @@ and password, and change their name, password and colour in their profile. The a
 in "Verwaltung" and creates links for forgotten passwords. **Phase 2: calendars.** Everyone links calendars through
 their subscription link (the server tries the link at once, stores it encrypted and never shows it again), sets
 which count as busy and which is the default, and sees a preview of their own next 4 weeks. Calendar contents
-are never stored. Gap search and voting follow in later phases.
+are never stored. Voting follows in a later phase.
 The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8). The database
 is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9 and "Restoring a backup").
 
@@ -26,6 +26,10 @@ is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9
 | Profile (own colour)                         | Admin area (dark mode)                      | Server off                                                     |
 | -------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------- |
 | ![Profile page](docs/screenshots/profile.png) | ![Admin area](docs/screenshots/admin.png)   | ![Start page, server asleep](docs/screenshots/start-offline.png) |
+
+| Gap search (settings)                            | Result: hours, "Fast alle"                       | Result: days in a row                                  |
+| ------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------ |
+| ![Search settings](docs/screenshots/search-form.png) | ![Search result](docs/screenshots/search-results.png) | ![Result, days](docs/screenshots/search-results-days.png) |
 
 ## Repository layout
 
