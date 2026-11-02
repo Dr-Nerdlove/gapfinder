@@ -216,8 +216,9 @@ missing, with a recommendation, and let the people choose.
   - Backups (`deploy/vm/backup.sh`, nightly timer): made by the server's CLI (`backup`, `check-backup` in
     `server/src/backup.ts`) in a `docker compose run` container, encrypted with age to a public key; the secret
     key exists only with the owner, so the VM can never decrypt (trial restore and restore ask for it). Copied
-    over SMB (`smbclient`) to a OneDrive folder on the Windows host, reached as the VM's default gateway
-    (Hyper-V Default Switch). `smbclient ls` with no match exits 1 (`NT_STATUS_NO_SUCH_FILE`): that is an
+    over SMB (`smbclient`) to a OneDrive folder on the Windows PC, reached at its fixed home-network address
+    that `setup.sh` asks for (`/etc/lueckenfueller/windows-pc`); never the default gateway, which is the router
+    and must not get the Windows login. `smbclient ls` with no match exits 1 (`NT_STATUS_NO_SUCH_FILE`): that is an
     empty folder, not an error. Backup, restore and `update.sh` share `/opt/lueckenfueller/.maintenance.lock`.
     `deploy/vm/test/backup.test.sh` runs the real CLI (via tsx) behind its fake `docker` and needs `age`:
     both `ci.yml` and `deploy.yml` run `npm test`, so both install it.
@@ -229,9 +230,16 @@ missing, with a recommendation, and let the people choose.
     database never holds it; a `calendar_key_check` row (HMAC) tells whether key and database belong together.
   - Firewall (`deploy/vm/firewall.nft`, own nftables table, not Debian's `nftables.service`, which flushes
     Docker's rules): the container may only reach TCP 443 and DNS at 9.9.9.9/1.1.1.1. That is why
-    `deploy/vm/compose.yaml` sets `dns:`: the VM's resolver (Hyper-V gateway or Tailscale's 100.100.100.100) is
-    blocked. A new outgoing service the server needs must be added there. `deploy/vm/test/firewall.test.sh`
+    `deploy/vm/compose.yaml` sets `dns:`: the VM's resolver (home router or Tailscale's 100.100.100.100) is
+    blocked. A new outgoing service the server needs must be added there. SSH from the home network is allowed
+    only from the Windows PC: the set `ssh_from4`, filled by `lueckenfueller-firewall.service` from
+    `/etc/lueckenfueller/windows-pc.nft`; a firewall reload empties it. `deploy/vm/test/firewall.test.sh`
     tests the rules in network namespaces (root; CI runs it with sudo, `npm test` does not).
+  - The VM sits on a Hyper-V **external** switch (directly in the home network, gateway = router), not on the
+    Default Switch: that one NATs through Windows, so a VPN on the PC (NordVPN, even with per-app split
+    tunneling) carried the VM's traffic and broke Tailscale (DERP dropped every minute, Funnel unreachable;
+    diagnosed 2026-11-02). Changes to network, address or switch must be done at the Hyper-V console, not over
+    ssh.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.

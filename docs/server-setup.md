@@ -34,15 +34,39 @@ You need:
 
 ## 2. Create the VM
 
-Open **PowerShell as administrator** (Windows search, "PowerShell", right-click, "Run as administrator"),
-paste the whole block below and press Enter. If your ISO file has another name or place, change the first line.
+Open **PowerShell as administrator** (Windows search, "PowerShell", right-click, "Run as administrator").
+
+The VM needs a **virtual switch** that puts it directly into your home network, like any other device. First
+look at which switches exist:
 
 ```powershell
-$Iso  = "C:\VMs\debian-netinst.iso"
-$Name = "lueckenfueller"
-$Disk = Join-Path (Get-VMHost).VirtualHardDiskPath "$Name.vhdx"
+Get-VMSwitch | Format-Table Name, SwitchType, NetAdapterInterfaceDescription
+```
 
-New-VM -Name $Name -Generation 2 -MemoryStartupBytes 1GB -NewVHDPath $Disk -NewVHDSizeBytes 10GB -SwitchName "Default Switch"
+- If a switch of the type **External** is listed (for example one that another VM such as Home Assistant
+  uses), use it: a network card can carry only one external switch. Note its name. Each VM on it is its own
+  device in the home network, as if it had its own cable to the router; they do not get in each other's way.
+  Later, do not rename or delete that switch: other VMs use it, and the firewall rule for the backups
+  (step 9) refers to its name (`vEthernet (<name>)`).
+- Otherwise create one on the PC's wired network card. Look up the card's name with `Get-NetAdapter`, then
+  (replace `<name>`):
+
+  ```powershell
+  New-VMSwitch -Name "Heimnetz" -NetAdapterName "<name>" -AllowManagementOS $true
+  ```
+
+  The PC's network drops for a few seconds. A network cable works reliably; Wi-Fi often does not.
+
+Then paste the whole block below and press Enter. Set `$Switch` to the name of your external switch, and if your
+ISO file has another name or place, change the first line.
+
+```powershell
+$Iso    = "C:\VMs\debian-netinst.iso"
+$Switch = "Heimnetz"
+$Name   = "lueckenfueller"
+$Disk   = Join-Path (Get-VMHost).VirtualHardDiskPath "$Name.vhdx"
+
+New-VM -Name $Name -Generation 2 -MemoryStartupBytes 1GB -NewVHDPath $Disk -NewVHDSizeBytes 10GB -SwitchName $Switch
 Set-VMMemory -VMName $Name -DynamicMemoryEnabled $false
 Set-VMProcessor -VMName $Name -Count 2
 # Linux needs this Secure Boot setting in Hyper-V.
@@ -56,7 +80,9 @@ Start-VM -Name $Name
 ```
 
 A window with the VM's screen opens. The disk grows only as needed; the 10 GB are a limit, not used up front.
-"Default Switch" gives the VM internet access through Windows; the VM cannot be reached from the home network.
+The VM is now a device in your home network with its own address from the router. It is deliberately not on
+Hyper-V's "Default Switch": there all of the VM's traffic runs through Windows, so a VPN on the PC (such as
+NordVPN) would carry it too, and the app would become unreachable from outside.
 
 ## 3. Install Debian
 
@@ -81,28 +107,45 @@ When it says "Installation complete", choose "Continue". The VM restarts and sho
 the installer again, close the VM window, in Hyper-V Manager open the VM's "Settings", "DVD Drive", "None",
 and start the VM again.
 
-## 4. Connect from Windows
+## 4. Fixed addresses and connecting from Windows
 
-Typing long commands into the VM window is tedious, and it cannot paste. Use a terminal on Windows instead:
+The VM and the PC need addresses that never change: the PC connects to the VM, and the VM copies its backups to
+the PC. Do this once.
 
-1. On Windows open **Terminal** or PowerShell (normal, not administrator) and type, with the user name you
-   chose when installing Debian instead of `admin`:
+1. **Fix the VM's hardware address in Hyper-V**, so the router always recognises it. In PowerShell as
+   administrator:
 
    ```powershell
-   ssh admin@lueckenfueller.mshome.net
+   Stop-VM lueckenfueller
+   $Mac = (Get-VMNetworkAdapter -VMName lueckenfueller).MacAddress
+   Set-VMNetworkAdapter -VMName lueckenfueller -StaticMacAddress $Mac
+   Start-VM lueckenfueller
    ```
 
-   Answer `yes` to the question about the fingerprint, then enter your password. From now on you can paste
-   commands with a right-click.
+2. **Reserve an address for the PC and the VM in the router.** In a FritzBox: **Heimnetz**, **Netzwerk**,
+   **Netzwerkverbindungen**, the pencil ("Bearbeiten") at the device, tick **"Diesem Netzwerkgerät immer die
+   gleiche IPv4-Adresse zuweisen"**, **"Übernehmen"**. Do this for the Windows PC and for `lueckenfueller`. In
+   other routers the function is called "DHCP reservation" or "static lease".
+3. **Write both addresses down.** In this guide they are `192.168.178.20` (PC) and `192.168.178.30` (VM); yours
+   will differ. The PC's address: `ipconfig` or `Get-NetIPConfiguration` in PowerShell. The VM's: log in in the
+   VM window and type `hostname -I`, or look at the router's list. If the VM got its address before you made
+   the reservation, restart the VM.
 
-Hyper-V's "Default Switch" gives the VM a new address after Windows restarts, but the name
-`lueckenfueller.mshome.net` (the VM's hostname from step 3) always leads to the current one, so the command
-stays the same. If the name is not found (rarely, for a few minutes after Windows starts), use the address
-instead: log in in the VM window, type `hostname -I`, and connect with that address, e.g.
-`ssh admin@172.20.31.5`. SSH is only reachable from this PC, not from the home network or the internet.
+Do not set a fixed address inside Debian; the router hands out the reserved one.
 
-Do not give the VM a fixed address inside Debian: the Default Switch changes its network on every Windows
-restart, and the VM would lose its internet connection (the backups find the PC's address by themselves).
+Typing long commands into the VM window is tedious, and it cannot paste. Use a terminal on Windows instead.
+Open **Terminal** or PowerShell (normal, not administrator) and type, with the VM's address and the user name
+you chose when installing Debian:
+
+```powershell
+ssh admin@192.168.178.30
+```
+
+Answer `yes` to the question about the fingerprint, then enter your password. From now on you can paste
+commands with a right-click.
+
+After the setup (step 5), only the Windows PC may connect with `ssh` (also over Tailscale); other devices at
+home cannot. Before that, every device at home can still try.
 
 ## 5. Run the setup
 
@@ -114,11 +157,14 @@ sudo bash setup.sh
 ```
 
 Enter your password when asked. The script ([`deploy/vm/setup.sh`](../deploy/vm/setup.sh)) installs and sets up
-everything; it prints a heading for each part. It stops twice and waits for you:
+everything; it prints a heading for each part. It stops three times and waits for you:
 
-1. **"To authenticate, visit: https://login.tailscale.com/a/..."** – open that link (copy it from the window),
+1. **"Address of the Windows PC in the home network"** – type the PC's reserved address from step 4 (e.g.
+   `192.168.178.20`) and press Enter. The backups go there, and only this PC may then connect to the VM with
+   `ssh`.
+2. **"To authenticate, visit: https://login.tailscale.com/a/..."** – open that link (copy it from the window),
    log in to Tailscale and confirm the new machine `lueckenfueller`.
-2. **Funnel** – if Tailscale has not yet allowed Funnel for your account, a second link appears. Open it and
+3. **Funnel** – if Tailscale has not yet allowed Funnel for your account, a second link appears. Open it and
    allow Funnel (and HTTPS certificates) for this machine. If no link appears, it is already allowed.
 
 At the end it prints something like:
@@ -131,7 +177,7 @@ https://lueckenfueller.tail1234.ts.net (Funnel on)
 That address (here `https://lueckenfueller.tail1234.ts.net`) is the **server address**. Write it down.
 
 The very last part, **"Checking the firewall"**, must end with `Firewall check passed`. It proves that the
-server can fetch calendars from the internet but cannot reach your PC, the VM itself or Tailscale (see
+server can fetch calendars from the internet but cannot reach your PC, the router, the VM itself or Tailscale (see
 "10. Calendar links: key and firewall").
 
 Test it: open `<server address>/api/health` in a browser on your phone (Wi-Fi off, so it really goes through the
@@ -206,10 +252,12 @@ The backup is made while the server runs; the app keeps working. The files are s
 ### Part 1: the folder on Windows
 
 The VM writes into one shared folder on the PC, with its own Windows user that may do nothing else (it cannot
-log in on the PC, and it can only reach this one folder). Open **PowerShell as administrator** (as in step 2)
+log in on the PC, and it can only reach this one folder). Only the VM's address may reach it. Open **PowerShell as administrator** (as in step 2)
 and paste this whole block:
 
 ```powershell
+$Vm       = "192.168.178.30"   # the VM's fixed address (step 4)
+$Switch   = "Heimnetz"          # the external switch from step 2
 $Folder   = Join-Path $env:OneDrive "Lückenfüller-Sicherung"
 $User     = "lueckenbackup"
 $Password = -join ((48..57) + (65..90) + (97..122) | Get-Random -Count 24 | ForEach-Object { [char]$_ })
@@ -225,8 +273,8 @@ New-Item -ItemType Directory -Force -Path $Folder | Out-Null
 icacls $Folder /grant "${User}:(OI)(CI)M" | Out-Null
 New-SmbShare -Name "lueckenfueller-backup" -Path $Folder -ChangeAccess $User | Out-Null
 
-# Let only the VM (through Hyper-V's "Default Switch") reach the shared folder, not the home network.
-New-NetFirewallRule -DisplayName "Lückenfüller backups from the VM" -Direction Inbound -Protocol TCP -LocalPort 445 -InterfaceAlias "vEthernet (Default Switch)" -Action Allow | Out-Null
+# Let only the VM reach the shared folder, not the rest of the home network.
+New-NetFirewallRule -DisplayName "Lückenfüller backups from the VM" -Direction Inbound -Protocol TCP -LocalPort 445 -RemoteAddress $Vm -InterfaceAlias "vEthernet ($Switch)" -Action Allow | Out-Null
 
 Write-Host "Folder:   $Folder"
 Write-Host "Password: $Password"
@@ -239,10 +287,21 @@ it down; if it is ever needed again, part 3 below makes a new one.
 If the first line fails or the folder is not in OneDrive (`$env:OneDrive` is empty when OneDrive is not set up
 for this Windows user), set `$Folder` by hand to a folder inside your OneDrive and run the block again.
 
+Check that Windows' own file sharing does not open the same port to the whole home network anyway:
+
+```powershell
+Get-NetFirewallPortFilter | Where-Object LocalPort -eq 445 | Get-NetFirewallRule | Where-Object { $_.Enabled -eq "True" -and $_.Direction -eq "Inbound" } | Format-Table DisplayName, Profile
+```
+
+Only "Lückenfüller backups from the VM" should show. If Windows' "Datei- und Druckerfreigabe (SMB eingehend)"
+shows as well, other devices at home can reach the share too. They would still need the backup user's
+password, but if you do not share files from this PC otherwise, you can switch that rule off.
+
 ### Part 2: the VM
 
 Connect to the VM with `ssh` (step 4). If you set up the VM before backups existed, first run the setup again
-(see "When the files in `deploy/vm/` change"). Then:
+(see "When the files in `deploy/vm/` change"). The backups go to the PC's address that you gave in the setup
+(step 5). Then:
 
 ```bash
 sudo lueckenfueller-backup setup
@@ -428,6 +487,8 @@ Where things are in the VM:
 - `/opt/lueckenfueller/data/` – the database. **This is the data to keep**; the backups protect it.
 - `/opt/lueckenfueller/backups/` – the newest 14 backups (encrypted). `/opt/lueckenfueller/backup-settings/` –
   the backup key's public half and the login for the Windows folder.
+- `/etc/lueckenfueller/windows-pc` – the Windows PC's address from the setup: backups go there, and only it may
+  connect with `ssh`.
 - `/usr/local/sbin/lueckenfueller-backup` and the `lueckenfueller-backup` timer – the nightly backup
   ([`deploy/vm/backup.sh`](../deploy/vm/backup.sh)).
 - `/usr/local/sbin/lueckenfueller-update` and the `lueckenfueller-update` timer – the hourly update
@@ -445,6 +506,90 @@ sudo bash setup.sh
 
 This is deliberate: the VM never runs new setup scripts from the internet on its own.
 
+## Moving the VM from the Default Switch to the home network
+
+For a VM that was set up on Hyper-V's "Default Switch" (the old way). Reason: with a VPN such as NordVPN on the
+PC, even with "only selected apps use the VPN", the VM's traffic also ran through the VPN, Tailscale's
+connection dropped every minute and the app was unreachable from outside. In the home network the VM goes
+straight to the router, and the VPN on the PC no longer matters. Tailscale and the server address stay the
+same. Set aside half an hour; the app is unreachable for a few minutes while the VM restarts.
+
+**Network changes are done with the VM switched off or at the Hyper-V window (`vmconnect`), never over `ssh`**:
+the connection would break in the middle.
+
+### If it does not work: going back
+
+You can undo everything. In PowerShell as administrator:
+
+```powershell
+Stop-VM lueckenfueller
+Connect-VMNetworkAdapter -VMName lueckenfueller -SwitchName "Default Switch"
+Start-VM lueckenfueller
+Set-NetFirewallRule -DisplayName "Lückenfüller backups from the VM" -RemoteAddress Any -InterfaceAlias "vEthernet (Default Switch)"
+```
+
+If the VM already ran the new setup, run it again in the Hyper-V window (the two lines from step 5). When it
+asks for the Windows PC's address, give the PC's address on the Default Switch: it is the VM's gateway, which
+`ip route` shows after "default via". This is only a stopgap: the Default Switch changes that address when
+Windows restarts, and then backups and `ssh` stop working until you run the setup again with the new address.
+The Tailscale connection and the server address are the same in both directions.
+
+### Steps
+
+1. **Hyper-V.** In PowerShell as administrator (use the name of your external switch, see step 2):
+
+   ```powershell
+   $Switch = "Heimnetz"
+   Stop-VM lueckenfueller
+   $Mac = (Get-VMNetworkAdapter -VMName lueckenfueller).MacAddress
+   Set-VMNetworkAdapter -VMName lueckenfueller -StaticMacAddress $Mac
+   Connect-VMNetworkAdapter -VMName lueckenfueller -SwitchName $Switch
+   Start-VM lueckenfueller
+   ```
+
+   If no external switch exists yet, create one first, as in step 2.
+2. **Router.** Reserve fixed addresses for the PC and the VM, as in step 4. If the VM got its address before the
+   reservation, restart it.
+3. **Windows firewall.** Let only the VM reach the backup folder (`$Vm` is the VM's reserved address):
+
+   ```powershell
+   $Vm = "192.168.178.30"
+   $Switch = "Heimnetz"
+   Set-NetFirewallRule -DisplayName "Lückenfüller backups from the VM" -RemoteAddress $Vm -InterfaceAlias "vEthernet ($Switch)"
+   ```
+
+   Also do the check for port 445 at the end of "9. Set up backups", part 1.
+4. **In the VM.** Open the VM's window (`vmconnect.exe localhost lueckenfueller`) and log in. `hostname -I` should show the reserved address, and
+   `ping -c 3 deb.debian.org` should work. Then `ssh` from the PC to the new address works, too. Run the setup
+   again (the two lines from step 5) and answer the new question with the PC's reserved address. It ends with
+   `Firewall check passed`. Then look at what listens in the VM:
+
+   ```bash
+   sudo ss -tulpn
+   ```
+
+   From the home network only `sshd` (port 22) and `tailscaled` may listen on all addresses; the server is on
+   `127.0.0.1:8080` only.
+5. **Backup.** Make one now and check it:
+
+   ```bash
+   sudo lueckenfueller-backup
+   sudo lueckenfueller-backup check
+   ```
+
+6. **Test with the VPN on.** Switch NordVPN **on** on the PC, then:
+   - On your phone over mobile data (Wi-Fi off) open the server address (`https://...ts.net`) and the app: both
+     must work.
+   - In the VM: `sudo journalctl -u tailscaled --since "-15 min" | grep -c "derp.Recv"` should stay at 0 or
+     close to it (before, it was about one per minute), and `tailscale netcheck` should work.
+   - Make a backup and check it again (step 5) with the VPN on.
+
+   NordVPN has two settings that can cut the connection between the PC and the VM: **"Invisibility on LAN"**
+   (the VM's backups to the PC are blocked) and the **kill switch**. Keep both off. If backups fail only while
+   the VPN is on, look there first.
+
+   Optionally: `ssh` from another device at home (for example your phone in the Wi-Fi) must **not** connect.
+
 ## If something goes wrong
 
 - **The app says the server sleeps, although the PC is on.** In Hyper-V Manager check that the VM
@@ -456,7 +601,10 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
 - **A backup failed.** `sudo journalctl -u lueckenfueller-backup -n 30` shows why. "cannot reach the Windows
   folder" means the backup is safe in the VM and is copied the next night; if it keeps happening, check that
   the shared folder still exists (`Get-SmbShare lueckenfueller-backup` in PowerShell) and run
-  `sudo lueckenfueller-backup setup` again. If Windows security ("Controlled folder access") blocks the
+  `sudo lueckenfueller-backup setup` again. "The Windows PC's address is not set up" means the setup has not
+  asked for it yet: run the setup again (see "When the files in `deploy/vm/` change"). If backups fail only
+  while a VPN runs on the PC, see the NordVPN note in "Moving the VM from the Default Switch to the home
+  network". If Windows security ("Controlled folder access") blocks the
   writes, allow them there.
 - **The firewall check failed** (at the end of the setup, or with `sudo lueckenfueller-firewall-check`). The line
   marked as failed says what: if the server *can* reach the PC, the VM or Tailscale, the firewall is not
@@ -465,15 +613,19 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
 - **The server log says "CALENDAR_KEY does not match"**. The database and the key in `.env` do not belong
   together (e.g. `.env` was edited by hand). Linked calendars cannot be read until the matching key is back:
   restore the newest backup, which carries the right key. Never just create a new key.
-- **`ssh` does not connect.** Wait a few minutes after Windows starts, or connect with the address from
-  `hostname -I` in the VM window (step 4).
+- **`ssh` does not connect.** After the setup it works only from the Windows PC (also over Tailscale), not from
+  other devices at home. Use the Hyper-V window if you are not at the PC. If the PC got another address (no
+  reservation in the router, step 4), the VM no longer recognises it: reserve the address, then run the setup
+  again in the Hyper-V window and enter the PC's current address. The VM's own address: log in in the Hyper-V
+  window and type `hostname -I`.
 - **Start over completely.** In Hyper-V Manager turn the VM off and delete it, delete
   `lueckenfueller.vhdx`, remove the machine in the Tailscale admin page, and begin at step 2. This deletes the
   database in the VM; to bring it back, follow "The VM is lost completely" above.
 
 ## What this set-up does for security
 
-- The router stays closed. The VM connects out to Tailscale; Funnel forwards only HTTPS on port 443 to the
+- The router stays closed. The VM is a device in the home network; from there it accepts only `ssh`, and only
+  from the Windows PC. The VM connects out to Tailscale; Funnel forwards only HTTPS on port 443 to the
   server, nothing else (not SSH, not the home network, not the WireGuard VPN). TLS ends inside the VM, so
   Tailscale's relay cannot read the traffic.
 - The server listens only on `127.0.0.1` inside the VM and runs in a container as a normal user with a
@@ -482,12 +634,12 @@ This is deliberate: the VM never runs new setup scripts from the internet on its
 - Calendar links are stored encrypted (AES-256-GCM) with a key that exists only in the VM's `.env` and inside
   the encrypted backups. Calendar contents are only held in memory for a few minutes, never written to disk.
 - The server's container may only reach the internet over HTTPS and two public name servers; a firewall
-  ([`deploy/vm/firewall.nft`](../deploy/vm/firewall.nft)) blocks it from the home network, the Windows PC, the
-  VM, Docker and Tailscale, so a calendar link pointing there gets nowhere. The app checks every link and
+  ([`deploy/vm/firewall.nft`](../deploy/vm/firewall.nft)) blocks it from the home network (router included), the
+  Windows PC, the VM, Docker and Tailscale, so a calendar link pointing there gets nowhere. The app checks every link and
   every redirect for the same.
 - Backups are encrypted with [age](https://age-encryption.org/) to a key whose secret half only the owner has;
   the VM holds only the public half, so even someone who breaks into the VM cannot read the older backups in
-  OneDrive. The Windows user for the backups can only reach its one shared folder, and the firewall lets only
-  the VM's virtual network reach it.
+  OneDrive. The Windows user for the backups can only reach its one shared folder, and the Windows firewall
+  lets only the VM's address reach it.
 - The server trusts the visitor address that Tailscale passes on (`TRUST_PROXY=true` in `.env`), which is
   correct only because Funnel is the only way in. Do not publish port 8080 any other way.
