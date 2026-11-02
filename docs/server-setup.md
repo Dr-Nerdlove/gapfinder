@@ -408,6 +408,19 @@ made before you ran the setup for phase 2 have none; that is fine as long as nob
 
 To try an older backup, add a part of its name, e.g. the date: `sudo lueckenfueller-backup check 2026-10-30`.
 
+**Look at the date first.** The check takes the newest backup and says nothing if that one is old. So a monthly
+check is two commands, in this order:
+
+```bash
+sudo lueckenfueller-backup list
+sudo lueckenfueller-backup check
+```
+
+In `list`, the newest name in the VM and the newest in the Windows folder must both carry last night's date
+(or the day before, if the PC was off). If not, the nightly backup has stopped: see "A backup failed" under
+"If something goes wrong". The trial restore cannot run by itself, because the VM never holds your secret
+key; remembering it once a month is up to you (a repeating entry in your phone's calendar helps).
+
 ### Which backups there are
 
 ```bash
