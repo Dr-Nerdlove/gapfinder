@@ -380,6 +380,11 @@ export function requestSummary(request: SearchRequest): string {
   return `${weekdaysLabel(request.weekdays)}, mind. ${durationLabel(request.durationMinutes)}, ${window.start}–${window.end} Uhr · ${range}`;
 }
 
+/** A free time the person can turn into a proposal of a poll. */
+export type PollPick =
+  | { id: string; kind: "timed"; label: string; slot: Slot }
+  | { id: string; kind: "days"; label: string; first: string; last: string; days: number; starts: string[] };
+
 export interface Row {
   key: string;
   /** "Sa 12.12." or "3.–16. Aug." */
@@ -390,6 +395,8 @@ export interface Row {
   extra?: string;
   /** Only for near misses: "alle außer Max". */
   missing?: string;
+  /** What can be chosen for a poll: one entry per free time of a day, or the stretch. */
+  picks: PollPick[];
 }
 
 export interface ResultView {
@@ -408,6 +415,14 @@ export function makeNameOf(people: readonly Person[], selfId: number): { name: N
   };
 }
 
+const timedPicks = (slots: readonly Slot[], missingPersonId?: number): PollPick[] =>
+  slots.map((slot) => ({
+    id: `timed:${slot.start}:${slot.end}:${missingPersonId ?? ""}`,
+    kind: "timed" as const,
+    label: formatSlot(slot),
+    slot,
+  }));
+
 const daysText = (n: number): string => (n === 1 ? "1 Tag" : `${n} Tage`);
 
 /** Turns the server's answer into lines. Near misses are sorted by day (hours) or start (days). */
@@ -415,24 +430,36 @@ export function resultView(result: SearchResult, people: readonly Person[], self
   const { except } = makeNameOf(people, selfId);
   if (result.mode === "hours") {
     return {
-      everyone: result.days.map((d) => ({ key: d.date, heading: formatDay(d.date), detail: d.slots.map(formatSlot).join(", ") })),
+      everyone: result.days.map((d) => ({ key: d.date, heading: formatDay(d.date), detail: d.slots.map(formatSlot).join(", "), picks: timedPicks(d.slots) })),
       nearMisses: result.nearMisses.map((n) => ({
         key: `${n.date}:${n.missingPersonId}`,
         heading: formatDay(n.date),
         detail: n.slots.map(formatSlot).join(", "),
         missing: except(n.missingPersonId),
+        picks: timedPicks(n.slots, n.missingPersonId),
       })),
     };
   }
-  const stretchRow = (s: { first: string; last: string; days: number; starts?: string[] }, key: string): Row => ({
+  const stretchRow = (s: { first: string; last: string; days: number; starts?: string[] }, key: string, missingPersonId?: number): Row => ({
     key,
+    picks: [
+      {
+        id: `days:${s.first}:${s.last}:${missingPersonId ?? ""}`,
+        kind: "days",
+        label: daysText(s.days),
+        first: s.first,
+        last: s.last,
+        days: s.days,
+        starts: s.starts ?? [],
+      },
+    ],
     heading: formatStretch(s.first, s.last),
     detail: daysText(s.days),
     ...(s.starts !== undefined && s.starts.length > 0 ? { extra: `Start möglich: ${s.starts.map(formatDayLong).join(", ")}` } : {}),
   });
   return {
     everyone: result.stretches.map((s) => stretchRow(s, s.first)),
-    nearMisses: result.nearMisses.map((n) => ({ ...stretchRow(n, `${n.first}:${n.missingPersonId}`), missing: except(n.missingPersonId) })),
+    nearMisses: result.nearMisses.map((n) => ({ ...stretchRow(n, `${n.first}:${n.missingPersonId}`, n.missingPersonId), missing: except(n.missingPersonId) })),
   };
 }
 

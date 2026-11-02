@@ -27,6 +27,21 @@ describe("parseRoute", () => {
     expect(parseRoute("#/einladung/aB3_-xY9/")).toEqual({ name: "invite", token: "aB3_-xY9" });
   });
 
+  it("maps the poll pages", () => {
+    expect(parseRoute("#/abstimmungen")).toEqual({ name: "polls" });
+    expect(parseRoute("#/abstimmungen/")).toEqual({ name: "polls" });
+    expect(parseRoute("#/abstimmung-neu")).toEqual({ name: "poll-new" });
+  });
+
+  it("reads the share token of a poll link", () => {
+    expect(parseRoute("#/abstimmung/aB3_-xY9")).toEqual({ name: "poll", token: "aB3_-xY9" });
+    expect(parseRoute("#/abstimmung/aB3_-xY9/")).toEqual({ name: "poll", token: "aB3_-xY9" });
+    expect(parseRoute("#/abstimmung/aB3_-xY9?x=1")).toEqual({ name: "poll", token: "aB3_-xY9" });
+    expect(parseRoute("#/abstimmung/")).toEqual({ name: "not-found" });
+    expect(parseRoute("#/abstimmung/a b")).toEqual({ name: "not-found" });
+    expect(parseRoute("#/abstimmung/a/b")).toEqual({ name: "not-found" });
+  });
+
   it("reads the token of a password reset link", () => {
     expect(parseRoute("#/passwort/Zz09_-")).toEqual({ name: "password-reset", token: "Zz09_-" });
   });

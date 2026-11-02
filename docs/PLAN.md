@@ -234,6 +234,17 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     page is open), not pushed. Every voter answers every proposal. Routes and types: `shared/src/polls.ts`,
     server in `server/src/routes/polls.ts` and `server/src/polls/`.
   - Built as two pull requests: 4a the server, 4b the screens.
+  - Settled with the owner before building 4b (preview mock-up, all recommendations taken): free times are
+    chosen with a check on each time (each free time of a day is its own choice; near misses too) and a bar
+    "N Termine gewählt – Abstimmung anlegen" at the bottom; start and end are two selects in 15-minute steps
+    inside the gap; the state is a table people × dates with sums, the best date (most "Ja", then fewest
+    "Nein") highlighted and "Noch nicht abgestimmt" below; "Meine Abstimmungen" is its own page
+    `#/abstimmungen` with a button on the start page. Routes: `#/abstimmung/<token>` (no login needed),
+    `#/abstimmung-neu` (the choice is handed over in memory only; a reload asks to search again). The guest's
+    vote key and last name live in localStorage (`lueckenfueller.guest-votes`, at most 50 polls). While the
+    server sleeps the last state stays on screen, buttons are disabled and the page retries every 30 seconds.
+    Logic and tests: `web/src/lib/poll-draft.ts`, `poll-view.ts`, `poll-actions.ts`, `guest-votes.ts`,
+    `polling.ts`.
 
 ### Fixing the date
 

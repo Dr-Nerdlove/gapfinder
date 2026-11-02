@@ -6,6 +6,9 @@ export type Route =
   | { name: "profile" }
   | { name: "calendars" }
   | { name: "search" }
+  | { name: "polls" }
+  | { name: "poll-new" }
+  | { name: "poll"; token: string }
   | { name: "admin" }
   | { name: "not-found" };
 
@@ -27,6 +30,10 @@ export function parseRoute(hash: string): Route {
       return { name: "calendars" };
     case "/suche":
       return { name: "search" };
+    case "/abstimmungen":
+      return { name: "polls" };
+    case "/abstimmung-neu":
+      return { name: "poll-new" };
     case "/verwaltung":
       return { name: "admin" };
   }
@@ -34,6 +41,7 @@ export function parseRoute(hash: string): Route {
   // "/einladung/<token>" splits into ["", "einladung", "<token>"].
   if (parts.length === 3 && parts[0] === "" && parts[2] !== undefined && TOKEN_PATTERN.test(parts[2])) {
     if (parts[1] === "einladung") return { name: "invite", token: parts[2] };
+    if (parts[1] === "abstimmung") return { name: "poll", token: parts[2] };
     if (parts[1] === "passwort") return { name: "password-reset", token: parts[2] };
   }
   return { name: "not-found" };

@@ -1,8 +1,9 @@
 <script lang="ts">
   import { NEAR_MISS_MIN_PEOPLE } from "@lueckenfueller/shared";
-  import type { Row } from "../../lib/gap-search";
+  import type { PollPick, Row } from "../../lib/gap-search";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
+  import Chip from "../Chip.svelte";
 
   interface Props {
     summary: string;
@@ -14,14 +15,29 @@
     nearMissesPossible: boolean;
     /** The last answer is shown while a new search is running. */
     stale: boolean;
+    /** The ids of the free times chosen for a poll. */
+    chosen: string[];
+    ontoggle: (pick: PollPick) => void;
   }
 
-  let { summary, notices, everyone, nearMisses, nearMissesPossible, stale }: Props = $props();
+  let { summary, notices, everyone, nearMisses, nearMissesPossible, stale, chosen, ontoggle }: Props = $props();
 
   const STEP = 10;
   let everyoneShown = $state(STEP);
   let nearShown = $state(STEP);
 </script>
+
+{#snippet picks(row: Row)}
+  <span class="picks">
+    {#each row.picks as pick (pick.id)}
+      <Chip
+        label={pick.kind === "timed" ? pick.label : `${pick.label} vorschlagen`}
+        selected={chosen.includes(pick.id)}
+        onclick={() => ontoggle(pick)}
+      />
+    {/each}
+  </span>
+{/snippet}
 
 <div class="results" class:stale aria-live="polite">
   <Card title="Ergebnis">
@@ -36,6 +52,8 @@
     </Card>
   {/if}
 
+  <p class="hint">Tippe auf Zeiten, die du als Termine zur Abstimmung vorschlagen willst.</p>
+
   <Card title="Alle frei">
     {#if everyone.length === 0}
       <p>Keine Lücke gefunden, in der alle Zeit haben.</p>
@@ -44,7 +62,10 @@
         {#each everyone.slice(0, everyoneShown) as row (row.key)}
           <li>
             <strong>{row.heading}</strong>
-            <span class="detail">{row.detail}{#if row.extra}<span class="extra">{row.extra}</span>{/if}</span>
+            <span class="detail">
+              {#if row.picks[0]?.kind === "timed"}{@render picks(row)}{:else}{row.detail}{@render picks(row)}{/if}
+              {#if row.extra}<span class="extra">{row.extra}</span>{/if}
+            </span>
           </li>
         {/each}
       </ul>
@@ -66,7 +87,8 @@
             <strong>{row.heading}</strong>
             <span class="detail">
               <span class="missing">{row.missing}</span>
-              {row.detail}{#if row.extra}<span class="extra">{row.extra}</span>{/if}
+              {#if row.picks[0]?.kind === "timed"}{@render picks(row)}{:else}{row.detail}{@render picks(row)}{/if}
+              {#if row.extra}<span class="extra">{row.extra}</span>{/if}
             </span>
           </li>
         {/each}
@@ -87,6 +109,11 @@
 
   .results.stale {
     opacity: 0.5;
+  }
+
+  .hint {
+    font-size: 0.9375rem;
+    color: var(--md-sys-color-on-surface-variant);
   }
 
   .summary {
@@ -138,6 +165,13 @@
   .missing {
     font-weight: 500;
     color: var(--md-sys-color-on-surface);
+  }
+
+  .picks {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
   }
 
   .extra {

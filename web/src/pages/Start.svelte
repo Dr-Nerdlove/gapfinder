@@ -40,6 +40,7 @@
     <Card title="Hallo {sessionState.user.username}">
       <div class="actions">
         <Button href="#/suche">Lücken suchen</Button>
+        <Button variant="tonal" href="#/abstimmungen">Meine Abstimmungen</Button>
         <Button variant="tonal" href="#/kalender">Kalender</Button>
         <Button variant="tonal" href="#/profil">Profil</Button>
         {#if sessionState.user.isAdmin}

@@ -1,5 +1,8 @@
 import type { Person, SearchResult } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
+import type { Row } from "./gap-search";
+
+const withoutPicks = ({ picks: _picks, ...row }: Row): Omit<Row, "picks"> => row;
 import {
   SEARCH_SETTINGS_KEY,
   berlinToday,
@@ -270,10 +273,22 @@ describe("the answer", () => {
 
   it("shows one line per day with all its free times", () => {
     const view = resultView(hours, people, 1);
-    expect(view.everyone).toEqual([
+    expect(view.everyone.map(withoutPicks)).toEqual([
       { key: "2026-12-12", heading: "Sa 12.12.", detail: "14:00–23:00" },
       { key: "2026-12-19", heading: "Sa 19.12.", detail: "10:00–12:00, 18:00–23:00" },
     ]);
+  });
+
+  it("offers every free time of a day as its own pick for a poll", () => {
+    const view = resultView(hours, people, 1);
+    expect(view.everyone[1]!.picks.map((p) => [p.kind, p.label])).toEqual([
+      ["timed", "10:00–12:00"],
+      ["timed", "18:00–23:00"],
+    ]);
+    const first = view.everyone[0]!.picks[0]!;
+    expect(first.kind === "timed" && first.slot).toEqual(hours.days[0]!.slots[0]);
+    const ids = [...view.everyone, ...view.nearMisses].flatMap((r) => r.picks.map((p) => p.id));
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it("says who is missing, and 'dir' for the searcher", () => {
@@ -301,11 +316,14 @@ describe("the answer", () => {
       nearMisses: [{ first: "2027-02-14", last: "2027-02-28", days: 15, missingPersonId: 2 }],
     };
     const view = resultView(days, people, 1);
-    expect(view.everyone).toEqual([
+    expect(view.everyone.map(withoutPicks)).toEqual([
       { key: "2026-08-03", heading: "3.–16. Aug.", detail: "14 Tage", extra: "Start möglich: Mo 3. Aug., Mo 10. Aug." },
       { key: "2026-10-05", heading: "5. Okt.", detail: "1 Tag" },
     ]);
-    expect(view.nearMisses).toEqual([{ key: "2027-02-14:2", heading: "14.–28. Feb.", detail: "15 Tage", missing: "alle außer Ben" }]);
+    expect(view.nearMisses.map(withoutPicks)).toEqual([{ key: "2027-02-14:2", heading: "14.–28. Feb.", detail: "15 Tage", missing: "alle außer Ben" }]);
+    expect(view.everyone[0]!.picks).toEqual([
+      { id: "days:2026-08-03:2026-08-16:", kind: "days", label: "14 Tage", first: "2026-08-03", last: "2026-08-16", days: 14, starts: ["2026-08-03", "2026-08-10"] },
+    ]);
   });
 
   it("names everyone who was left out and why", () => {

@@ -319,3 +319,47 @@ describe("gap search endpoints", () => {
     expect(await pending).toEqual({ ok: false, kind: "offline" });
   });
 });
+
+describe("poll endpoints", () => {
+  async function call(fn: (o: api.CallOptions) => Promise<unknown>, token: string | null = "t") {
+    const fetchImpl = mockFetch(() => jsonResponse({}));
+    await fn({ baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl), ...(token ? { token } : {}) });
+    const [url, init] = fetchImpl.mock.calls[0]!;
+    return { url, method: init.method, body: init.body, headers: init.headers as Record<string, string> };
+  }
+  const answers = { answers: [{ proposalId: 1, answer: "yes" as const }] };
+
+  it("uses the paths and methods of the contract", async () => {
+    expect(await call((o) => api.listPolls(o))).toMatchObject({ url: "http://api.test/api/polls", method: "GET" });
+    expect(await call((o) => api.updatePoll(4, { closed: true }, o))).toMatchObject({ url: "http://api.test/api/polls/4", method: "PATCH", body: '{"closed":true}' });
+    expect(await call((o) => api.deletePoll(4, o))).toMatchObject({ url: "http://api.test/api/polls/4", method: "DELETE" });
+    expect(await call((o) => api.newPollShareLink(4, o))).toMatchObject({ url: "http://api.test/api/polls/4/share-link", method: "POST" });
+    expect(await call((o) => api.removePollVote(4, 9, o))).toMatchObject({ url: "http://api.test/api/polls/4/votes/9", method: "DELETE" });
+    expect(await call((o) => api.getPollByLink("tok", o))).toMatchObject({ url: "http://api.test/api/poll-links/tok", method: "GET" });
+    expect(await call((o) => api.castAccountVote("tok", answers, o))).toMatchObject({ url: "http://api.test/api/poll-links/tok/my-vote", method: "PUT" });
+    expect(await call((o) => api.withdrawAccountVote("tok", o))).toMatchObject({ url: "http://api.test/api/poll-links/tok/my-vote", method: "DELETE" });
+    expect(await call((o) => api.castGuestVote("tok", { name: "Tobi", ...answers }, o))).toMatchObject({ url: "http://api.test/api/poll-links/tok/votes", method: "POST" });
+    expect(await call((o) => api.changeGuestVote("tok", 3, { name: "Tobi", ...answers }, o))).toMatchObject({ url: "http://api.test/api/poll-links/tok/votes/3", method: "PUT" });
+    expect(await call((o) => api.withdrawGuestVote("tok", 3, o))).toMatchObject({ url: "http://api.test/api/poll-links/tok/votes/3", method: "DELETE" });
+  });
+
+  it("creates a poll with the request as body", async () => {
+    const request = { kind: "days" as const, title: "T", participants: [], proposals: [{ first: "2026-12-05", last: "2026-12-07" }] };
+    expect(await call((o) => api.createPoll(request, o))).toMatchObject({ url: "http://api.test/api/polls", method: "POST", body: JSON.stringify(request) });
+  });
+
+  it("does not let a share token break out of its path", async () => {
+    expect((await call((o) => api.getPollByLink("a/b?c", o))).url).toBe("http://api.test/api/poll-links/a%2Fb%3Fc");
+  });
+
+  it("sends the vote key of a guest in a header, never in the address", async () => {
+    const { url, headers } = await call((o) => api.changeGuestVote("tok", 3, { name: "Tobi", ...answers }, { ...o, voteKey: "secret-key" }), null);
+    expect(headers["X-Vote-Key"]).toBe("secret-key");
+    expect(url).not.toContain("secret-key");
+    expect(headers).not.toHaveProperty("Authorization");
+  });
+
+  it("sends no vote key header without one", async () => {
+    expect((await call((o) => api.getPollByLink("tok", o))).headers).not.toHaveProperty("X-Vote-Key");
+  });
+});
