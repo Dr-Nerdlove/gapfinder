@@ -19,6 +19,9 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- "Meine Abstimmungen" now shows the date of a fixed appointment, e.g. "Termin steht: Sa 12.12., 13:00–15:00"
+  or "Termin steht: 14.–28. Feb." (same writing as on the poll page). Long dates wrap on narrow phones. While the
+  server is not updated yet, the list keeps showing "Termin steht ✓".
 - Server part of showing the fixed date in "Meine Abstimmungen": the poll list now also carries the times of the
   fixed proposal (`fixedProposal`, empty while no date is fixed). Nothing changes on screen yet; the app shows the
   date in a follow-up change once the server has updated (up to an hour after the merge).

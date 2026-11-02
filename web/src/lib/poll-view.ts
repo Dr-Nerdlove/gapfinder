@@ -63,6 +63,14 @@ export function summaryLine(poll: PollSummary): string {
   return `${plural(poll.proposalCount, "Termin", "Termine")} · ${plural(poll.voteCount, "Stimme", "Stimmen")} · ${state}`;
 }
 
+/**
+ * The tag of a fixed date in the list: "Termin steht: Sa 12.12., 13:00–15:00". An older server sends no
+ * `fixedProposal` (or null): then only "Termin steht ✓".
+ */
+export function fixedTag(poll: { fixedProposal?: Proposal | null | undefined }): string {
+  return poll.fixedProposal ? `Termin steht: ${proposalLabel(poll.fixedProposal)}` : "Termin steht ✓";
+}
+
 /** The hint under a poll in the list: only while the person can still vote. */
 export function needsVote(poll: Pick<PollSummary, "open" | "voted">): boolean {
   return poll.open && !poll.voted;
