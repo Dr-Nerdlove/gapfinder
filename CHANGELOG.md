@@ -7,6 +7,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 3a, gap search on the server: a list of everyone with an account (only name and colour) to choose
+  whom to search with, and the search itself. The server finds the times when everyone is free, either for a
+  given number of hours on chosen weekdays (optionally in a time window, even across midnight, and with a buffer
+  before and after every event) or for several free days in a row (optionally starting on a given weekday).
+  It also reports "almost everyone" times where exactly one person is missing (from three people on). A person
+  with no calendar, or with a calendar that cannot be read completely, is left out and named as such instead of
+  counting as free. All times follow German time, including the daylight saving days. Nothing is stored, and the
+  answer only contains times, never event titles. A person can run 30 searches every 15 minutes. There are no
+  screens yet (phase 3b); **the server image must be updated before they can use it**.
 - Phase 2b, calendars: everyone can link their calendars through the subscription link of Google, Apple iCloud
   or Outlook ("Kalender" page). The server tries a new link at once and keeps it only when it works; the link
   is stored encrypted and never shown again, only the provider and the name. Up to 10 calendars per person, one

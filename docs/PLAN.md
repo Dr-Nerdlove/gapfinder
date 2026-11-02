@@ -154,6 +154,40 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
    When there is no slot for everyone, the app shows the best near misses ("alle außer Max").
 - All times are German time (Europe/Berlin), including daylight saving changes.
 - Calendars are fetched fresh for a search (kept 15 minutes in memory, see "Calendars").
+- Decided 2026-11-01 (phase 3):
+  - **Who can be searched with:** everyone with an account can choose everyone else with an account (a small
+    circle that only an invite gets into). Rejected: a profile switch "appear in other people's searches"
+    and confirmed friendships (more to build and to click, for little gain among friends). Trade-off: whoever
+    searches often can roughly tell when someone is usually busy; nobody ever sees an event.
+  - **The searcher is always part of their own search.**
+  - **Near misses:** a second list "Fast alle" below the results, always shown (also when there are results for
+    everyone), with the name of the one person who is missing; only slots where **exactly one** person is
+    missing, and only when the search has at least 3 readable people. A near miss is left out when it lies
+    entirely within a result for everyone. Rejected: up to two missing (long lists), near misses only when
+    nothing fits everyone, and "Max only from 20:00" hints (reveal more of someone's day).
+  - **Unreadable calendars:** a person with no calendar, or with any calendar that cannot be read right now
+    (broken, unreachable, or so large that it was not read completely), is **left out of the search with a
+    clear notice** ("Max: Kalender nicht lesbar – nicht berücksichtigt"); with only one of several calendars
+    unreadable, the whole person is left out, or they would look free when they are not. Rejected: refusing to
+    search until every calendar is readable (one broken link would block the whole group).
+  - **Multi-day results are merged:** one line per free stretch ("3.–16. Aug.: alle frei (14 Tage)"); with a
+    starting weekday, the line says on which of those weekdays the period can start. Rejected: every possible
+    start as its own line (very long lists).
+  - Settled with the owner before building: results are **not stored** (a poll in phase 4 is made from chosen
+    results; the device remembers the last search settings); each day shows all its free windows that are long
+    enough, with the buffer already taken off, and today only from now on; the time window may **cross
+    midnight** (20:00–02:00 belongs to the day it starts); duration in half hours; buffer 0–2 hours, only for
+    weekdays + duration (in a multi-day search the whole day is empty anyway); search range at most a year;
+    at most 50 people per search and 30 searches per person every 15 minutes. A new list of all accounts (only
+    username and colour) is visible to everyone with an account.
+  - Settled while building 3a: a multi-day period starts **tomorrow at the earliest** and always lies entirely
+    inside the search range; the range starts today at the earliest and ends at most 365 days ahead (calendars
+    are read 400 days ahead); a window that started yesterday and crosses midnight is not offered (the range
+    starts today); a wall time that does not exist on the spring change day counts as 03:xx, one that exists
+    twice in autumn as the earlier one; at most 8 calendars are read at the same time per search; invalid
+    searches do not count towards the limit. Routes: `GET /api/people`, `POST /api/searches` (types in
+    `shared/src/gaps.ts`, the pure search in `server/src/gaps/search.ts`).
+  - Built as two pull requests: 3a the search and the server routes, 3b the screens.
 
 ### Sharing and voting
 
