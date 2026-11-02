@@ -425,7 +425,8 @@ cmd_restore() {
   log "starting the server with the restored database ..."
   docker compose up --detach "$SERVICE"
   if ! wait_healthy; then
-    fail "the server does not start with the restored database. Details:  cd $APP_DIR && sudo docker compose logs --tail 50"
+    fail "the server does not start with the restored database. Details:  cd $APP_DIR && sudo docker compose logs --tail 50${before:+
+To go back to the state before the restore:  sudo lueckenfueller-backup restore $before}"
   fi
   echo
   log "restored $(basename "$file"). The replaced database files are in $aside."

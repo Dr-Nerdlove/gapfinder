@@ -11,7 +11,15 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKUP="$HERE/../backup.sh"
 REPO="$(cd "$HERE/../../.." && pwd)"
 WORK="$(mktemp -d)"
-trap 'rm -rf "$WORK"' EXIT
+HOLDER=""   # PID of a process that holds the maintenance lock (see hold_lock)
+release_lock() {
+  if [[ -n "$HOLDER" ]]; then
+    kill "$HOLDER" 2>/dev/null || true
+    wait "$HOLDER" 2>/dev/null || true
+    HOLDER=""
+  fi
+}
+trap 'release_lock; rm -rf "$WORK"' EXIT
 export REPO
 # backup.sh reads the Windows PC's address from this file when windows-folder.conf has no host= line. Point it
 # at a file that does not exist, so a test can never read the real /etc/lueckenfueller/windows-pc.
@@ -25,6 +33,7 @@ fi
 
 # The fake docker only knows the calls backup.sh makes. State lives in files under $FAKE:
 #   calls   log of "stop" and "up" (the calls that change the server)
+#   health  (optional) what "inspect --format" answers instead of "healthy", e.g. "unhealthy" or "starting"
 # "compose run" runs the real tool (server/src/cli.ts) on $APP/data; paths /data/... and /check/... are
 # mapped to the folders the real container would see there. Like the compose file's env_file, it hands the
 # lines of $APP/.env to the tool as environment variables (and nothing else of the caller's environment:
@@ -63,7 +72,7 @@ case "$1 ${2:-}" in
   "compose stop") [[ "$3" == "api" ]] && echo stop >>"$f/calls" ;;
   "compose up") [[ "$3 $4" == "--detach api" ]] && echo up >>"$f/calls" ;;
   "compose ps") [[ "$*" == "compose ps --all --quiet api" ]] && echo cid ;;
-  "inspect --format") echo healthy ;;
+  "inspect --format") if [[ -f "$f/health" ]]; then cat "$f/health"; else echo healthy; fi ;;
   *) echo "fake docker: unexpected call: $*" >&2; exit 2 ;;
 esac
 EOF
@@ -186,9 +195,12 @@ preconfigure() {
 }
 
 # bk <args>: runs backup.sh with $FAKE/input as the answers; sets $status; output in $FAKE/output.
+# SMB_RETRY_DELAY and HEALTH_INTERVAL default to 0 but can be set by the caller; BK_TIMEOUT=<seconds> runs it
+# under "timeout" (status 124 when it did not finish).
 bk() {
   set +e
-  PATH="$WORK/bin:$PATH" SMB_RETRY_DELAY=0 HEALTH_INTERVAL=0 bash "$BACKUP" "$@" <"$FAKE/input" >"$FAKE/output" 2>&1
+  PATH="$WORK/bin:$PATH" SMB_RETRY_DELAY="${SMB_RETRY_DELAY:-0}" HEALTH_INTERVAL="${HEALTH_INTERVAL:-0}" \
+    ${BK_TIMEOUT:+timeout "$BK_TIMEOUT"} bash "$BACKUP" "$@" <"$FAKE/input" >"$FAKE/output" 2>&1
   status=$?
   set -e
 }
@@ -216,6 +228,17 @@ invites_in() {
 
 # occurrences <text> <file>: how many lines of the (binary) file contain the text.
 occurrences() { grep -c -a -F -- "$1" "$2" || true; }
+
+# hold_lock: another process (like update.sh) takes the maintenance lock and keeps it until release_lock.
+hold_lock() {
+  rm -f "$FAKE/lock-held"
+  bash -c 'exec 8>>"$1"; flock 8; echo held >"$2"; exec sleep 30' _ "$APP/.maintenance.lock" "$FAKE/lock-held" &
+  HOLDER=$!
+  local tries=50
+  while ((tries-- > 0)); do [[ -f "$FAKE/lock-held" ]] && return 0; sleep 0.1; done
+  echo "the test could not take the lock" >&2
+  return 1
+}
 
 # decrypt_to <encrypted file> <plain file>, with the case's secret key.
 decrypt_to() { age -d -i "$FAKE/key" -o "$2" "$1" 2>/dev/null; }
@@ -577,6 +600,109 @@ WINDOWS_PC_FILE="$FAKE/windows-pc" bk run
 expect "exit 0" [ "$status" -eq 0 ]
 expect "smbclient only called with host= from the settings" only_called_with_localhost
 finish "host= line and windows-pc file: the host= line wins"
+
+# --- 12. the maintenance lock ------------------------------------------------------------------------
+
+# While another process (the hourly update) holds the lock, backup and restore wait; they never run alongside.
+new_case
+preconfigure
+seed_invite Anna
+bk run
+sleep 1
+seed_invite Berta
+hold_lock
+before_names="$(local_names)"
+BK_TIMEOUT=3 bk run
+expect "run does not finish while the lock is held (timeout, 124)" [ "$status" -eq 124 ]
+expect "run made no new backup" [ "$(local_names)" == "$before_names" ]
+cp "$APP/data/lueckenfueller.sqlite" "$FAKE/db.before"
+answers "$SECRET" yes
+BK_TIMEOUT=8 bk restore
+expect "restore does not finish while the lock is held (timeout, 124)" [ "$status" -eq 124 ]
+expect "restore got past the key check and was waiting for the lock" grep -q 'will be REPLACED' "$FAKE/output"
+expect "restore did not stop the server" [ -z "$(calls)" ]
+expect "restore did not change the database" cmp "$FAKE/db.before" "$APP/data/lueckenfueller.sqlite"
+expect "restore made no backup and no replaced-* folder" bash -c '[[ "$(find "$1" -maxdepth 1 -name "replaced-*" | wc -l)" -eq 0 && "$2" == "$3" ]]' _ "$APP" "$(local_names)" "$before_names"
+holder_pid="$HOLDER"
+release_lock
+expect "no leftover holder" bash -c '! kill -0 "$1" 2>/dev/null' _ "$holder_pid"
+sleep 1
+bk run
+expect "run works once the lock is free" [ "$status" -eq 0 ]
+expect "one new backup" [ "$(local_names | count_lines)" -eq 2 ]
+expect "share has them all" [ "$(share_names)" == "$(local_names)" ]
+finish "lock held elsewhere: run and restore wait and change nothing; after release, run works"
+
+# --- 13. the server does not come up after a restore ------------------------------------------------------
+
+new_case
+preconfigure
+seed_invite Anna
+bk run
+seed_invite Berta
+echo unhealthy >"$FAKE/health"
+answers "$SECRET" yes
+bk restore
+before_file="$(local_names | grep -e '-before-restore' || true)"
+expect "fails" [ "$status" -ne 0 ]
+expect "says the server does not start" grep -q 'the server does not start with the restored database' "$FAKE/output"
+expect "-before-restore backup exists" [ "$(printf '%s' "$before_file" | count_lines)" -eq 1 ]
+expect "names the undo command with that file" grep -qF "sudo lueckenfueller-backup restore $before_file" "$FAKE/output"
+expect "replaced-* folder holds the old database (2 invites)" [ "$(invites_in "$(ls "$APP"/replaced-*/lueckenfueller.sqlite | head -n 1)")" == "2" ]
+expect "server was stopped and started" [ "$(calls)" == "stop,up" ]
+finish "restore, server unhealthy: fails, says so, names the undo command, old database kept"
+
+new_case
+preconfigure
+seed_invite Anna
+bk run
+echo starting >"$FAKE/health"
+answers "$SECRET" yes
+HEALTH_TIMEOUT=0 HEALTH_INTERVAL=1 BK_TIMEOUT=30 bk restore
+expect "does not hang (no timeout)" [ "$status" -ne 124 ]
+expect "fails when the server never becomes healthy" [ "$status" -ne 0 ]
+expect "says the server does not start" grep -q 'the server does not start with the restored database' "$FAKE/output"
+expect "names the undo command" grep -q 'sudo lueckenfueller-backup restore lueckenfueller-.*-before-restore\.sqlite\.age' "$FAKE/output"
+finish "restore, server stays 'starting': gives up after HEALTH_TIMEOUT instead of hanging"
+
+# --- 14. wrong Windows password ---------------------------------------------------------------------------
+
+new_case
+preconfigure
+seed_invite Anna
+bk run
+expect "first run works" [ "$status" -eq 0 ]
+sleep 1
+(umask 077; printf 'username=lueckenbackup\npassword=wrong\n' >"$APP/backup-settings/windows-login")
+calls_before="$(count_lines <"$FAKE/smb_hosts")"
+SMB_TRIES=2 SMB_RETRY_DELAY=0 bk run
+calls_after="$(count_lines <"$FAKE/smb_hosts")"
+expect "fails" [ "$status" -ne 0 ]
+expect "new backup stays in the VM" [ "$(local_names | count_lines)" -eq 2 ]
+expect "nothing new in the share" [ "$(share_names | count_lines)" -eq 1 ]
+expect "says the Windows folder cannot be reached" grep -q 'cannot reach the Windows folder' "$FAKE/output"
+expect "shows the logon failure" grep -q 'NT_STATUS_LOGON_FAILURE' "$FAKE/output"
+expect "smbclient tried exactly SMB_TRIES (2) times" [ "$((calls_after - calls_before))" -eq 2 ]
+(umask 077; printf 'username=lueckenbackup\npassword=pw123\n' >"$APP/backup-settings/windows-login")
+sleep 1
+bk run
+expect "works again with the right password" [ "$status" -eq 0 ]
+expect "the missing backup was copied" [ "$(share_names)" == "$(local_names)" ]
+expect "three backups in the share" [ "$(share_names | count_lines)" -eq 3 ]
+finish "wrong Windows password: the backup stays in the VM, exactly SMB_TRIES attempts, next run catches up"
+
+new_case
+mkdir -p "$APP/backup-settings"
+printf 'host=127.0.0.1\n' >"$APP/backup-settings/windows-folder.conf"
+answers "$SECRET" backup lueckenbackup wrong
+bk setup
+expect "fails" [ "$status" -ne 0 ]
+expect "says the Windows folder cannot be reached" grep -q 'the Windows folder cannot be reached' "$FAKE/output"
+expect "shows the logon failure" grep -q 'NT_STATUS_LOGON_FAILURE' "$FAKE/output"
+expect "tried once" [ "$(count_lines <"$FAKE/smb_hosts")" -eq 1 ]
+expect "no backup made" [ "$(local_names | count_lines)" -eq 0 ]
+expect "nothing in the share" [ "$(share_names | count_lines)" -eq 0 ]
+finish "setup with a wrong Windows password: fails with the 'cannot be reached' message"
 
 if ((failures > 0)); then
   echo "$failures test(s) failed"
