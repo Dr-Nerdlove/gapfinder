@@ -112,6 +112,7 @@ describe("texts", () => {
       deadline: "2026-12-02T19:00:00.000Z",
       open: true,
       fixedProposalId: null,
+      fixedProposal: null,
       createdAt: "",
       expiresAt: "",
       voted: false,

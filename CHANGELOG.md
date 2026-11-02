@@ -19,6 +19,9 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Server part of showing the fixed date in "Meine Abstimmungen": the poll list now also carries the times of the
+  fixed proposal (`fixedProposal`, empty while no date is fixed). Nothing changes on screen yet; the app shows the
+  date in a follow-up change once the server has updated (up to an hour after the merge).
 - Phase 5b, the screens for fixing and sending the date. On a poll's page the creator and the admin get a card
   "Termin festlegen": pick one proposal (the one with the most "Ja" is preselected), the app reads the calendars
   again and warns who is busy, whose calendar cannot be read and who has no calendar (a warning only, fixing

@@ -94,6 +94,28 @@ const pollRow = (e: Setup, id: number) =>
   };
 
 describe("fixing the date", () => {
+  it("shows the times of the fixed proposal in the list, follows a change and goes back to null", async () => {
+    const e = await setup();
+    const poll = await createPoll(e);
+    const listed = async () => (await call(e, "GET", "/api/polls", { token: e.me.token })).json<PollList>().polls[0]!;
+    expect((await listed()).fixedProposal).toBeNull();
+
+    expect((await fix(e, poll, 0)).statusCode).toBe(200);
+    expect((await listed()).fixedProposal).toEqual(poll.proposals[0]);
+    expect((await fix(e, poll, 1)).statusCode).toBe(200);
+    expect((await listed()).fixedProposal).toEqual(poll.proposals[1]);
+    expect((await call(e, "DELETE", `/api/polls/${poll.id}/fixed`, { token: e.me.token })).statusCode).toBe(200);
+    expect((await listed()).fixedProposal).toBeNull();
+  });
+
+  it("shows a fixed poll of whole days in the list as first and last day", async () => {
+    const e = await setup();
+    const poll = await createPoll(e, daysBody());
+    expect((await fix(e, poll, 1)).statusCode).toBe(200);
+    const [summary] = (await call(e, "GET", "/api/polls", { token: e.me.token })).json<PollList>().polls;
+    expect(summary!.fixedProposal).toEqual({ id: poll.proposals[1]!.id, first: "2026-11-20", last: "2026-11-22" });
+  });
+
   it("fixes a proposal: the view, the summary and the share link show it, and the poll does not take votes", async () => {
     const e = await setup();
     const poll = await createPoll(e);
@@ -113,6 +135,7 @@ describe("fixing the date", () => {
 
     const list = (await call(e, "GET", "/api/polls", { token: e.me.token })).json<PollList>();
     expect(list.polls[0]).toMatchObject({ fixedProposalId: poll.proposals[1]!.id, open: false });
+    expect(list.polls[0]!.fixedProposal).toEqual(poll.proposals[1]);
     const viewed = (await call(e, "GET", link(poll))).json<PollView>();
     expect(viewed).toMatchObject({ fixedProposalId: poll.proposals[1]!.id, fixedAt: "2026-11-01T10:05:00.000Z", open: false });
     expect(pollRow(e, poll.id)).toMatchObject({ fixed_sequence: 1, updated_at: "2026-11-01T10:05:00.000Z" });

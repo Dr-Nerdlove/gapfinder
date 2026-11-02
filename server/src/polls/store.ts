@@ -335,6 +335,7 @@ export function listPollSummaries(db: DatabaseSync, userId: number, now: Date): 
     deadline: row.deadline,
     open: isOpen(row, now),
     fixedProposalId: row.fixed_proposal_id,
+    fixedProposal: row.fixed_proposal_id === null ? null : (proposalsOf(db, row).find((p) => p.id === row.fixed_proposal_id) ?? null),
     createdAt: row.created_at,
     expiresAt: row.expires_at,
     voted: row.voted === 1,
