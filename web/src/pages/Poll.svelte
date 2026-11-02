@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import * as api from "../lib/api";
   import type { ApiResult } from "../lib/api";
+  import { fixedProposal, reviewCheck, serverCanFix, type CheckReview } from "../lib/fix-date";
   import { guestVoteFor, lastGuestName, liveGuestVote } from "../lib/guest-votes";
   import { buildPollLink } from "../lib/links";
   import { errorMessage } from "../lib/messages";
@@ -17,6 +18,8 @@
   import LinkBox from "../components/LinkBox.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
+  import FixDate from "../components/polls/FixDate.svelte";
+  import FixedDate from "../components/polls/FixedDate.svelte";
   import PollManage from "../components/polls/PollManage.svelte";
   import PollResults from "../components/polls/PollResults.svelte";
   import VoteForm from "../components/polls/VoteForm.svelte";
@@ -32,6 +35,7 @@
   let busy = $state(false);
   let voteProblem = $state("");
   let manageProblem = $state("");
+  let fixProblem = $state("");
   let removing = $state<{ id: number; name: string } | null>(null);
   /** Every answer of the server gets a number; an answer that arrives after a newer one is dropped. */
   let newest = 0;
@@ -56,7 +60,7 @@
   $effect(() => {
     token;
     screen = { phase: "loading" };
-    voteProblem = manageProblem = "";
+    voteProblem = manageProblem = fixProblem = "";
     void refresh();
     return startPolling(refresh);
   });
@@ -73,6 +77,7 @@
   const stored = $derived(poll ? liveGuestVote(poll, guestVoteFor(token)) : null);
   const ownVoteId = $derived(poll ? (loggedIn ? poll.myVoteId : (stored?.voteId ?? null)) : null);
   const locked = $derived(sessionState.offline);
+  const fixed = $derived(poll ? fixedProposal(poll) : null);
 
   const deps = { run: session.run };
 
@@ -124,6 +129,25 @@
       () => navigate("#/abstimmungen"),
     );
 
+  /** The check before fixing. A failed check never stops the person: the dialog then says so. */
+  async function check(proposalId: number): Promise<CheckReview> {
+    return reviewCheck(await session.run((o) => api.checkFix(poll!.id, { proposalId }, o)));
+  }
+
+  /** Runs a call for fixing or un-fixing; the answer is the new poll. */
+  async function changeFixed(call: () => Promise<ApiResult<PollView>>): Promise<void> {
+    if (busy) return;
+    busy = true;
+    fixProblem = "";
+    const result = await call();
+    busy = false;
+    if (result.ok) show(result.data);
+    else fixProblem = errorMessage(result);
+  }
+
+  const fix = (proposalId: number): Promise<void> => changeFixed(() => session.run((o) => api.fixPoll(poll!.id, { proposalId }, o)));
+  const unfix = (): Promise<void> => changeFixed(() => session.run((o) => api.unfixPoll(poll!.id, o)));
+
   async function removeVote(): Promise<void> {
     const target = removing;
     removing = null;
@@ -154,7 +178,7 @@
     <Card>
       {#if poll.creator}<p>Von {poll.creator.username}</p>{/if}
       {#if poll.note}<p class="note">{poll.note}</p>{/if}
-      <p class="status" class:closed={!poll.open}>{statusText(poll)}</p>
+      <p class="status" class:closed={!poll.open && !fixed}>{statusText(poll)}</p>
       <p class="updated" aria-live="polite">
         {#if screen.offline}
           Der Server ist gerade nicht erreichbar. Stand von {updatedText(screen.updatedAt)} Uhr.
@@ -164,6 +188,10 @@
         {#if screen.problem}<span class="problem"> {screen.problem}</span>{/if}
       </p>
     </Card>
+
+    {#if fixed}
+      <FixedDate {poll} proposal={fixed} {locked} />
+    {/if}
 
     <PollResults {poll} busy={busy || locked} onremove={poll.canManage ? (id, name) => (removing = { id, name }) : undefined} />
 
@@ -179,8 +207,12 @@
         onsubmit={vote}
         onwithdraw={withdraw}
       />
-    {:else}
+    {:else if !fixed}
       <Card tone="notice"><p>{statusText(poll)}. Abstimmen geht nicht mehr.</p></Card>
+    {/if}
+
+    {#if poll.canManage && serverCanFix(poll)}
+      <FixDate {poll} {busy} {locked} problem={fixProblem} oncheck={check} onfix={fix} onunfix={unfix} />
     {/if}
 
     <Card title="Link weitergeben">

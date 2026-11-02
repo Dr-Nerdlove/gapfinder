@@ -363,3 +363,48 @@ describe("poll endpoints", () => {
     expect((await call((o) => api.getPollByLink("tok", o))).headers).not.toHaveProperty("X-Vote-Key");
   });
 });
+
+describe("fixing the date", () => {
+  it("fixes with PUT, takes back with DELETE and checks with POST", async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({ id: 7 }));
+    const o = { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl), token: "t" };
+    await api.fixPoll(7, { proposalId: 3 }, o);
+    await api.unfixPoll(7, o);
+    await api.checkFix(7, { proposalId: 3 }, o);
+    expect(fetchImpl.mock.calls.map(([url, init]) => `${init.method} ${url}`)).toEqual([
+      "PUT http://api.test/api/polls/7/fixed",
+      "DELETE http://api.test/api/polls/7/fixed",
+      "POST http://api.test/api/polls/7/fix-check",
+    ]);
+    expect(JSON.parse(fetchImpl.mock.calls[0]![1].body as string)).toEqual({ proposalId: 3 });
+  });
+
+  it("switches the calendar feed on and off", async () => {
+    const fetchImpl = mockFetch((_url, init) => (init.method === "DELETE" ? new Response(null, { status: 204 }) : jsonResponse({ token: "x" })));
+    const o = { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) };
+    expect(await api.getCalendarFeed(o)).toEqual({ ok: true, data: { token: "x" } });
+    await api.createCalendarFeed(o);
+    expect(await api.deleteCalendarFeed(o)).toEqual({ ok: true, data: undefined });
+    expect(fetchImpl.mock.calls.map(([url, init]) => `${init.method} ${url}`)).toEqual([
+      "GET http://api.test/api/me/calendar-feed",
+      "POST http://api.test/api/me/calendar-feed",
+      "DELETE http://api.test/api/me/calendar-feed",
+    ]);
+  });
+
+  it("fetches the calendar file as text", async () => {
+    const fetchImpl = mockFetch(() => new Response("BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n", { status: 200, headers: { "content-type": "text/calendar" } }));
+    const result = await api.getEventIcs("tok/en", { baseUrl: "http://api.test/", fetchImpl: asFetch(fetchImpl) });
+    expect(result).toEqual({ ok: true, data: "BEGIN:VCALENDAR\r\nEND:VCALENDAR\r\n" });
+    expect(fetchImpl.mock.calls[0]![0]).toBe("http://api.test/api/poll-links/tok%2Fen/event.ics");
+  });
+
+  it("reports a missing date, a sleeping server and a broken answer for the calendar file", async () => {
+    const notFixed = mockFetch(() => jsonResponse({ code: "poll_not_fixed" }, 409));
+    expect(await api.getEventIcs("t", { fetchImpl: asFetch(notFixed) })).toMatchObject({ ok: false, kind: "error", code: "poll_not_fixed" });
+    const sleeping = mockFetch(() => Promise.reject(new TypeError("network")));
+    expect(await api.getEventIcs("t", { fetchImpl: asFetch(sleeping) })).toEqual({ ok: false, kind: "offline" });
+    const html = mockFetch(() => new Response("<html>502</html>", { status: 502 }));
+    expect(await api.getEventIcs("t", { fetchImpl: asFetch(html) })).toMatchObject({ ok: false, kind: "error", code: "error", status: 502 });
+  });
+});

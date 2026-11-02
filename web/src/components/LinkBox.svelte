@@ -7,9 +7,11 @@
     note: string;
     /** Text for the share sheet of the phone. */
     shareText: string;
+    /** Offer the phone's share sheet (not for a private link that must stay with one person). */
+    shareable?: boolean;
   }
 
-  let { label, link, note, shareText }: Props = $props();
+  let { label, link, note, shareText, shareable = true }: Props = $props();
 
   const id = $props.id();
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -40,7 +42,7 @@
   <input {id} bind:this={input} readonly value={link} onfocus={(e) => e.currentTarget.select()} />
   <div class="actions">
     <Button variant="tonal" onclick={copy}>Kopieren</Button>
-    {#if canShare}<Button variant="tonal" onclick={share}>Teilen</Button>{/if}
+    {#if canShare && shareable}<Button variant="tonal" onclick={share}>Teilen</Button>{/if}
     <span class="feedback" aria-live="polite">{feedback}</span>
   </div>
   <p class="note">{note}</p>

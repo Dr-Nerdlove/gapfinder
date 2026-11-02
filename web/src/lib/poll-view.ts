@@ -10,6 +10,7 @@ import {
 } from "@lueckenfueller/shared";
 import type { ApiResult } from "./api";
 import { berlinToday, formatClock, formatDay, formatStretch } from "./gap-search";
+import { fixedIdOf } from "./fix-date";
 import { errorMessage } from "./messages";
 
 // Everything the poll pages show or decide without the screen: texts, sums, who has not voted, the answers a
@@ -43,8 +44,12 @@ export function proposalHeading(proposal: Proposal): { top: string; bottom: stri
   return { top: formatDay(day), bottom: day === endDay ? time : `${time} (bis ${formatDay(endDay)})` };
 }
 
-/** Whether and until when the poll takes votes. */
-export function statusText(poll: Pick<PollView, "closed" | "open" | "deadline">): string {
+/**
+ * Whether and until when the poll takes votes. A fixed date comes first: fixing makes the poll not `open`, but
+ * that is no "Frist abgelaufen" and no "von Hand geschlossen".
+ */
+export function statusText(poll: Pick<PollView, "closed" | "open" | "deadline"> & { fixedProposalId?: number | null | undefined }): string {
+  if (fixedIdOf(poll) !== null) return "Der Termin steht";
   if (poll.closed) return "Beendet (von Hand geschlossen)";
   if (!poll.open) return poll.deadline ? `Beendet (Frist am ${formatInstant(poll.deadline)} abgelaufen)` : "Beendet";
   return poll.deadline ? `Abstimmen möglich bis ${formatInstant(poll.deadline)}` : "Abstimmen ohne Frist";
@@ -95,6 +100,12 @@ export function bestProposalIds(poll: Pick<PollView, "proposals" | "votes">): nu
   const best = all.reduce<Tally | null>((top, t) => (top === null || t.yes > top.yes || (t.yes === top.yes && t.no < top.no) ? t : top), null);
   if (best === null || best.yes === 0) return [];
   return all.filter((t) => t.yes === best.yes && t.no === best.no).map((t) => t.proposalId);
+}
+
+/** The columns to highlight: the fixed date once there is one, otherwise the best proposals. */
+export function highlightedProposalIds(poll: Pick<PollView, "proposals" | "votes"> & { fixedProposalId?: number | null | undefined }): number[] {
+  const fixed = fixedIdOf(poll);
+  return fixed !== null ? [fixed] : bestProposalIds(poll);
 }
 
 /** The sum as text: "3 Ja", or "2 Ja · 1 Vielleicht · 1 Nein" (only what is not zero). */

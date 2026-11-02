@@ -6,16 +6,18 @@
     type?: "button" | "submit";
     disabled?: boolean;
     href?: string;
+    /** The link opens in a new tab (for other websites). */
+    external?: boolean;
     full?: boolean;
     onclick?: (event: MouseEvent) => void;
     children: Snippet;
   }
 
-  let { variant = "filled", type = "button", disabled = false, href, full = false, onclick, children }: Props = $props();
+  let { variant = "filled", type = "button", disabled = false, href, external = false, full = false, onclick, children }: Props = $props();
 </script>
 
 {#if href && !disabled}
-  <a class="button {variant}" class:full {href}>{@render children()}</a>
+  <a class="button {variant}" class:full {href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>{@render children()}</a>
 {:else}
   <button class="button {variant}" class:full {type} {disabled} {onclick}>{@render children()}</button>
 {/if}

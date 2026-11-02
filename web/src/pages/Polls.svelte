@@ -3,6 +3,7 @@
   import { untrack } from "svelte";
   import * as api from "../lib/api";
   import { errorMessage } from "../lib/messages";
+  import { fixedIdOf } from "../lib/fix-date";
   import { needsVote, summaryLine } from "../lib/poll-view";
   import { session, sessionState } from "../lib/session.svelte";
   import Button from "../components/Button.svelte";
@@ -58,7 +59,7 @@
           <strong>{poll.title}</strong>
           <span class="line">{summaryLine(poll)}</span>
           {#if poll.creator}<span class="line">Von {poll.creator.username}</span>{/if}
-          {#if needsVote(poll)}<span class="tag">Du hast noch nicht abgestimmt</span>{:else if poll.voted}<span class="tag done">Abgestimmt ✓</span>{/if}
+          {#if fixedIdOf(poll) !== null}<span class="tag fixed">Termin steht ✓</span>{:else if needsVote(poll)}<span class="tag">Du hast noch nicht abgestimmt</span>{:else if poll.voted}<span class="tag done">Abgestimmt ✓</span>{/if}
         </Card>
       </a>
     {/each}
@@ -89,6 +90,11 @@
     color: var(--md-sys-color-on-secondary-container);
     font-size: 0.875rem;
     font-weight: 600;
+  }
+
+  .tag.fixed {
+    background: var(--md-sys-color-primary-container);
+    color: var(--md-sys-color-on-primary-container);
   }
 
   .tag.done {

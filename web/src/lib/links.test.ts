@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildInviteLink, buildPasswordResetLink, buildPollLink } from "./links";
+import { buildFeedLink, buildInviteLink, buildPasswordResetLink, buildPollLink } from "./links";
 
 const where = { origin: "https://dr-nerdlove.github.io", pathname: "/gapfinder/" };
 
@@ -18,5 +18,9 @@ describe("links", () => {
 
   it("builds the link of a poll for everyone", () => {
     expect(buildPollLink("tok-9", where)).toBe("https://dr-nerdlove.github.io/gapfinder/#/abstimmung/tok-9");
+  });
+
+  it("builds the calendar feed link on the API address", () => {
+    expect(buildFeedLink("tok_9-A", "https://pc.tail1234.ts.net/")).toBe("https://pc.tail1234.ts.net/api/calendar-feeds/tok_9-A.ics");
   });
 });
