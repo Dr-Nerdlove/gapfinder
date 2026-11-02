@@ -362,4 +362,16 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
 
 ## Open points
 
-None at the moment.
+- **Better message while the server sleeps (to do, decided by the owner on 2026-11-02):** a poll link opened
+  between 01:00 and 07:00 shows only "Die Abstimmung kann gerade nicht geladen werden". Plan: a clearer text
+  ("Ab 7 Uhr kannst du abstimmen ...") and a button that adds a reminder at 07:00 as a calendar entry (`.ics`
+  made in the app, with the poll link; works on every phone, no permission, no server change). Rejected for now:
+  - An offline vote queue: the poll comes from the server, so at night there is no form to fill in. It would
+    need the poll kept on the device (names and votes of others stored anew), would not help someone opening a
+    link for the first time at night, and needs rules for votes that arrive after the poll changed.
+  - A push notification at 07:00: a web page cannot schedule a local notification (Chrome's Notification
+    Triggers trial was dropped), so it needs Web Push from the server: a service worker, a new key and library,
+    stored subscriptions (personal data of guests), messages through Google/Mozilla/Apple, and on iPhones only
+    for the app added to the home screen. Revisit if notifications are wanted elsewhere too (e.g. "Termin steht").
+- **Review of the guides (to do):** check README and `docs/` for gaps and outdated steps, and whether the
+  trial restore of the backup still runs regularly.
