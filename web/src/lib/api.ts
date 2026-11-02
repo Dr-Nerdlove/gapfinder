@@ -8,6 +8,7 @@ import type {
   ApiErrorBody,
   Calendar,
   CalendarList,
+  CalendarFeed,
   CalendarPreview,
   ChangePasswordRequest,
   CompletePasswordResetRequest,
@@ -16,6 +17,8 @@ import type {
   CreatedInvite,
   CreatedPasswordReset,
   ErrorCode,
+  FixCheck,
+  FixPollRequest,
   GuestVoteCreated,
   GuestVoteRequest,
   InviteInfo,
@@ -283,3 +286,57 @@ export const changeGuestVote = (shareToken: string, voteId: number, body: GuestV
 
 export const withdrawGuestVote = (shareToken: string, voteId: number, o: CallOptions = {}) =>
   request<PollView>(`/api/poll-links/${segment(shareToken)}/votes/${segment(voteId)}`, { ...o, method: "DELETE" });
+
+// Fixing the date (phase 5a, `shared/src/polls.ts`). The check reads the participants' calendars like a search.
+
+export const fixPoll = (id: number, body: FixPollRequest, o: CallOptions = {}) =>
+  request<PollView>(`/api/polls/${segment(id)}/fixed`, { ...o, method: "PUT", body });
+
+export const unfixPoll = (id: number, o: CallOptions = {}) =>
+  request<PollView>(`/api/polls/${segment(id)}/fixed`, { ...o, method: "DELETE" });
+
+export const checkFix = (id: number, body: FixPollRequest, o: CallOptions = {}) =>
+  request<FixCheck>(`/api/polls/${segment(id)}/fix-check`, { timeoutMs: SEARCH_REQUEST_TIMEOUT_MS, ...o, method: "POST", body });
+
+/**
+ * The fixed date as a calendar file (text, not JSON). Fetched by the app instead of opened as a link, so that a
+ * sleeping server shows a message in the app and not the browser's error page.
+ */
+export async function getEventIcs(shareToken: string, o: CallOptions = {}): Promise<ApiResult<string>> {
+  const { timeoutMs = REQUEST_TIMEOUT_MS, fetchImpl = fetch, baseUrl = API_URL } = o;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    let response: Response;
+    let text: string;
+    try {
+      response = await fetchImpl(`${baseUrl.replace(/\/+$/, "")}/api/poll-links/${segment(shareToken)}/event.ics`, {
+        signal: controller.signal,
+      });
+      text = await response.text();
+    } catch {
+      return { ok: false, kind: "offline" };
+    }
+    if (response.ok) return { ok: true, data: text };
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(text);
+    } catch {
+      parsed = undefined;
+    }
+    return parseErrorBody(response.status, parsed);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+// The personal calendar feed (`shared/src/polls.ts`): `token` is null while it is switched off.
+
+export const getCalendarFeed = (o: CallOptions = {}) => request<CalendarFeed>("/api/me/calendar-feed", o);
+
+/** Switches the feed on, or renews its token (the old link stops working). */
+export const createCalendarFeed = (o: CallOptions = {}) =>
+  request<CalendarFeed>("/api/me/calendar-feed", { ...o, method: "POST" });
+
+export const deleteCalendarFeed = (o: CallOptions = {}) =>
+  request<void>("/api/me/calendar-feed", { ...o, method: "DELETE" });

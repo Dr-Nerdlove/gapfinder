@@ -19,6 +19,19 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Phase 5b, the screens for fixing and sending the date. On a poll's page the creator and the admin get a card
+  "Termin festlegen": pick one proposal (the one with the most "Ja" is preselected), the app reads the calendars
+  again and warns who is busy, whose calendar cannot be read and who has no calendar (a warning only, fixing
+  stays possible, also when the check itself fails), then the date is fixed. Later it can be changed to another
+  proposal or taken back. Once a date is fixed, everybody with the link, guests too, sees it highlighted with
+  three buttons: download the `.ics` file, "In Google Kalender eintragen" and "In Outlook eintragen" (private
+  Outlook accounts; people with a work account use the `.ics` file). The app builds both links itself; whole-day
+  dates end on the day after the last day. A fixed poll now says "Der Termin steht" instead of "Frist
+  abgelaufen". In the profile, "Mein Lückenfüller-Kalender" switches the personal calendar feed on, shows and
+  copies its link with short instructions for Google, Apple and Outlook (Google refreshes only every few hours),
+  renews the link or switches it off. "Meine Abstimmungen" shows "Termin steht ✓". The buttons appear only once
+  the server has the phase 5a update (up to an hour after the app), until then the app behaves as before.
+  Not verified on a real account: that Outlook reads the end of a whole-day date as the day after the last day.
 - Phase 5a, fixing the date on the server: the creator or the admin of a poll can fix one date as the final one,
   change it to another date later, or take it back. While a date is fixed the poll takes no more votes (taking
   it back opens the poll again, unless it was closed by hand or its deadline has passed). Before fixing, the

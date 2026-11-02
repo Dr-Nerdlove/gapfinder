@@ -9,13 +9,24 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 
 ## Status
 
-**Phase 1c: foundation done.** The app is deployed automatically, the server runs on the home PC with automatic
-updates, and there are accounts: friends join through a personal invite link from the admin, log in with username
-and password, and change their name, password and colour in their profile. The admin manages invites and accounts
-in "Verwaltung" and creates links for forgotten passwords. **Phase 2: calendars.** Everyone links calendars through
-their subscription link (the server tries the link at once, stores it encrypted and never shows it again), sets
-which count as busy and which is the default, and sees a preview of their own next 4 weeks. Calendar contents
-are never stored. Voting follows in a later phase.
+**Phases 1 to 5 are done.** The app is deployed automatically and the server runs on the home PC with automatic
+updates.
+
+- **Accounts:** friends join through a personal invite link from the admin, log in with username and password, and
+  change their name, password and colour in their profile. The admin manages invites and accounts in "Verwaltung"
+  and creates links for forgotten passwords.
+- **Calendars:** everyone links calendars through their subscription link (the server tries the link at once,
+  stores it encrypted and never shows it again), sets which count as busy and which is the default, and sees a
+  preview of their own next 4 weeks. Calendar contents are never stored.
+- **Gap search:** choose people, a period and a duration (or whole days) and see when everyone, or almost
+  everyone, is free.
+- **Voting:** pick free times as proposals and share one link; everybody with it, guests too, votes with
+  Ja / Vielleicht / Nein and sees the state of the vote. "Meine Abstimmungen" lists your polls.
+- **Fixing the date:** the creator or the admin fixes one proposal after a fresh calendar check (a warning, never
+  a block). Everybody with the link sees the date and can download it as `.ics` or add it to Google Calendar or
+  Outlook; in the profile, a personal calendar feed puts the fixed dates into any calendar app.
+
+Not built yet: connecting Google or Outlook directly, and an offline vote queue (phase 6, optional).
 The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8). The database
 is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9 and "Restoring a backup").
 
@@ -30,6 +41,10 @@ is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9
 | Gap search (settings)                            | Result: hours, "Fast alle"                       | Result: days in a row                                  |
 | ------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------ |
 | ![Search settings](docs/screenshots/search-form.png) | ![Search result](docs/screenshots/search-results.png) | ![Result, days](docs/screenshots/search-results-days.png) |
+
+| Poll: state and voting                              | Fixing the date: choose, then check                 | Date fixed (what everybody sees)                          |
+| --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------- |
+| ![Poll state](docs/screenshots/polls/3-state.png) | ![Fixing the date](docs/screenshots/fix-date/2-fix-check.png) | ![Date fixed](docs/screenshots/fix-date/4-date-fixed-guest.png) |
 
 ## Repository layout
 

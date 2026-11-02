@@ -2,6 +2,7 @@
   import { normalizeName } from "@lueckenfueller/shared";
   import * as api from "../lib/api";
   import Button from "../components/Button.svelte";
+  import CalendarFeed from "../components/CalendarFeed.svelte";
   import Card from "../components/Card.svelte";
   import Message from "../components/Message.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
@@ -113,6 +114,8 @@
       <SeedColorPicker value={user.seedColor} disabled={colorBusy || locked} onpick={pickColor} />
       <Message text={colorError} />
     </Card>
+
+    <CalendarFeed />
 
     <Card title="Passwort ändern">
       <form onsubmit={savePassword}>

@@ -3,7 +3,7 @@
   import {
     ANSWER_LABELS,
     answerOf,
-    bestProposalIds,
+    highlightedProposalIds,
     notVotedYet,
     proposalHeading,
     tallies,
@@ -21,7 +21,8 @@
   let { poll, onremove, busy = false }: Props = $props();
 
   const sums = $derived(tallies(poll));
-  const best = $derived(new Set(bestProposalIds(poll)));
+  const best = $derived(new Set(highlightedProposalIds(poll)));
+  const fixed = $derived(poll.fixedProposalId != null);
   const missing = $derived(notVotedYet(poll));
 </script>
 
@@ -72,7 +73,7 @@
     </table>
   </div>
   {#if best.size > 0}
-    <p class="legend"><span class="best-mark">Hervorgehoben</span> ist der Termin mit den meisten „Ja“.</p>
+    <p class="legend"><span class="best-mark">Hervorgehoben</span> ist {fixed ? "der festgelegte Termin" : "der Termin mit den meisten „Ja“"}.</p>
   {/if}
 </Card>
 

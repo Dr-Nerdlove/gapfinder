@@ -279,6 +279,26 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     the calendar file writer is `server/src/calendars/ics-write.ts`, the shared calendar reading
     `server/src/calendars/busy.ts`, the feed contents `server/src/polls/feed.ts`. A wrong feed token is not
     counted in the per-address bucket (calendar services share addresses; the token cannot be guessed).
+- Settled with the owner before building 5b (preview mock-up, all recommendations taken except Outlook): the
+  creator or admin picks the date in an own card "Termin festlegen" (a list of the proposals, the best one
+  preselected), the button "Kalender prüfen und festlegen" always shows a confirmation, with the warning when
+  someone is busy, unreadable or without a calendar, or a note when the check itself failed; fixing is allowed in
+  every case. The fixed date is shown to everybody in a highlighted card with three buttons; the voting form is
+  gone and the table highlights the fixed column. Outlook: **one button, private accounts only**
+  (`outlook.live.com`); work accounts use the `.ics` file. Link formats (checked at the source, the maintained
+  add-to-calendar notes by InteractionDesignFoundation, there is no official Microsoft text): Google
+  `calendar.google.com/calendar/render?action=TEMPLATE&text&dates&details`, timed as UTC
+  `YYYYMMDDTHHmmssZ/…`, whole days `YYYYMMDD/YYYYMMDD` with the day after the last day as the end; Outlook
+  `outlook.live.com/calendar/0/deeplink/compose?path=/calendar/action/compose&rru=addevent&subject&startdt&enddt&body`,
+  `allday=true` with plain dates. Whether Outlook treats `enddt` of a whole-day event as exclusive is documented
+  nowhere; it is sent exclusive and still has to be tried once with a real account. "Meine Abstimmungen" shows
+  only "Termin steht ✓", not the date (`PollSummary` carries no times).
+  Built in `web/src/lib/fix-date.ts` (fixed proposal, links, check review), `calendar-feed.ts`, new calls in
+  `api.ts` (the `.ics` is fetched by the app, so a sleeping server shows a message and not the browser's error
+  page), screens `components/polls/FixDate.svelte`, `FixedDate.svelte`, `components/CalendarFeed.svelte`.
+  Backward compatible: a server without 5a sends no `fixedProposalId`, so the app hides the fixing card and
+  treats the poll as not fixed; the profile card says the feature is not on the server yet (the missing route
+  answers 404).
 
 ### Look
 
@@ -340,4 +360,8 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
 
 ## Open points
 
-- None at the moment.
+- **Show the fixed date in "Meine Abstimmungen"** (to do, asked by the owner): the list only says "Termin steht ✓"
+  because `PollSummary` has only `fixedProposalId`. The server would have to send the fixed proposal's times too
+  (additive field in `shared/src/polls.ts` and `server/src/routes/polls.ts`); then the app shows the date in the
+  list and treats a missing field as before. Server first, app after the VM has updated.
+- Try the Outlook link with a whole-day date on a real private account and note the result here.

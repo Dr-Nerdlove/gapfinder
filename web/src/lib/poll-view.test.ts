@@ -8,6 +8,7 @@ import {
   bestProposalIds,
   checkGuestName,
   formatInstant,
+  highlightedProposalIds,
   needsVote,
   nextScreen,
   notVotedYet,
@@ -81,6 +82,22 @@ describe("texts", () => {
     expect(statusText({ ...poll, deadline: null })).toBe("Abstimmen ohne Frist");
     expect(statusText({ ...poll, closed: true, open: false })).toBe("Beendet (von Hand geschlossen)");
     expect(statusText({ ...poll, open: false })).toBe("Beendet (Frist am Mi 2.12., 20:00 abgelaufen)");
+  });
+
+  it("says the date stands, never 'deadline passed', once a date is fixed", () => {
+    const fixed = { ...poll, open: false, fixedProposalId: 1 };
+    expect(statusText(fixed)).toBe("Der Termin steht");
+    // Also when the poll was closed by hand, and when the deadline lies in the past.
+    expect(statusText({ ...fixed, closed: true })).toBe("Der Termin steht");
+    expect(statusText({ ...fixed, deadline: "2020-01-01T10:00:00.000Z" })).toBe("Der Termin steht");
+    // An older server sends no field at all: the poll is simply not fixed.
+    const { fixedProposalId: _omit, ...old } = { ...poll, open: false };
+    expect(statusText(old)).toBe("Beendet (Frist am Mi 2.12., 20:00 abgelaufen)");
+  });
+
+  it("highlights the fixed date instead of the best one", () => {
+    expect(highlightedProposalIds(poll)).toEqual([1]);
+    expect(highlightedProposalIds({ ...poll, fixedProposalId: 2 })).toEqual([2]);
   });
 
   it("sums up a poll for the list", () => {
