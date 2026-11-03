@@ -44,7 +44,11 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build:shared
-      - run: npm run build -w web
+      - name: Build the app
+        # APP_BUILD is the same "sha-<7 characters>" the server image gets as APP_VERSION; the app compares the two.
+        run: |
+          export APP_BUILD="sha-${GITHUB_SHA::7}"
+          npm run build -w web
         env:
           VITE_API_URL: ${{ vars.API_URL }}
       - uses: actions/configure-pages@v5

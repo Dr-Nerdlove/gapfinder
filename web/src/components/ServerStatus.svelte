@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
-  import { API_URL } from "../lib/config";
-  import { checkHealth, type HealthResult } from "../lib/health";
+  import { API_URL, APP_BUILD, APP_RELEASE } from "../lib/config";
+  import { checkHealth, serverFreshness, type HealthResult } from "../lib/health";
 
   let status = $state<HealthResult | { kind: "loading" }>({ kind: "loading" });
 
@@ -20,7 +20,13 @@
     <h2>Verbinde …</h2>
   {:else if status.kind === "online"}
     <h2>Server erreichbar</h2>
-    <p>Version {status.version}</p>
+    <p>Version {APP_RELEASE}</p>
+    {#if serverFreshness(status.version, APP_BUILD) === "current"}
+      <p class="detail">Der Server ist auf dem neuesten Stand.</p>
+    {:else if serverFreshness(status.version, APP_BUILD) === "updating"}
+      <p class="detail">Der Server wird gerade aktualisiert. Das dauert nach einer Änderung bis zu einer Stunde.</p>
+    {/if}
+    <p class="build">Stand {status.version}</p>
   {:else}
     <h2>Lückenfüller schläft gerade</h2>
     <p>Der Server ist nachts von 1 bis 7 Uhr aus. Versuch es später noch einmal.</p>
@@ -49,6 +55,11 @@
 
   p {
     margin-top: 4px;
+  }
+
+  .build {
+    font-size: 0.8125rem;
+    opacity: 0.75;
   }
 
   button {
