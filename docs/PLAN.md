@@ -375,5 +375,10 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
     Triggers trial was dropped), so it needs Web Push from the server: a service worker, a new key and library,
     stored subscriptions (personal data of guests), messages through Google/Mozilla/Apple, and on iPhones only
     for the app added to the home screen. Revisit if notifications are wanted elsewhere too (e.g. "Termin steht").
-- **Review of the guides (to do):** check README and `docs/` for gaps and outdated steps, and whether the
-  trial restore of the backup still runs regularly.
+- **Review of the guides (done 2026-11-02):** README and `docs/` were checked against `deploy/vm/*.sh`, the
+  units, `setup.sh`, the Dockerfile, `.nvmrc`, `package.json` and the CI files (commands, file names, messages,
+  retention numbers, timer times, Node versions): no outdated steps found. Gap found and closed: the trial
+  restore is manual by design (the VM never holds the secret key) and `check` does not warn when the newest
+  backup is old, so the guide now tells the owner to run `list` first and look at the dates. Not built, offer
+  if wanted: a warning in the VM when the newest backup is older than two days (for example in the nightly
+  run or in `check`), and a reminder for the monthly trial restore.

@@ -7,6 +7,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- **Server guide: monthly backup check.** The trial restore section now says to run `list` first and look at the dates, because `check` opens the newest backup even if it is old, and that the trial restore cannot run by itself. Documentation only; nothing to do on the VM.
 - **Restore names the way back.** If the server does not start after a restore, the message now also gives the command that goes back to the state before. Reaches the VM when `setup.sh` is rerun. The backup test now also covers the maintenance lock, a server that does not come up after a restore, and a wrong Windows password.
 - **Server guide corrected.** The password change for the backup user now names the right lines of the script, step 5 warns to check the PC's address with `ipconfig` (a wrong one cuts the SSH window), and the list of files in the VM is complete. `setup.sh` only has two reworded hints (rerun `setup.sh` to get them; nothing else changes).
 - **Server VM moves into the home network.** The VM now sits on a Hyper-V external switch, directly in the home
