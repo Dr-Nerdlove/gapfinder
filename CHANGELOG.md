@@ -5,6 +5,16 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- **Busy setting per kind of search.** Each calendar can now count as busy separately for searches by hours and
+  by whole days (for example a work calendar that should block weekday evenings but not a holiday). Existing
+  settings carry over to both.
+
+### Changed
+
+- The search choices are now called "Stunden" and "Ganze Tage".
+
 ### Fixed
 
 - **The app's own icon when sharing a link.** The share sheet on Android showed the icon of another website on the

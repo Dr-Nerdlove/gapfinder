@@ -1,6 +1,6 @@
 import type { PreviewEvent } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
-import { dayHeading, groupPreviewByDay, NO_TITLE, previewDays, problemNotices } from "./preview";
+import { busyNote, dayHeading, entryIsOff, groupPreviewByDay, NO_TITLE, previewDays, problemNotices } from "./preview";
 
 let nextId = 1;
 function event(start: string, end: string, extra: Partial<PreviewEvent> = {}): PreviewEvent {
@@ -271,5 +271,30 @@ describe("problemNotices", () => {
 
   it("gives nothing for no problems", () => {
     expect(problemNotices([], calendars)).toEqual([]);
+  });
+});
+
+describe("busyNote and entryIsOff", () => {
+  it.each([
+    [true, true, "", false],
+    [true, false, " · zählt nur für Stunden", false],
+    [false, true, " · zählt nur für ganze Tage", false],
+    [false, false, " · zählt nicht", true],
+  ])("hours %s, days %s", (countsAsBusy, countsAsBusyDays, note, off) => {
+    expect(busyNote({ countsAsBusy, countsAsBusyDays })).toBe(note);
+    expect(entryIsOff({ countsAsBusy, countsAsBusyDays })).toBe(off);
+  });
+
+  it("takes countsAsBusyDays from countsAsBusy when an older server does not send it", () => {
+    const [day] = groupPreviewByDay([
+      event("2026-11-02T08:00:00Z", "2026-11-02T09:00:00Z", { title: "Aus", countsAsBusy: false }),
+      event("2026-11-02T10:00:00Z", "2026-11-02T11:00:00Z", { title: "An", countsAsBusy: true }),
+      event("2026-11-02T12:00:00Z", "2026-11-02T13:00:00Z", { title: "Nur Tage", countsAsBusy: false, countsAsBusyDays: true }),
+    ]);
+    expect(day!.entries.map((e) => [e.title, busyNote(e)])).toEqual([
+      ["Aus", " · zählt nicht"],
+      ["An", ""],
+      ["Nur Tage", " · zählt nur für ganze Tage"],
+    ]);
   });
 });

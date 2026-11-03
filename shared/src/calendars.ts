@@ -25,8 +25,10 @@ export interface Calendar {
   id: number;
   name: string;
   provider: CalendarProvider;
-  /** Events of this calendar count as busy (switched off e.g. for a birthday calendar). */
+  /** Counts as busy in the hour search and when fixing a timed poll date (switched off e.g. for a birthday calendar). */
   countsAsBusy: boolean;
+  /** Counts as busy in the multi-day search and when fixing a whole-day poll date; missing from servers older than this change. */
+  countsAsBusyDays?: boolean;
   /** Decides which "add to calendar" button the person sees first. Exactly one calendar is the default. */
   isDefault: boolean;
   status: CalendarStatus;
@@ -57,6 +59,7 @@ export interface AddCalendarRequest {
 export interface UpdateCalendarRequest {
   name?: string;
   countsAsBusy?: boolean;
+  countsAsBusyDays?: boolean;
   /** Only `true` is accepted: another calendar becomes the default by being chosen. */
   isDefault?: true;
   /** A new link for the same calendar ("Link neu eintragen"); tried at once like a new one. */
@@ -74,6 +77,8 @@ export interface PreviewEvent {
   allDay: boolean;
   /** False for events marked "free" and for every event of a calendar that does not count as busy. */
   countsAsBusy: boolean;
+  /** Same for the multi-day search; missing from servers older than this change. */
+  countsAsBusyDays?: boolean;
 }
 
 /** Why a calendar could not be read for the preview. */

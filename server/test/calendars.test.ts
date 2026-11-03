@@ -146,6 +146,7 @@ describe("POST /api/calendars", () => {
       name: "Familie",
       provider: "google",
       countsAsBusy: true,
+      countsAsBusyDays: true,
       isDefault: true,
       status: "ok",
       createdAt: e.clock.now().toISOString(),
@@ -340,6 +341,20 @@ describe("PATCH /api/calendars/:id", () => {
     const calendars = (await list(e)).calendars;
     expect(calendars.map((c) => c.isDefault)).toEqual([true, false]);
     expect(calendars[0]!.id).toBe(second.id);
+  });
+
+  it("saves countsAsBusyDays on its own, without touching countsAsBusy, and the other way round", async () => {
+    const e = await setup();
+    const calendar = await add(withFeed(e, GOOGLE_LINK, EMPTY), GOOGLE_LINK);
+    expect(calendar).toMatchObject({ countsAsBusy: true, countsAsBusyDays: true });
+    const patch = (body: object) => call(e, "PATCH", `/api/calendars/${calendar.id}`, { token: e.me.token, body });
+
+    expect((await patch({ countsAsBusyDays: false })).json<Calendar>()).toMatchObject({ countsAsBusy: true, countsAsBusyDays: false });
+    expect((await list(e)).calendars[0]).toMatchObject({ countsAsBusy: true, countsAsBusyDays: false });
+
+    expect((await patch({ countsAsBusy: false })).json<Calendar>()).toMatchObject({ countsAsBusy: false, countsAsBusyDays: false });
+    expect((await patch({ countsAsBusyDays: true })).json<Calendar>()).toMatchObject({ countsAsBusy: false, countsAsBusyDays: true });
+    expect((await patch({ countsAsBusyDays: "yes" })).statusCode).toBe(400);
   });
 
   it("allows an empty name (the app shows the provider) and an empty body", async () => {
@@ -585,6 +600,15 @@ describe("the link stays secret", () => {
 describe("GET /api/calendars/preview", () => {
   const T = (summary: string, start: string, end: string, extra: object = {}) => ({ summary, start, end, ...extra });
 
+  it("shows countsAsBusyDays on preview events too", async () => {
+    const e = await setup();
+    e.feeds.set(GOOGLE_LINK, ics([T("Zahnarzt", "2026-11-05T09:00:00Z", "2026-11-05T10:00:00Z")]));
+    const calendar = await add(e, GOOGLE_LINK);
+    await call(e, "PATCH", `/api/calendars/${calendar.id}`, { token: e.me.token, body: { countsAsBusyDays: false } });
+    const preview = (await call(e, "GET", "/api/calendars/preview", { token: e.me.token })).json<CalendarPreview>();
+    expect(preview.events).toMatchObject([{ countsAsBusy: true, countsAsBusyDays: false }]);
+  });
+
   it("answers 503 calendars_unavailable without a key", async () => {
     env = await createCalendarEnv({ calendarKey: null, calendarKeyProblem: "CALENDAR_KEY is not set" });
     const me = await addUserWithSession(env, "Vincent R.");
@@ -652,10 +676,10 @@ describe("GET /api/calendars/preview", () => {
     const preview = (await call(e, "GET", "/api/calendars/preview", { token: e.me.token })).json<CalendarPreview>();
     expect(preview.problems).toEqual([]);
     expect(preview.events).toEqual([
-      { calendarId: google.id, title: "Frei eingetragen", start: "2026-11-04T09:00:00.000Z", end: "2026-11-04T10:00:00.000Z", allDay: false, countsAsBusy: false },
-      { calendarId: apple.id, title: "Geburtstag Oma", start: "2026-11-05T09:00:00.000Z", end: "2026-11-05T09:30:00.000Z", allDay: false, countsAsBusy: false },
-      { calendarId: google.id, title: "Zahnarzt", start: "2026-11-05T09:00:00.000Z", end: "2026-11-05T10:00:00.000Z", allDay: false, countsAsBusy: true },
-      { calendarId: google.id, title: "Ganztags", start: "2026-11-05T23:00:00.000Z", end: "2026-11-06T23:00:00.000Z", allDay: true, countsAsBusy: true },
+      { calendarId: google.id, title: "Frei eingetragen", start: "2026-11-04T09:00:00.000Z", end: "2026-11-04T10:00:00.000Z", allDay: false, countsAsBusy: false, countsAsBusyDays: false },
+      { calendarId: apple.id, title: "Geburtstag Oma", start: "2026-11-05T09:00:00.000Z", end: "2026-11-05T09:30:00.000Z", allDay: false, countsAsBusy: false, countsAsBusyDays: true },
+      { calendarId: google.id, title: "Zahnarzt", start: "2026-11-05T09:00:00.000Z", end: "2026-11-05T10:00:00.000Z", allDay: false, countsAsBusy: true, countsAsBusyDays: true },
+      { calendarId: google.id, title: "Ganztags", start: "2026-11-05T23:00:00.000Z", end: "2026-11-06T23:00:00.000Z", allDay: true, countsAsBusy: true, countsAsBusyDays: true },
     ]);
   });
 

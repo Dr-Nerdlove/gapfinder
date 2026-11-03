@@ -148,7 +148,11 @@ export function registerSearchRoutes(app: FastifyInstance, ctx: AppContext): voi
       // Every search counts, not only failed ones: reading calendars is the expensive part.
       countCalendarReads(ctx, user.id);
 
-      const { readable, skipped } = await collectBusyTimes(ctx, search.personIds);
+      const { readable, skipped } = await collectBusyTimes(
+        ctx,
+        search.personIds,
+        search.request.mode === "days" ? "days" : "hours",
+      );
       const now = ctx.now().getTime();
       const base = { people: readable, from: search.from, to: search.to, now };
       const { request: kind } = search;

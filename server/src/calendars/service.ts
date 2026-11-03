@@ -173,6 +173,7 @@ export async function buildPreview(ctx: AppContext, userId: number): Promise<Cal
         end: new Date(event.end).toISOString(),
         allDay: event.allDay,
         countsAsBusy: event.busy && row.counts_busy === 1,
+        countsAsBusyDays: event.busy && row.counts_busy_days === 1,
       });
     }
   });

@@ -126,8 +126,8 @@
 
   <Card title="Was suchst du?">
     <div class="chips" role="group" aria-label="Art der Suche">
-      <Chip label="Stunden an Wochentagen" selected={settings.kind === "hours"} onclick={() => (settings.kind = "hours")} />
-      <Chip label="Mehrere Tage am Stück" selected={settings.kind === "days"} onclick={() => (settings.kind = "days")} />
+      <Chip label="Stunden" selected={settings.kind === "hours"} onclick={() => (settings.kind = "hours")} />
+      <Chip label="Ganze Tage" selected={settings.kind === "days"} onclick={() => (settings.kind = "days")} />
     </div>
 
     {#if settings.kind === "hours"}
