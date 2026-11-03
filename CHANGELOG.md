@@ -5,6 +5,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-11-03
+
+Usernames are now set by the admin and stay that way. When inviting someone, the admin types the exact username
+(for example "Max", or "Samuel Kr." when several friends share a first name); the app refuses a name that an
+account or an open invite already has. Invited people see their username and only choose a password, and nobody can
+change their own username in the profile any more; only the admin renames accounts. Existing accounts keep their
+names and log in as before. The server updates itself within about an hour; until then it still shortens a typed
+name to first name plus initial, so wait with invites that need more letters. Nothing has to be done on the VM.
+
 ### Changed
 
 - **Usernames are fixed by the admin.** The admin types the exact username when inviting someone (e.g. "Samuel
