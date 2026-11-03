@@ -6,6 +6,7 @@ import type {
   AddCalendarRequest,
   AccountVoteRequest,
   ApiErrorBody,
+  BackupStatus,
   Calendar,
   CalendarList,
   CalendarFeed,
@@ -214,6 +215,9 @@ export const deleteUser = (id: number, o: CallOptions = {}) =>
 
 export const createPasswordReset = (id: number, o: CallOptions = {}) =>
   request<CreatedPasswordReset>(`/api/admin/users/${segment(id)}/password-reset`, { ...o, method: "POST" });
+
+/** Not on servers older than the backup status: they answer 404, which callers treat as "nothing to show". */
+export const getBackupStatus = (o: CallOptions = {}) => request<BackupStatus>("/api/admin/backup-status", o);
 
 export const listInvites = (o: CallOptions = {}) => request<AdminInvite[]>("/api/admin/invites", o);
 

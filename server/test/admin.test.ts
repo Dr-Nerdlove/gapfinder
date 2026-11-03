@@ -18,6 +18,7 @@ async function setup() {
 
 const adminRoutes: [string, string, unknown?][] = [
   ["GET", "/api/admin/users"],
+  ["GET", "/api/admin/backup-status"],
   ["PATCH", "/api/admin/users/1", { username: "Whoever" }],
   ["DELETE", "/api/admin/users/1"],
   ["POST", "/api/admin/users/1/password-reset"],

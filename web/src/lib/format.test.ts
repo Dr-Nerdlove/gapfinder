@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDate } from "./format";
+import { formatDate, formatDateTime } from "./format";
 
 describe("formatDate", () => {
   it("formats in German style", () => {
@@ -15,5 +15,16 @@ describe("formatDate", () => {
 
   it("gives an empty text for a broken date", () => {
     expect(formatDate("kaputt")).toBe("");
+  });
+});
+
+describe("formatDateTime", () => {
+  it("formats date and time in German time", () => {
+    expect(formatDateTime("2026-11-15T17:30:00.000Z")).toBe("15.11.2026, 18:30");
+    expect(formatDateTime("2026-07-15T22:30:00.000Z")).toBe("16.07.2026, 00:30");
+  });
+
+  it("gives an empty text for a broken date", () => {
+    expect(formatDateTime("kaputt")).toBe("");
   });
 });

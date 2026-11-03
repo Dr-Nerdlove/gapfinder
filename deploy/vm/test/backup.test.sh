@@ -334,7 +334,7 @@ expect "one file in the VM" [ "$(local_names | count_lines)" -eq 1 ]
 expect "same file in the share" [ "$(share_names)" == "$(local_names)" ]
 decrypt_to "$APP/backups/$(local_names | head -n 1)" "$FAKE/plain.sqlite" || problems+=" [decrypts]"
 expect "one invite inside" [ "$(invites_in "$FAKE/plain.sqlite")" == "1" ]
-expect "no plain file in data/" [ -z "$(find "$APP/data" -mindepth 1 -maxdepth 1 ! -name 'lueckenfueller.sqlite*')" ]
+expect "no plain file in data/" [ -z "$(find "$APP/data" -mindepth 1 -maxdepth 1 ! -name 'lueckenfueller.sqlite*' ! -name backup-status)" ]
 expect "only encrypted files in backups/" [ -z "$(find "$APP/backups" -type f ! -name '*.sqlite.age')" ]
 expect "the file is not a plain database" bash -c '! head -c 15 "$1" | grep -q "SQLite format"' _ "$APP/backups/$(local_names | head -n 1)"
 finish "run: encrypted backup in the VM and the share, content is the database"
@@ -703,6 +703,136 @@ expect "tried once" [ "$(count_lines <"$FAKE/smb_hosts")" -eq 1 ]
 expect "no backup made" [ "$(local_names | count_lines)" -eq 0 ]
 expect "nothing in the share" [ "$(share_names | count_lines)" -eq 0 ]
 finish "setup with a wrong Windows password: fails with the 'cannot be reached' message"
+
+# --- 15. the status file for the app ----------------------------------------------------------------------
+
+# status_value <key>: the value of that key in the status file (empty if none).
+status_value() { sed -n "s/^$1=//p" "$APP/data/backup-status" 2>/dev/null | tail -n 1; }
+is_utc_time() { [[ "$1" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$ ]]; }
+
+# A run that reaches Windows sets last_backup and last_copy, nothing else.
+new_case
+preconfigure
+seed_invite Anna
+bk run
+expect "exit 0" [ "$status" -eq 0 ]
+expect "last_backup is a UTC time" is_utc_time "$(status_value last_backup)"
+expect "last_copy is a UTC time" is_utc_time "$(status_value last_copy)"
+expect "no last_check yet" [ -z "$(status_value last_check)" ]
+expect "status file is mode 644" [ "$(stat -c %a "$APP/data/backup-status")" == "644" ]
+expect "no temporary file left in data/" [ -z "$(find "$APP/data" -name '.backup-status.*')" ]
+expect "only known keys, no secrets" [ -z "$(grep -v -E '^(last_backup|last_copy|last_check)=' "$APP/data/backup-status" || true)" ]
+finish "status: a run sets last_backup and last_copy"
+
+# Windows offline: last_backup is updated, last_copy is not; after the catch-up it is.
+new_case
+preconfigure
+seed_invite Anna
+bk run
+first_copy="$(status_value last_copy)"
+first_backup="$(status_value last_backup)"
+sleep 1
+touch "$FAKE/offline"
+bk run
+expect "fails while Windows is off" [ "$status" -ne 0 ]
+expect "last_backup is newer" [ "$(status_value last_backup)" != "$first_backup" ]
+expect "last_backup has a time" is_utc_time "$(status_value last_backup)"
+expect "last_copy is unchanged" [ "$(status_value last_copy)" == "$first_copy" ]
+sleep 1
+rm "$FAKE/offline"
+bk run
+expect "exit 0 when Windows is back" [ "$status" -eq 0 ]
+expect "last_copy is newer now" [ "$(status_value last_copy)" != "$first_copy" ]
+finish "status: Windows offline updates last_backup but not last_copy"
+
+# A first run with Windows offline has no last_copy at all.
+new_case
+preconfigure
+seed_invite Anna
+touch "$FAKE/offline"
+bk run
+expect "last_backup is set" is_utc_time "$(status_value last_backup)"
+expect "last_copy is not there" [ -z "$(status_value last_copy)" ]
+finish "status: a first run with Windows offline has no last_copy"
+
+# check sets last_check and keeps the other keys (and unknown ones the script does not own).
+new_case
+preconfigure
+seed_invite Anna
+bk run
+backup_before="$(status_value last_backup)"
+copy_before="$(status_value last_copy)"
+answers "$SECRET"
+bk check
+expect "exit 0" [ "$status" -eq 0 ]
+expect "last_check is a UTC time" is_utc_time "$(status_value last_check)"
+expect "last_backup kept" [ "$(status_value last_backup)" == "$backup_before" ]
+expect "last_copy kept" [ "$(status_value last_copy)" == "$copy_before" ]
+finish "status: check sets last_check and keeps the other keys"
+
+# A failed check (wrong key) does not set last_check.
+new_case
+preconfigure
+seed_invite Anna
+bk run
+answers "$other_secret"
+bk check
+expect "fails" [ "$status" -ne 0 ]
+expect "no last_check" [ -z "$(status_value last_check)" ]
+finish "status: a failed check does not set last_check"
+
+# An existing last_check stays when a run updates the other keys.
+new_case
+preconfigure
+seed_invite Anna
+printf 'last_check=2026-10-01T10:00:00Z\n' >"$APP/data/backup-status"
+bk run
+expect "exit 0" [ "$status" -eq 0 ]
+expect "last_check kept" [ "$(status_value last_check)" == "2026-10-01T10:00:00Z" ]
+expect "last_backup set" is_utc_time "$(status_value last_backup)"
+expect "one line per key" [ "$(wc -l <"$APP/data/backup-status")" -eq 3 ]
+finish "status: updating one key keeps the others"
+
+# A restore keeps the file, sets last_check, and the -before-restore backup does not touch last_backup.
+new_case
+preconfigure
+seed_invite Anna
+bk run
+backup_before="$(status_value last_backup)"
+copy_before="$(status_value last_copy)"
+sleep 1
+answers "$SECRET" yes
+bk restore
+expect "exit 0" [ "$status" -eq 0 ]
+expect "status file survived the restore" [ -f "$APP/data/backup-status" ]
+expect "last_check is a UTC time" is_utc_time "$(status_value last_check)"
+expect "last_backup unchanged by the -before-restore backup" [ "$(status_value last_backup)" == "$backup_before" ]
+expect "last_copy unchanged" [ "$(status_value last_copy)" == "$copy_before" ]
+expect "status file not moved to replaced-*" [ -z "$(find "$APP" -path '*/replaced-*' -name backup-status)" ]
+finish "status: a restore keeps the file and sets last_check"
+
+# A restore answered "no" has still passed the key check, which proves the key works: last_check is set.
+new_case
+preconfigure
+seed_invite Anna
+bk run
+answers "$SECRET" no
+bk restore
+expect "fails (not restored)" [ "$status" -ne 0 ]
+expect "last_check is set (the key worked)" is_utc_time "$(status_value last_check)"
+finish "status: a restore that passed the key check sets last_check even if not confirmed"
+
+# A status file that cannot be written never makes the backup fail.
+new_case
+preconfigure
+seed_invite Anna
+mkdir "$APP/data/backup-status"
+bk run
+expect "exit 0 anyway" [ "$status" -eq 0 ]
+expect "backup in the share" [ "$(share_names)" == "$(local_names)" ]
+expect "warns" grep -q 'could not write' "$FAKE/output"
+expect "no temporary file left" [ -z "$(find "$APP/data" -name '.backup-status.*')" ]
+finish "status: an unwritable status file is only a warning"
 
 if ((failures > 0)); then
   echo "$failures test(s) failed"

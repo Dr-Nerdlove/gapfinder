@@ -419,7 +419,11 @@ sudo lueckenfueller-backup check
 In `list`, the newest name in the VM and the newest in the Windows folder must both carry last night's date
 (or the day before, if the PC was off). If not, the nightly backup has stopped: see "A backup failed" under
 "If something goes wrong". The trial restore cannot run by itself, because the VM never holds your secret
-key; remembering it once a month is up to you (a repeating entry in your phone's calendar helps).
+key, so you have to do it. The app reminds you: the backup script writes the time of the last backup, of the last
+copy to Windows and of the last trial restore into a small status file, and the start page (for the admin only)
+shows a warning card when the trial restore is more than 35 days ago, or when the nightly backup or the copy to
+Windows is more than 50 hours old. "Verwaltung" always shows these three times in the card "Sicherung". Until the
+VM has run the new `setup.sh` (see "When the files in `deploy/vm/` change"), the card says the state is unknown.
 
 ### Which backups there are
 
@@ -502,6 +506,9 @@ Where things are in the VM:
   container ([`deploy/vm/firewall.nft`](../deploy/vm/firewall.nft)); `/usr/local/sbin/lueckenfueller-firewall-check`
   checks it.
 - `/opt/lueckenfueller/data/` – the database. **This is the data to keep**; the backups protect it.
+- `/opt/lueckenfueller/data/backup-status` – when the last backup, copy to Windows and trial restore happened
+  (three `key=value` lines, written by the backup script, no secrets). The server shows it to the admin in the
+  app. A restore leaves it in place.
 - `/opt/lueckenfueller/backups/` – the newest 14 backups (encrypted). `/opt/lueckenfueller/backup-settings/` –
   the backup key's public half and the login for the Windows folder.
 - `/etc/lueckenfueller/windows-pc` – the Windows PC's address from the setup: backups go there, and only it may
@@ -634,6 +641,10 @@ The Tailscale connection and the server address are the same in both directions.
   while a VPN runs on the PC, see the NordVPN note in "Moving the VM from the Default Switch to the home
   network". If Windows security ("Controlled folder access") blocks the
   writes, allow them there.
+- **The card "Sicherung prüfen" appears on the start page.** The backup or the copy to Windows is more than
+  50 hours old: see "A backup failed" above. If the trial restore is due, run `sudo lueckenfueller-backup check`
+  in the VM. If the card says the state is unknown, the VM has not written the status file yet: run the setup again (see "When the
+  files in `deploy/vm/` change").
 - **The firewall check failed** (at the end of the setup, or with `sudo lueckenfueller-firewall-check`). The line
   marked as failed says what: if the server *can* reach the PC, the VM or Tailscale, the firewall is not
   active (`sudo systemctl status lueckenfueller-firewall`); if it *cannot* reach `calendar.google.com`, the
