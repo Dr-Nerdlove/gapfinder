@@ -5,6 +5,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- In the search for whole days, only all-day events and events of at least 6 hours make a day busy, so a short
+  appointment no longer blocks a holiday. The same goes for the check before fixing a whole-day poll date.
+
 ## [1.2.0] - 2026-11-03
 
 Each calendar can now count as busy separately for the two kinds of search: "Stunden" and "Ganze Tage". For

@@ -101,6 +101,11 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     **"Ganze Tage"** (multi-day search, and fixing a whole-day poll date). Existing calendars take over their old
     setting for both. The search choices are renamed to "Stunden" and "Ganze Tage" to match. The old field
     `countsAsBusy` is kept (it means the hour search) so older servers and apps keep working.
+  - Decided 2026-11-03: in the multi-day search (and the check before fixing a whole-day poll date) only events
+    of **at least 6 hours** count as busy (`DAYS_SEARCH_MIN_EVENT_HOURS`): holidays, trips, all-day events and
+    long shifts block a day, a dentist appointment does not. The "Ganze Tage" switch stays for calendars whose
+    long events (work shifts) should not block a holiday. The hour search is unchanged; the calendar preview
+    does not mark short events.
 - Events marked as "free" (`TRANSP:TRANSPARENT`) never count as busy. All-day events count as busy unless
   their calendar is switched off.
 - The links are stored **encrypted**; only the server reads them. They never reach other users or the admin.
@@ -152,7 +157,8 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
    - **weekdays + duration** (the choice "Stunden"), optionally with a time window (e.g. Saturday, 5 hours,
      18:00–23:00). Without a time window the default window is **09:00–23:00**; or
    - a **multi-day period** (the choice "Ganze Tage"; e.g. 7 days in a row), optionally starting on a given
-     weekday. A day is free when it has **no busy event at all**.
+     weekday. A day is free when nobody has an **all-day event or an event of at least 6 hours** on it
+     (shorter events do not count).
    - Optional buffer before and after (travel time).
 3. Choose the search range: next 30 / 90 days, half a year, a year, a month, or a custom range of months.
 4. Results are **grouped per day** ("Sa 12.12.: alle frei 14:00–23:00") instead of listing every start time.

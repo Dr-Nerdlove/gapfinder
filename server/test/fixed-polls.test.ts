@@ -371,8 +371,8 @@ describe("the check before fixing", () => {
   it("checks whole days from German midnight to German midnight, across the UTC date change", async () => {
     const e = await setup();
     // The proposal is Tuesday 2026-11-10: 2026-11-09T23:00Z (00:00 CET) until 2026-11-10T23:00Z.
-    await addCalendar(e, e.me.token, GOOGLE_LINK, [busy("2026-11-09T22:00:00Z", "2026-11-09T23:00:00Z")]); // before, touching
-    await addCalendar(e, e.anna.token, APPLE_LINK, [busy("2026-11-09T22:30:00Z", "2026-11-09T23:15:00Z")]); // starts the evening before, overlaps 15 minutes
+    await addCalendar(e, e.me.token, GOOGLE_LINK, [busy("2026-11-09T17:00:00Z", "2026-11-09T23:00:00Z")]); // before, touching
+    await addCalendar(e, e.anna.token, APPLE_LINK, [busy("2026-11-09T17:30:00Z", "2026-11-09T23:30:00Z")]); // starts the evening before, overlaps 30 minutes
     await addCalendar(e, e.ben.token, OUTLOOK_LINK, [busy("2026-11-10T22:45:00Z", "2026-11-11T08:00:00Z")]); // overlaps the last 15 minutes
     await addCalendar(e, e.admin.token, OTHER_LINK, [busy("2026-11-10T23:00:00Z", "2026-11-11T08:00:00Z")]); // after, touching
     const poll = await createPoll(e, daysBody({ participants: [e.anna.id, e.ben.id, e.admin.id] }));
@@ -389,6 +389,20 @@ describe("the check before fixing", () => {
     const result = (await check(e, poll, 1)).json<FixCheck>();
     expect(names(result.busy)).toEqual(["Anna K."]);
     expect(names((await check(e, poll, 0)).json<FixCheck>().busy)).toEqual([]);
+  });
+
+  it("counts only events of at least 6 hours when checking whole days, but every event for a timed date", async () => {
+    const e = await setup();
+    // Saturday 2026-11-07 is the timed proposal (18:00 UTC), Tuesday 2026-11-10 the whole-day one.
+    await addCalendar(e, e.anna.token, APPLE_LINK, [
+      busy("2026-11-07T17:00:00Z", "2026-11-07T19:00:00Z"),
+      busy("2026-11-10T08:00:00Z", "2026-11-10T13:59:00Z"),
+    ]);
+    await addCalendar(e, e.ben.token, OUTLOOK_LINK, [busy("2026-11-10T08:00:00Z", "2026-11-10T14:00:00Z")]);
+    const timed = await createPoll(e, timedBody({ participants: [e.anna.id, e.ben.id] }));
+    const days = await createPoll(e, daysBody({ participants: [e.anna.id, e.ben.id] }));
+    expect(names((await check(e, days, 0)).json<FixCheck>().busy)).toEqual(["ben m."]);
+    expect(names((await check(e, timed, 0)).json<FixCheck>().busy)).toEqual(["Anna K."]);
   });
 
   it("uses the hour switch for a timed date and the day switch for a whole-day date", async () => {

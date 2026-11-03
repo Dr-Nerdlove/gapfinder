@@ -288,7 +288,7 @@ describe("POST /api/searches: who is searched", () => {
     const patch = (id: number, body: object) =>
       call(e, "PATCH", `/api/calendars/${id}`, { token: e.me.token, body });
     const e = await setup();
-    const work = await addCalendar(e, e.me.token, GOOGLE_LINK, [busyOn("2026-11-07T12:00:00Z", "2026-11-07T13:00:00Z", "Arbeit")]);
+    const work = await addCalendar(e, e.me.token, GOOGLE_LINK, [busyOn("2026-11-07T08:00:00Z", "2026-11-07T14:00:00Z", "Arbeit")]);
     const hoursSlots = async () => {
       const result = (await search(e, hoursBody())).json<SearchResult>();
       if (result.mode !== "hours") throw new Error("hours expected");
@@ -302,13 +302,35 @@ describe("POST /api/searches: who is searched", () => {
 
     // Hours on, days off: the event blocks the hour search only.
     expect((await patch(work.id, { countsAsBusyDays: false })).statusCode).toBe(200);
-    expect(await hoursSlots()).toBe(2);
+    expect(await hoursSlots()).toBe(1);
     expect(await dayStretches()).toBe(1);
 
     // The reverse: days on, hours off.
     await patch(work.id, { countsAsBusy: false, countsAsBusyDays: true });
     expect(await hoursSlots()).toBe(1);
     expect(await dayStretches()).toBe(0);
+  });
+
+  it("lets only events of at least 6 hours block a day, while the hour search sees every event", async () => {
+    const e = await setup();
+    await addCalendar(e, e.me.token, GOOGLE_LINK, [
+      busyOn("2026-11-03T08:00:00Z", "2026-11-03T13:59:00Z"), // 5 h 59: does not block the 3rd
+      busyOn("2026-11-04T08:00:00Z", "2026-11-04T14:00:00Z"), // exactly 6 h: blocks the 4th
+      busyOn("2026-11-05", "2026-11-06"), // all-day: blocks the 5th
+      busyOn("2026-11-07T10:00:00Z", "2026-11-07T11:00:00Z"), // short, on the Saturday of the hour search
+    ]);
+    const days = (await search(e, daysBody({ days: 1 }))).json<SearchResult>();
+    if (days.mode !== "days") throw new Error("days expected");
+    expect(days.stretches).toEqual([
+      { first: "2026-11-02", last: "2026-11-03", days: 2 },
+      { first: "2026-11-06", last: "2026-11-08", days: 3 },
+    ]);
+    const hours = (await search(e, hoursBody())).json<SearchResult>();
+    if (hours.mode !== "hours") throw new Error("hours expected");
+    expect(hours.days[0]!.slots).toEqual([
+      slot("2026-11-07T08:00:00Z", "2026-11-07T10:00:00Z"),
+      slot("2026-11-07T11:00:00Z", "2026-11-07T22:00:00Z"),
+    ]);
   });
 
   it("does not read more than 8 calendars at the same time", async () => {
@@ -379,8 +401,8 @@ describe("POST /api/searches: results", () => {
   it("finds free stretches of days for three people, with a near miss", async () => {
     const e = await setup();
     await addCalendar(e, e.me.token, GOOGLE_LINK);
-    // 12:00 UTC is 13:00 German time on the 4th: a busy day for Anna.
-    await addCalendar(e, e.anna.token, APPLE_LINK, [busyOn("2026-11-04T12:00:00Z", "2026-11-04T13:00:00Z", "Termin")]);
+    // 6 hours on the 4th (09:00 to 15:00 German time): a busy day for Anna.
+    await addCalendar(e, e.anna.token, APPLE_LINK, [busyOn("2026-11-04T08:00:00Z", "2026-11-04T14:00:00Z", "Termin")]);
     await addCalendar(e, e.ben.token, OUTLOOK_LINK, [{ start: "2026-11-08", end: "2026-11-09", summary: "Urlaubstag" }]);
     const response = await search(e, daysBody({ people: [e.anna.id, e.ben.id], to: "2026-11-10", days: 2 }));
     expect(response.statusCode).toBe(200);
