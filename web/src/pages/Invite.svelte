@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { normalizeName } from "@lueckenfueller/shared";
   import * as api from "../lib/api";
   import Button from "../components/Button.svelte";
   import Card from "../components/Card.svelte";
@@ -10,7 +9,7 @@
   import { ERROR_MESSAGES, errorMessage } from "../lib/messages";
   import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
-  import { checkNewPassword, checkUsername } from "../lib/validation";
+  import { checkNewPassword } from "../lib/validation";
 
   let { token }: { token: string } = $props();
 
@@ -21,7 +20,6 @@
   let repeat = $state("");
   let busy = $state(false);
   let error = $state("");
-  let usernameError = $state("");
 
   async function loadInfo(): Promise<void> {
     load = { kind: "loading" };
@@ -46,15 +44,13 @@
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     error = "";
-    usernameError = checkUsername(username) ?? "";
-    if (usernameError) return;
     const passwordProblem = checkNewPassword(password, repeat);
     if (passwordProblem) {
       error = passwordProblem;
       return;
     }
     busy = true;
-    const result = await session.acceptInvite(token, normalizeName(username), password);
+    const result = await session.acceptInvite(token, username, password);
     busy = false;
     if (result.ok) navigate("#/");
     else if (result.kind === "error" && result.code === "invite_invalid") load = { kind: "invalid" };
@@ -81,16 +77,9 @@
     <OfflineNotice />
     <Card title="Konto anlegen">
       <form onsubmit={submit}>
-        <TextField
-          label="Benutzername"
-          name="username"
-          autocomplete="username"
-          hint="So sehen dich deine Freunde."
-          error={usernameError}
-          bind:value={username}
-          required
-          disabled={busy || sessionState.offline}
-        />
+        <p>Dein Benutzername: <strong>{username}</strong></p>
+        <p class="note">Merk ihn dir gut, du brauchst ihn zum Anmelden. Ändern kann ihn nur der Admin.</p>
+        <input type="text" name="username" autocomplete="username" value={username} hidden readonly />
         <TextField label="Passwort" name="new-password" type="password" autocomplete="new-password" bind:value={password} required disabled={busy || sessionState.offline} />
         <TextField label="Passwort wiederholen" name="repeat-password" type="password" autocomplete="new-password" bind:value={repeat} required disabled={busy || sessionState.offline} />
         <Message text={error} />
@@ -105,5 +94,9 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .note {
+    font-size: 0.875rem;
   }
 </style>

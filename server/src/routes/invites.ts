@@ -12,8 +12,9 @@ import { checkedPassword, checkedUsername, clientKey, enforceLimits, tokenParam 
 
 const acceptBody = {
   type: "object",
-  required: ["username", "password"],
+  required: ["password"],
   properties: {
+    // Sent by older frontends; ignored: the username is the one the admin fixed in the invite.
     username: { type: "string", maxLength: 1000 },
     password: { type: "string", maxLength: 1000 },
   },
@@ -42,7 +43,7 @@ export function registerInviteRoutes(app: FastifyInstance, ctx: AppContext): voi
     { schema: { body: acceptBody } },
     async (request, reply): Promise<SessionResponse> => {
       const invite = openInviteOrFail(request);
-      const name = checkedUsername(request.body.username);
+      const name = checkedUsername(invite.suggested_username);
       const password = checkedPassword(request.body.password, "password");
       if (findUserByKey(ctx.db, name.key)) throw new ApiError(409, "username_taken");
 

@@ -1,4 +1,4 @@
-import { INVITE_VALID_DAYS, type AdminInvite, type CreatedInvite } from "@lueckenfueller/shared";
+import { INVITE_VALID_DAYS, usernameKey, type AdminInvite, type CreatedInvite } from "@lueckenfueller/shared";
 import type { DatabaseSync } from "node:sqlite";
 import { generateToken, hashToken } from "../auth/tokens.js";
 import { addDays } from "../time.js";
@@ -71,6 +71,11 @@ export function listOpenInvites(db: DatabaseSync, now: Date): InviteRow[] {
   return db
     .prepare("SELECT * FROM invites WHERE used_at IS NULL AND expires_at > ? ORDER BY id DESC")
     .all(now.toISOString()) as unknown as InviteRow[];
+}
+
+/** True when an open (unused, unexpired) invite already reserves this username key. */
+export function isUsernameInvited(db: DatabaseSync, key: string, now: Date): boolean {
+  return listOpenInvites(db, now).some((invite) => usernameKey(invite.suggested_username) === key);
 }
 
 /** Withdraws an unused invite. False when there is none with this id. */

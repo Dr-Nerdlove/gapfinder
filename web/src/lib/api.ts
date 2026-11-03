@@ -221,6 +221,12 @@ export const getBackupStatus = (o: CallOptions = {}) => request<BackupStatus>("/
 
 export const listInvites = (o: CallOptions = {}) => request<AdminInvite[]>("/api/admin/invites", o);
 
+/**
+ * The invite request for an exact username. It carries the same text as `username` (current servers) and as
+ * `name` (older servers, which only know that field and turn it into a suggestion).
+ */
+export const inviteRequest = (username: string): CreateInviteRequest => ({ username, name: username });
+
 export const createInvite = (body: CreateInviteRequest, o: CallOptions = {}) =>
   request<CreatedInvite>("/api/admin/invites", { ...o, method: "POST", body });
 

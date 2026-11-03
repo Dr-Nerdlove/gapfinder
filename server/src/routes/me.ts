@@ -1,21 +1,13 @@
 import { normalizeSeedColor, type ChangePasswordRequest, type Me, type UpdateMeRequest } from "@lueckenfueller/shared";
 import type { FastifyInstance } from "fastify";
 import { deleteSessionsOfUser } from "../accounts/sessions.js";
-import {
-  findUserByKey,
-  findUserById,
-  toMe,
-  updatePasswordHash,
-  updateSeedColor,
-  updateUsername,
-} from "../accounts/users.js";
+import { findUserById, toMe, updatePasswordHash, updateSeedColor } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
 import { hashPassword, verifyPassword } from "../auth/passwords.js";
 import { PASSWORD_FAILURES_PER_USER } from "../auth/rate-limit.js";
-import { isUniqueViolation } from "../db.js";
 import type { AppContext } from "../context.js";
 import { ApiError, validation } from "../errors.js";
-import { checkedPassword, checkedUsername, enforceLimits } from "./shared.js";
+import { checkedPassword, enforceLimits } from "./shared.js";
 
 const updateMeBody = {
   type: "object",
@@ -46,24 +38,14 @@ export function registerMeRoutes(app: FastifyInstance, ctx: AppContext): void {
       const { user } = authOf(request);
       const { username, seedColor } = request.body;
 
-      let newName: { username: string; key: string } | undefined;
-      if (username !== undefined) {
-        newName = checkedUsername(username);
-        const owner = findUserByKey(ctx.db, newName.key);
-        if (owner && owner.id !== user.id) throw new ApiError(409, "username_taken");
-      }
+      // Only the admin renames users (PATCH /api/admin/users/:id).
+      if (username !== undefined) throw new ApiError(403, "forbidden");
       let newColor: string | null | undefined;
       if (seedColor !== undefined) {
         newColor = seedColor === null ? null : normalizeSeedColor(seedColor);
         if (seedColor !== null && newColor === null) throw validation("seedColor");
       }
 
-      try {
-        if (newName) updateUsername(ctx.db, user.id, newName.username, newName.key);
-      } catch (error) {
-        if (isUniqueViolation(error)) throw new ApiError(409, "username_taken");
-        throw error;
-      }
       if (newColor !== undefined) updateSeedColor(ctx.db, user.id, newColor);
       return toMe(findUserById(ctx.db, user.id)!);
     },

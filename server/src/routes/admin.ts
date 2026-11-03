@@ -2,6 +2,7 @@ import {
   INVITE_NAME_MAX_LENGTH,
   normalizeName,
   suggestUsername,
+  usernameKey,
   usernameProblem,
   type AdminInvite,
   type AdminRenameUserRequest,
@@ -12,7 +13,7 @@ import {
   type CreatedPasswordReset,
 } from "@lueckenfueller/shared";
 import type { FastifyInstance } from "fastify";
-import { createInvite, deleteUnusedInvite, listOpenInvites, toAdminInvite } from "../accounts/invites.js";
+import { createInvite, deleteUnusedInvite, isUsernameInvited, listOpenInvites, toAdminInvite } from "../accounts/invites.js";
 import { createPasswordReset } from "../accounts/resets.js";
 import { deleteUser, findUserById, findUserByKey, listUsers, toAdminUser, updateUsername } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
@@ -31,8 +32,8 @@ const renameBody = {
 
 const createInviteBody = {
   type: "object",
-  required: ["name"],
-  properties: { name: { type: "string", maxLength: 1000 } },
+  // `username` is the exact username (new); `name` is the legacy field of older frontends (suggestUsername).
+  properties: { username: { type: "string", maxLength: 1000 }, name: { type: "string", maxLength: 1000 } },
 } as const;
 
 /** All routes below `/api/admin`: only for logged-in admins. */
@@ -58,6 +59,7 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
         const name = checkedUsername(request.body.username);
         const owner = findUserByKey(ctx.db, name.key);
         if (owner && owner.id !== id) throw new ApiError(409, "username_taken");
+        if (isUsernameInvited(ctx.db, name.key, ctx.now())) throw new ApiError(409, "username_taken");
         try {
           updateUsername(ctx.db, id, name.username, name.key);
         } catch (error) {
@@ -90,10 +92,23 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
       "/api/admin/invites",
       { schema: { body: createInviteBody } },
       async (request, reply): Promise<CreatedInvite> => {
-        const name = normalizeName(request.body.name);
-        if ([...name].length > INVITE_NAME_MAX_LENGTH) throw validation("name");
-        const suggestedUsername = suggestUsername(name);
-        if (suggestedUsername === "" || usernameProblem(suggestedUsername) !== null) throw validation("name");
+        const { username, name: legacyName } = request.body;
+        let suggestedUsername: string;
+        if (username !== undefined) {
+          suggestedUsername = checkedUsername(username).username;
+        } else if (legacyName !== undefined) {
+          // Older frontends send the person's full name and expect a suggestion made from it.
+          const name = normalizeName(legacyName);
+          if ([...name].length > INVITE_NAME_MAX_LENGTH) throw validation("name");
+          suggestedUsername = suggestUsername(name);
+          if (suggestedUsername === "" || usernameProblem(suggestedUsername) !== null) throw validation("name");
+        } else {
+          throw validation("username");
+        }
+        const key = usernameKey(suggestedUsername);
+        if (findUserByKey(ctx.db, key) || isUsernameInvited(ctx.db, key, ctx.now())) {
+          throw new ApiError(409, "username_taken");
+        }
         // Invites made in the admin area are never admin invites: admins are created on the command line.
         const invite = createInvite(
           ctx.db,

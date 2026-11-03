@@ -66,15 +66,16 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 ### Accounts and roles
 
 - Accounts are created only through an **invite link** the admin (owner) generates.
-- Username defaults to first name + initial of the last name ("Vincent R."); it must be unique and can be
-  changed.
+- The username is fixed by the admin when inviting (decided 2026-11-03): the first name alone when it is
+  unique in the group, otherwise plus an initial or more letters, e.g. "Samuel H.", "Samuel Kr.", "Samuel Kö.".
+  It must be unique. Users cannot change it; only the admin renames (admin area). Duplicates, including names
+  of open invites, are refused at invite time.
 - Login with username and password. No e-mail addresses; a forgotten password is reset by the admin.
 - The admin can rename and delete profiles and reset passwords. The admin does **not** see the contents of
   other people's calendars – nobody does; others only ever see "busy" or "free".
 - Decided 2026-11-01 (phase 1c):
-  - Invite links are **personal and single-use**: the admin types the person's name, the app suggests the
-    username from it, and the link works once and for **14 days**. Only the suggested username is stored, not
-    the full name. A group link was rejected: whoever forwards it invites strangers.
+  - Invite links are **personal and single-use**: the admin types the person's exact username (see above), and
+    the link works once and for **14 days**. Only the username is stored. A group link was rejected: whoever forwards it invites strangers.
   - A forgotten password is reset with a **reset link** the admin creates (once, **24 hours**); the person
     chooses the new password, the admin never knows it. Using it ends all logins of that account.
   - The **first admin** is created with a command in the VM (`admin-link`), which prints an admin invite link;

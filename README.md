@@ -13,7 +13,7 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 updates.
 
 - **Accounts:** friends join through a personal invite link from the admin, log in with username and password, and
-  change their name, password and colour in their profile. The admin manages invites and accounts in "Verwaltung"
+  change their password and colour in their profile (the admin sets and changes usernames). The admin manages invites and accounts in "Verwaltung"
   and creates links for forgotten passwords.
 - **Calendars:** everyone links calendars through their subscription link (the server tries the link at once,
   stores it encrypted and never shows it again), sets which count as busy and which is the default, and sees a
@@ -77,7 +77,7 @@ Accounts only come from invite links. For a first local admin account, build the
 
 ```sh
 npm run build -w server
-cd server && node dist/cli.js admin-link "Vorname Nachname"   # uses ./data like the dev server
+cd server && node dist/cli.js admin-link "Vorname"   # uses ./data like the dev server
 ```
 
 `node dist/cli.js password-link "<username>"` makes a password reset link the same way.

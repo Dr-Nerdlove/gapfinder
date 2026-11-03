@@ -173,7 +173,7 @@ describe("typed endpoints", () => {
     expect(await call((o) => api.deleteUser(7, o))).toMatchObject({ url: "http://api.test/api/admin/users/7", method: "DELETE" });
     expect(await call((o) => api.createPasswordReset(7, o))).toMatchObject({ url: "http://api.test/api/admin/users/7/password-reset", method: "POST" });
     expect(await call((o) => api.listInvites(o))).toMatchObject({ url: "http://api.test/api/admin/invites" });
-    expect(await call((o) => api.createInvite({ name: "Anna K" }, o))).toMatchObject({ url: "http://api.test/api/admin/invites", method: "POST" });
+    expect(await call((o) => api.createInvite(api.inviteRequest("Anna K"), o))).toMatchObject({ url: "http://api.test/api/admin/invites", method: "POST", body: '{"username":"Anna K","name":"Anna K"}' });
     expect(await call((o) => api.deleteInvite(3, o))).toMatchObject({ url: "http://api.test/api/admin/invites/3", method: "DELETE" });
   });
 });
