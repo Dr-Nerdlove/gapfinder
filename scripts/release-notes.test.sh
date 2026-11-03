@@ -20,6 +20,16 @@ cat > "$WORK/changelog.md" <<'MD'
 
 - Something not released yet.
 
+## [1.2.0] - 2027-01-10
+
+A paragraph wrapped
+over three
+lines.
+
+- A list item that is
+  wrapped once.
+- A short item.
+
 ## [1.1.0] - 2026-12-01
 
 Second summary.
@@ -55,6 +65,13 @@ if [[ "$out" == "$expected" ]]; then ok "summary of the asked version, without e
 
 out="$(bash "$SCRIPT" 1.1.0 "$WORK/changelog.md")"
 if [[ "$out" == "Second summary." ]]; then ok "another version, no link without a repository"; else bad "another version"; echo "$out"; fi
+
+out="$(bash "$SCRIPT" 1.2.0 "$WORK/changelog.md")"
+expected="A paragraph wrapped over three lines.
+
+- A list item that is wrapped once.
+- A short item."
+if [[ "$out" == "$expected" ]]; then ok "wrapped lines of paragraphs and list items are joined"; else bad "joining wrapped lines"; echo "$out"; fi
 
 if bash "$SCRIPT" 9.9.9 "$WORK/changelog.md" 2>"$WORK/err"; then bad "unknown version must fail"; else
   if grep -q "no summary for version 9.9.9" "$WORK/err"; then ok "unknown version fails with a clear message"; else bad "unknown version message"; fi
