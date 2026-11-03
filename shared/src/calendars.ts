@@ -7,6 +7,12 @@ export const CALENDARS_PER_USER = 10;
 export const CALENDAR_NAME_MAX_LENGTH = 60;
 /** Longest subscription link the server accepts, in characters. */
 export const CALENDAR_LINK_MAX_LENGTH = 2048;
+/**
+ * In the multi-day search (and the check before fixing a whole-day poll date) only events lasting at least this
+ * many hours make a day busy. All-day events (24 h, or 23/25 h on a clock change) count, a dentist appointment
+ * does not.
+ */
+export const DAYS_SEARCH_MIN_EVENT_HOURS = 6;
 /** The preview of one's own busy times covers this many days from today. */
 export const CALENDAR_PREVIEW_DAYS = 28;
 
