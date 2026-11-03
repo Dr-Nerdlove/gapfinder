@@ -9,7 +9,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - **GitHub releases are made automatically.** When a change on `main` carries a new version number (the release
   pull request), a workflow sets the tag (once the deploy has finished green) `vX.Y.Z` and creates the GitHub release, with the summary from this file
-  as its notes. Nothing changes in the app or on the server. This also makes the missing release `v1.0.0`.
+  as its notes (each paragraph on one line, so the text does not break mid-sentence on GitHub). Nothing changes in the app or on the server. This also makes the missing release `v1.0.0`.
 
 ## [1.0.0] - 2026-11-03
 

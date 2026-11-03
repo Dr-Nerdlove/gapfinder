@@ -254,7 +254,8 @@ missing, with a recommendation, and let the people choose.
   names the number: new feature `1.x.0`, fix `1.0.x`, breaking change `2.0.0`. Nothing is released without the
   owner's word. A release is one pull request (version in the `package.json` files, `CHANGELOG.md` with
   "[Unreleased]" turned into "[x.y.z] - date" and a short summary in plain words before its first `###` heading,
-  nothing else). **Merging it is the release:** once `deploy.yml` has finished green for that push,
+  nothing else). The summary becomes the release notes on its own, so it must not point at the entries "below";
+  its wrapped lines are joined per paragraph and list item, because GitHub shows every line break in a release. **Merging it is the release:** once `deploy.yml` has finished green for that push,
   `.github/workflows/release.yml` (`workflow_run`) sets the tag `vX.Y.Z` on that commit and creates the GitHub release (text only, no files, notes = that summary plus a link to the changelog,
   `scripts/release-notes.sh`) when the version in `package.json` has no release yet. A push without a new version
   does nothing. On 2026-11-03 a cloud session's tag push was cut off (not retried) and the GitHub tools have no release call,
