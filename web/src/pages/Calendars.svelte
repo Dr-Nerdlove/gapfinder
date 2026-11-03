@@ -86,7 +86,7 @@
   {:else if loaded}
     {#if calendars.length === 0}
       <Card>
-        <p>Du hast noch keinen Kalender verknüpft. Trage unten den Link zu deinem Kalender ein.</p>
+        <p>Du hast noch keinen Kalender verknüpft. Unten zeigen wir dir Schritt für Schritt, wie das geht.</p>
       </Card>
     {:else}
       <CalendarList bind:this={list} {calendars} {locked} onchanged={changed} onremoved={removed} />

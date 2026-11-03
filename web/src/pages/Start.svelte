@@ -5,9 +5,11 @@
   import Card from "../components/Card.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import ServerStatus from "../components/ServerStatus.svelte";
+  import Tour from "../components/Tour.svelte";
   import { backupWarnings } from "../lib/backup-status";
   import { brokenCount } from "../lib/calendars";
   import { session, sessionState } from "../lib/session.svelte";
+  import { markTourSeen, tourSeen } from "../lib/tour";
 
   const userId = $derived(sessionState.user?.id);
 
@@ -26,6 +28,17 @@
     return () => {
       current = false;
     };
+  });
+
+  let tourOpen = $state(false);
+
+  // The tour opens by itself once per user and device. It counts as seen as soon as it opens, so leaving
+  // through a link or closing the tab does not bring it back.
+  $effect(() => {
+    if (userId !== undefined && !tourSeen(userId)) {
+      markTourSeen(userId);
+      tourOpen = true;
+    }
   });
 
   const isAdmin = $derived(sessionState.user?.isAdmin === true);
@@ -68,6 +81,7 @@
         <Button variant="tonal" href="#/abstimmungen">Meine Abstimmungen</Button>
         <Button variant="tonal" href="#/kalender">Kalender</Button>
         <Button variant="tonal" href="#/profil">Profil</Button>
+        <Button variant="tonal" onclick={() => (tourOpen = true)}>Einführung</Button>
         {#if sessionState.user.isAdmin}
           <Button variant="tonal" href="#/verwaltung">Verwaltung</Button>
         {/if}
@@ -104,6 +118,10 @@
 
   <ServerStatus />
 </div>
+
+{#if sessionState.user}
+  <Tour open={tourOpen} hasCalendar={calendarList ? calendarList.calendars.length > 0 : null} onclose={() => (tourOpen = false)} />
+{/if}
 
 <style>
   header {

@@ -5,6 +5,18 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- **Guided tour for new users.** It opens once on the start page after the first login on a device, and can be
+  opened again at any time with "Einführung" on the start page.
+- **Privacy page** (`#/privatsphaere`) that explains in plain words what happens with a calendar and who can see
+  what. It is open to everyone, guests included.
+
+### Changed
+
+- **Simpler guide for adding a calendar.** It first asks which calendar you use and then shows short steps for
+  phone and computer. Google's setting is now named "Kalender integrieren" and works in the phone's browser.
+
 ## [1.2.0] - 2026-11-03
 
 Each calendar can now count as busy separately for the two kinds of search: "Stunden" and "Ganze Tage". For

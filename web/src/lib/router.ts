@@ -10,6 +10,7 @@ export type Route =
   | { name: "poll-new" }
   | { name: "poll"; token: string }
   | { name: "admin" }
+  | { name: "privacy" }
   | { name: "not-found" };
 
 /** Invite and reset tokens are base64url: letters, digits, "-" and "_". */
@@ -36,6 +37,8 @@ export function parseRoute(hash: string): Route {
       return { name: "poll-new" };
     case "/verwaltung":
       return { name: "admin" };
+    case "/privatsphaere":
+      return { name: "privacy" };
   }
   const parts = normalized.split("/");
   // "/einladung/<token>" splits into ["", "einladung", "<token>"].

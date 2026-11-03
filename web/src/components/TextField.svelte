@@ -47,7 +47,7 @@
     bind:value
   />
   {#if error || hint}
-    <p id="{id}-note" class="note" class:error={!!error}>{error ?? hint}</p>
+    <p id="{id}-note" class="note" class:error={!!error}>{error || hint}</p>
   {/if}
 </div>
 

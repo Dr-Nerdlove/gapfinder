@@ -7,6 +7,7 @@
   import { session } from "../../lib/session.svelte";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
+  import CalendarGuide from "./CalendarGuide.svelte";
   import Message from "../Message.svelte";
   import TextField from "../TextField.svelte";
 
@@ -59,12 +60,13 @@
   {#if !canAddCalendar(count)}
     <p>Du hast schon {CALENDARS_PER_USER} Kalender verknüpft, das ist die Höchstzahl. Entferne erst einen, dann kannst du einen neuen eintragen.</p>
   {:else}
+    <CalendarGuide />
     <form onsubmit={add}>
       <TextField
         label="Kalender-Link"
         name="calendar-link"
         autocomplete="off"
-        hint="Den Link kopierst du in deinem Kalender (siehe Hilfe unten) und fügst ihn hier ein."
+        hint="Füge den kopierten Link hier ein. Am Handy: lange auf das Feld tippen und „Einsetzen“ wählen."
         error={linkError}
         bind:value={link}
         maxlength={CALENDAR_LINK_MAX_LENGTH}
@@ -76,44 +78,11 @@
       <Message kind="success" text={done} />
       <div><Button type="submit" {disabled}>Kalender hinzufügen</Button></div>
     </form>
+    <p class="note">
+      Deine Freunde sehen nie deine Termine, nur „belegt“ oder „frei“. Der Link wird verschlüsselt gespeichert.
+      <a href="#/privatsphaere">Was mit deinem Kalender passiert</a>
+    </p>
   {/if}
-
-  <div class="help">
-    <details>
-      <summary>Google Kalender</summary>
-      <ol>
-        <li>Öffne Google Kalender am Computer und gehe zu den Einstellungen (Zahnrad).</li>
-        <li>Wähle links unter „Einstellungen für meine Kalender“ den gewünschten Kalender aus.</li>
-        <li>Öffne den Abschnitt „Integrierte Kalender“ (er heißt manchmal auch „Kalender integrieren“).</li>
-        <li>Kopiere die „Privatadresse im iCal-Format“ und füge sie oben ein.</li>
-      </ol>
-      <p>Gib den Link niemandem sonst. Wer ihn hat, kann deinen Kalender lesen.</p>
-    </details>
-    <details>
-      <summary>Apple iCloud</summary>
-      <ol>
-        <li>Öffne die Kalender-App auf dem Mac oder iCloud.com im Browser.</li>
-        <li>Tippe bei dem Kalender auf „Kalender teilen“ (das Symbol mit der Person).</li>
-        <li>Schalte „Öffentlicher Kalender“ ein.</li>
-        <li>Kopiere den Link und füge ihn oben ein.</li>
-      </ol>
-      <p>Wichtig: Jeder, der diesen Link kennt, kann deinen Kalender lesen. Gib ihn nicht weiter.</p>
-    </details>
-    <details>
-      <summary>Outlook</summary>
-      <ol>
-        <li>Öffne Outlook im Web und gehe zu Einstellungen → Kalender → Freigegebene Kalender.</li>
-        <li>Wähle unter „Kalender veröffentlichen“ den Kalender aus.</li>
-        <li>Wähle „Kann alle Details anzeigen“, wenn du die Titel in der Vorschau sehen möchtest, oder „Kann nur Verfügbarkeit anzeigen“.</li>
-        <li>Klicke auf „Veröffentlichen“, kopiere den ICS-Link und füge ihn oben ein.</li>
-      </ol>
-    </details>
-  </div>
-
-  <p class="privacy">
-    Der Link wird verschlüsselt gespeichert und nur vom Server gelesen. Deine Freunde sehen nie Termine, nur „belegt“
-    oder „frei“. Danach zeigt dir die App nur noch den Anbieter, nie den Link.
-  </p>
 </Card>
 
 <style>
@@ -128,65 +97,12 @@
     color: var(--md-sys-color-primary);
   }
 
-  .help {
-    display: flex;
-    flex-direction: column;
+  .note {
+    font-size: 0.875rem;
   }
 
-  details {
-    border-top: 1px solid var(--md-sys-color-outline-variant);
-    padding: 0 0 8px;
-  }
-
-  summary {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-    min-height: 48px;
-    list-style: none;
+  .note a {
+    color: var(--md-sys-color-primary);
     font-weight: 500;
-    color: var(--md-sys-color-on-surface);
-    cursor: pointer;
-  }
-
-  summary::-webkit-details-marker {
-    display: none;
-  }
-
-  summary::after {
-    content: "";
-    flex: none;
-    width: 8px;
-    height: 8px;
-    margin-right: 6px;
-    border-right: 2px solid var(--md-sys-color-on-surface-variant);
-    border-bottom: 2px solid var(--md-sys-color-on-surface-variant);
-    transform: rotate(45deg);
-    transition: transform 0.15s;
-  }
-
-  details[open] > summary::after {
-    transform: rotate(-135deg);
-  }
-
-  details[open] > :not(summary) {
-    margin-bottom: 8px;
-  }
-
-  ol {
-    margin: 0;
-    padding-left: 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-
-  details p {
-    font-size: 0.875rem;
-  }
-
-  .privacy {
-    font-size: 0.875rem;
   }
 </style>

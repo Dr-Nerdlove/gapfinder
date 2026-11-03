@@ -18,6 +18,8 @@ describe("parseRoute", () => {
     ["#/suche?x=1", { name: "search" }],
     ["#/verwaltung", { name: "admin" }],
     ["#/verwaltung?x=1", { name: "admin" }],
+    ["#/privatsphaere", { name: "privacy" }],
+    ["#/privatsphaere/", { name: "privacy" }],
   ])("maps %j to its page", (hash, route) => {
     expect(parseRoute(hash)).toEqual(route);
   });
