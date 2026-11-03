@@ -1,7 +1,9 @@
 // Reading the calendars of several people for their busy times: shared by the gap search and the check before
 // a poll's date is fixed. `kind` picks which switch of a calendar counts: the hour search or the multi-day
-// search. Never returns or logs anything of a calendar but the busy times.
-import { SEARCHES_PER_USER, type SkippedPerson } from "@lueckenfueller/shared";
+// search. In the multi-day search only events of at least `DAYS_SEARCH_MIN_EVENT_HOURS` hours count (a short
+// appointment does not block a whole day); the hour search sees every event. Never returns or logs anything of
+// a calendar but the busy times.
+import { DAYS_SEARCH_MIN_EVENT_HOURS, SEARCHES_PER_USER, type SkippedPerson } from "@lueckenfueller/shared";
 import type { AppContext } from "../context.js";
 import { rateLimited } from "../errors.js";
 import type { Interval, SearchPersonInput } from "../gaps/search.js";
@@ -60,8 +62,11 @@ export async function collectBusyTimes(
         return;
       }
       if ((kind === "days" ? row.counts_busy_days : row.counts_busy) !== 1) return;
+      const minLength = kind === "days" ? DAYS_SEARCH_MIN_EVENT_HOURS * 3600_000 : 0;
       for (const event of read.calendar.events) {
-        if (event.busy) busy[person]!.push({ start: event.start, end: event.end });
+        if (event.busy && event.end - event.start >= minLength) {
+          busy[person]!.push({ start: event.start, end: event.end });
+        }
       }
     } catch {
       unreadable[person] = true;

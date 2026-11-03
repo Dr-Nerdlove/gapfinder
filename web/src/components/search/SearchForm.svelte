@@ -1,5 +1,6 @@
 <script lang="ts">
   import {
+    DAYS_SEARCH_MIN_EVENT_HOURS,
     SEARCH_MAX_BUFFER_MINUTES,
     SEARCH_MAX_DURATION_MINUTES,
     SEARCH_MAX_PERIOD_DAYS,
@@ -178,7 +179,7 @@
           bind:value={() => (settings.startWeekday === null ? "" : String(settings.startWeekday)), (v) => (settings.startWeekday = v === "" ? null : (Number(v) as Weekday))}
         />
       </div>
-      <p class="note">Ein Tag zählt als frei, wenn bei niemandem etwas eingetragen ist.</p>
+      <p class="note">Ein Tag zählt als frei, wenn niemand an diesem Tag einen ganztägigen Termin oder einen Termin von mindestens {DAYS_SEARCH_MIN_EVENT_HOURS} Stunden hat.</p>
     {/if}
   </Card>
 

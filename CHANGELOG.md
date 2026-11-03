@@ -16,6 +16,9 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - **Simpler guide for adding a calendar.** It first asks which calendar you use and then shows short steps for
   phone and computer. Google's setting is now named "Kalender integrieren" and works in the phone's browser.
+- **Short appointments no longer block a whole day.** In the search for whole days, only all-day events and
+  events of at least 6 hours make a day busy, so a dentist appointment no longer blocks a holiday. The same goes
+  for the check before fixing a whole-day poll date.
 
 ## [1.2.0] - 2026-11-03
 
