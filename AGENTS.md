@@ -253,12 +253,16 @@ missing, with a recommendation, and let the people choose.
   is released; the assistant suggests it** after a bigger change (a new feature or anything the users notice) and
   names the number: new feature `1.x.0`, fix `1.0.x`, breaking change `2.0.0`. Nothing is released without the
   owner's word. A release is one pull request (version in the `package.json` files, `CHANGELOG.md` with
-  "[Unreleased]" turned into "[x.y.z] - date" and a short summary, nothing else) and, after the merge and the owner's
-  OK, the tag `vX.Y.Z` and a GitHub release with notes in plain English, made by hand with the GitHub tools (a release
-  with text only, no files, so "published files are built by CI" does not apply). There is no release workflow: a
-  push to `main` deploys as always, with or without a release.
+  "[Unreleased]" turned into "[x.y.z] - date" and a short summary in plain words before its first `###` heading,
+  nothing else). **Merging it is the release:** once `deploy.yml` has finished green for that push,
+  `.github/workflows/release.yml` (`workflow_run`) sets the tag `vX.Y.Z` on that commit and creates the GitHub release (text only, no files, notes = that summary plus a link to the changelog,
+  `scripts/release-notes.sh`) when the version in `package.json` has no release yet. A push without a new version
+  does nothing. On 2026-11-03 a cloud session's tag push was cut off (not retried) and the GitHub tools have no release call,
+  which is why the workflow does it. If a run fails, repeat it under Actions, "Release",
+  "Run workflow".
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
-  CI: `.github/workflows/ci.yml` (checks) and `deploy.yml` (Pages + server image).
+  CI: `.github/workflows/ci.yml` (checks), `deploy.yml` (Pages + server image) and `release.yml` (tag + GitHub
+  release after a green deploy of a new version).
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
   tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
   later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never

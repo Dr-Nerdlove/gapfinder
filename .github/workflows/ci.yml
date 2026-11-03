@@ -28,7 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@v5
       - name: Check the VM shell scripts (shellcheck is preinstalled on the runner)
-        run: shellcheck deploy/vm/*.sh deploy/vm/test/*.sh
+        run: shellcheck deploy/vm/*.sh deploy/vm/test/*.sh scripts/*.sh
       - name: Install nftables and iproute2 (the firewall unit and its test need them)
         run: sudo apt-get update -qq && sudo apt-get install -y -qq nftables iproute2
       - name: Check the systemd units

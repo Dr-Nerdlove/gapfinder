@@ -1,0 +1,55 @@
+name: Release
+
+# Creates the tag vX.Y.Z and the GitHub release when `main` carries a version (the "version" in package.json) that has
+# no release yet. A release is therefore made by merging the release pull request (version numbers + CHANGELOG);
+# a push without a new version does nothing. The notes come from the summary at the top of that version's
+# CHANGELOG section (scripts/release-notes.sh). The release has only text, no files.
+#
+# It runs only after the Deploy workflow has finished green for a push to main (tests passed, app and server image
+# published), so a version that never went live gets no release. The release is set on the commit Deploy ran on.
+# "Run workflow" by hand does the same check on the newest main, e.g. to repeat a run that failed.
+
+on:
+  workflow_run:
+    workflows: [Deploy]
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
+    runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TARGET_SHA }}
+      - name: Create the release if this version has none yet
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "package.json has version \"$version\", which is not MAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          tag="v$version"
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag exists already, nothing to do."
+            exit 0
+          fi
+          bash scripts/release-notes.sh "$version" CHANGELOG.md "$GITHUB_REPOSITORY" > release-notes.md
+          gh release create "$tag" --target "$TARGET_SHA" --title "Lückenfüller $version" --notes-file release-notes.md --latest
+          echo "Created release $tag on $TARGET_SHA."
