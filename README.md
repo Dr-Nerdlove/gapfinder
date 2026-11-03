@@ -123,8 +123,8 @@ of pulling it: `docker compose build`.
   ([`deploy/vm/update.sh`](deploy/vm/update.sh)). Setting up the VM, Tailscale Funnel and these updates:
   [`docs/server-setup.md`](docs/server-setup.md).
 - Versions follow `vMAJOR.MINOR.PATCH`; changes are listed in [`CHANGELOG.md`](CHANGELOG.md).
-- **GitHub release:** made automatically (`.github/workflows/release.yml`) when a push to `main` carries a version in
-  `package.json` that has no release yet: it sets the tag `vX.Y.Z` and creates the release with the summary at the top
+- **GitHub release:** made automatically (`.github/workflows/release.yml`) after the deploy of a push to `main` finished
+  green and that push carries a version in `package.json` that has no release yet: it sets the tag `vX.Y.Z` and creates the release with the summary at the top
   of that version's `CHANGELOG.md` section. To release: one pull request that sets the four `package.json` versions
   (`npm version <x.y.z> --workspaces --include-workspace-root --no-git-tag-version`) and turns `[Unreleased]` into
   `[x.y.z] - date` with a short summary in plain words before its first `###` heading; merging it is the release.

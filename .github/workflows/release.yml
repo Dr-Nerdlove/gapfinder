@@ -4,11 +4,15 @@ name: Release
 # no release yet. A release is therefore made by merging the release pull request (version numbers + CHANGELOG);
 # a push without a new version does nothing. The notes come from the summary at the top of that version's
 # CHANGELOG section (scripts/release-notes.sh). The release has only text, no files.
-# "Run workflow" by hand does the same check, e.g. to repeat a run that failed.
+#
+# It runs only after the Deploy workflow has finished green for a push to main (tests passed, app and server image
+# published), so a version that never went live gets no release. The release is set on the commit Deploy ran on.
+# "Run workflow" by hand does the same check on the newest main, e.g. to repeat a run that failed.
 
 on:
-  push:
-    branches: [main]
+  workflow_run:
+    workflows: [Deploy]
+    types: [completed]
   workflow_dispatch:
 
 permissions:
@@ -20,9 +24,18 @@ concurrency:
 
 jobs:
   release:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
+    env:
+      TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
     steps:
       - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TARGET_SHA }}
       - name: Create the release if this version has none yet
         env:
           GH_TOKEN: ${{ github.token }}
@@ -38,5 +51,5 @@ jobs:
             exit 0
           fi
           bash scripts/release-notes.sh "$version" CHANGELOG.md "$GITHUB_REPOSITORY" > release-notes.md
-          gh release create "$tag" --target "$GITHUB_SHA" --title "Lückenfüller $version" --notes-file release-notes.md --latest
-          echo "Created release $tag on $GITHUB_SHA."
+          gh release create "$tag" --target "$TARGET_SHA" --title "Lückenfüller $version" --notes-file release-notes.md --latest
+          echo "Created release $tag on $TARGET_SHA."
