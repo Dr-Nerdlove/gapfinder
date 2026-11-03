@@ -1,10 +1,11 @@
 <script lang="ts">
-  import type { CalendarList } from "@lueckenfueller/shared";
+  import type { BackupStatus, CalendarList } from "@lueckenfueller/shared";
   import * as api from "../lib/api";
   import Button from "../components/Button.svelte";
   import Card from "../components/Card.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import ServerStatus from "../components/ServerStatus.svelte";
+  import { backupWarnings } from "../lib/backup-status";
   import { brokenCount } from "../lib/calendars";
   import { session, sessionState } from "../lib/session.svelte";
 
@@ -26,6 +27,30 @@
       current = false;
     };
   });
+
+  const isAdmin = $derived(sessionState.user?.isAdmin === true);
+
+  /**
+   * Null until known; stays null for everyone but the admin, when the server is asleep or answers an error (an
+   * older server answers 404 until the VM has updated).
+   */
+  let backupStatus = $state<BackupStatus | null>(null);
+
+  $effect(() => {
+    if (!isAdmin) {
+      backupStatus = null;
+      return;
+    }
+    let current = true;
+    void session.run((o) => api.getBackupStatus(o)).then((result) => {
+      if (current) backupStatus = result.ok ? result.data : null;
+    });
+    return () => {
+      current = false;
+    };
+  });
+
+  const backupProblems = $derived(backupStatus ? backupWarnings(backupStatus, new Date()) : []);
 
   const broken = $derived(calendarList ? brokenCount(calendarList.calendars) : 0);
 </script>
@@ -57,6 +82,14 @@
       <Card tone="notice">
         <p>{broken === 1 ? "Ein Kalender-Link funktioniert nicht mehr." : `${broken} Kalender-Links funktionieren nicht mehr.`}</p>
         <div class="actions"><Button href="#/kalender">Link neu eintragen</Button></div>
+      </Card>
+    {/if}
+    {#if backupProblems.length > 0}
+      <Card title="Sicherung prüfen" tone="notice">
+        {#each backupProblems as problem (problem)}
+          <p>{problem}</p>
+        {/each}
+        <div class="actions"><Button href="#/verwaltung">Zur Verwaltung</Button></div>
       </Card>
     {/if}
     <OfflineNotice />

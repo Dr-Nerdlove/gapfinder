@@ -19,6 +19,10 @@
 # 3. The encrypted file is kept in the VM (newest $KEEP_LOCAL) and copied to a shared folder on the Windows
 #    PC (newest $KEEP_REMOTE), which OneDrive copies to the cloud. Copies that failed earlier are caught up.
 #
+# The state of the backups for the app: $APP_DIR/data/backup-status (key=value lines, UTC times), which the
+# server shows to the admin (start page and "Verwaltung") so a stopped backup or an overdue trial restore does
+# not go unnoticed. It holds no secrets. Writing it never makes a backup, check or restore fail.
+#
 # A restore also puts the calendar key from the backup back into .env (the old .env is kept in the
 # replaced-* folder), so a new VM can read the calendar links of the old one. A backup without a key (made
 # before calendar links existed) leaves the VM's own key alone.
@@ -30,6 +34,7 @@ CLI=(node server/dist/cli.js)
 APP_UID=1000                       # the container's user "node", who owns the database
 DB_NAME="lueckenfueller.sqlite"    # DATABASE_FILE_NAME in server/src/config.ts
 BACKUP_DIR="$APP_DIR/backups"
+STATUS_FILE="$APP_DIR/data/backup-status"   # read by the server as /data/backup-status; a restore leaves it alone
 SETTINGS_DIR="$APP_DIR/backup-settings"
 RECIPIENT_FILE="$SETTINGS_DIR/public-key.txt"
 SHARE_FILE="$SETTINGS_DIR/windows-folder.conf"
@@ -54,6 +59,25 @@ trap cleanup EXIT
 current_calendar_key() {
   [[ -f "$APP_DIR/.env" ]] || return 0
   sed -n 's/^CALENDAR_KEY=//p' "$APP_DIR/.env" | tail -n 1
+}
+
+# set_status <last_backup|last_copy|last_check>: records "now" (UTC) under that key in the status file and keeps
+# the other keys. Written to a temporary file in the same folder and moved over the old one. A failure is only
+# a warning: the backup, check or restore it belongs to must go on.
+set_status() {
+  local key="$1" tmp="$APP_DIR/data/.backup-status.$$"
+  if {
+    { [[ ! -f "$STATUS_FILE" ]] || grep -v -e "^$key=" -e '^$' "$STATUS_FILE" || true; } >"$tmp" &&
+      printf '%s=%s\n' "$key" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >>"$tmp" &&
+      chmod 0644 "$tmp" &&
+      { [[ "$(id -u)" -ne 0 ]] || chown "$APP_UID:$APP_UID" "$tmp"; } &&
+      mv -T "$tmp" "$STATUS_FILE"
+  } 2>/dev/null; then
+    return 0
+  fi
+  rm -f "$tmp" 2>/dev/null || true
+  log "warning: could not write $STATUS_FILE; the app will not see the new state" >&2
+  return 0
 }
 
 # put_calendar_key <key> <folder>: keeps the old .env in <folder> and sets CALENDAR_KEY in .env to <key>. The
@@ -203,11 +227,13 @@ cmd_run() {
   take_lock
   name="$(make_backup "")"
   log "backup $name saved in the VM"
+  set_status last_backup
   prune_local
   if ! share_configured; then
     fail "the Windows folder is not set up, so the backup is only in the VM. Run:  sudo lueckenfueller-backup setup"
   fi
   upload || exit 1
+  set_status last_copy
   log "done"
 }
 
@@ -364,6 +390,7 @@ cmd_check() {
   cd "$APP_DIR"
   file="$(choose_backup "${1:-}")"
   decrypt_and_check "$file"
+  set_status last_check
   echo
   log "trial restore passed: this backup and your key work. Nothing was changed."
 }
@@ -391,6 +418,7 @@ cmd_restore() {
   cd "$APP_DIR"
   file="$(choose_backup "${1:-}")"
   decrypt_and_check "$file"
+  set_status last_check
   echo
   echo "The server's database will be REPLACED by this backup. Everything that happened after it is lost"
   echo "(the current state is saved first, so this can be undone)."

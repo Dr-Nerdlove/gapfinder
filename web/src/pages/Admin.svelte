@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { AdminInvite, AdminUser } from "@lueckenfueller/shared";
   import * as api from "../lib/api";
+  import BackupCard from "../components/admin/BackupCard.svelte";
   import InviteCreator from "../components/admin/InviteCreator.svelte";
   import OpenInvites from "../components/admin/OpenInvites.svelte";
   import UserList from "../components/admin/UserList.svelte";
@@ -50,6 +51,7 @@
     <Card><p>Nur für den Admin.</p></Card>
   {:else}
     <OfflineNotice onretry={load} />
+    <BackupCard />
     <InviteCreator oncreated={(invite) => (invites = [invite, ...invites])} />
     {#if loadError}
       <Card>

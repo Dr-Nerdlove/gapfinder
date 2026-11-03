@@ -379,6 +379,8 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
   units, `setup.sh`, the Dockerfile, `.nvmrc`, `package.json` and the CI files (commands, file names, messages,
   retention numbers, timer times, Node versions): no outdated steps found. Gap found and closed: the trial
   restore is manual by design (the VM never holds the secret key) and `check` does not warn when the newest
-  backup is old, so the guide now tells the owner to run `list` first and look at the dates. Not built, offer
-  if wanted: a warning in the VM when the newest backup is older than two days (for example in the nightly
-  run or in `check`), and a reminder for the monthly trial restore.
+  backup is old, so the guide now tells the owner to run `list` first and look at the dates. Now built: the
+  backup script writes `data/backup-status` (last backup, last copy to Windows, last trial restore), the server
+  gives it to the admin, and the app shows a warning card on the admin's start page and the state in
+  "Verwaltung". It warns when the backup or the copy is older than 50 hours, or the trial restore older than
+  35 days. It reaches the VM when the owner reruns `setup.sh`.

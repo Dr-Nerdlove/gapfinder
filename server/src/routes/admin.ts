@@ -6,6 +6,7 @@ import {
   type AdminInvite,
   type AdminRenameUserRequest,
   type AdminUser,
+  type BackupStatus,
   type CreateInviteRequest,
   type CreatedInvite,
   type CreatedPasswordReset,
@@ -15,6 +16,7 @@ import { createInvite, deleteUnusedInvite, listOpenInvites, toAdminInvite } from
 import { createPasswordReset } from "../accounts/resets.js";
 import { deleteUser, findUserById, findUserByKey, listUsers, toAdminUser, updateUsername } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
+import { readBackupStatus } from "../backup-status.js";
 import { countBroken } from "../calendars/store.js";
 import { isUniqueViolation } from "../db.js";
 import type { AppContext } from "../context.js";
@@ -44,6 +46,8 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
     admin.get("/api/admin/users", async (): Promise<AdminUser[]> =>
       listUsers(ctx.db).map((user) => toAdminUser(user, countBroken(ctx.db, user.id))),
     );
+
+    admin.get("/api/admin/backup-status", async (): Promise<BackupStatus> => readBackupStatus(ctx.config.dataDir));
 
     admin.patch<{ Body: AdminRenameUserRequest }>(
       "/api/admin/users/:id",

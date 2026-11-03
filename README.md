@@ -28,7 +28,8 @@ updates.
 
 Not built yet: connecting Google or Outlook directly, and an offline vote queue (phase 6, optional).
 The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8). The database
-is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9 and "Restoring a backup").
+is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9 and "Restoring a backup"); the
+admin sees a warning on the start page when a backup is missing or the monthly trial restore is due.
 
 | Login                                    | Invite link                                | Start, logged in                                     |
 | ---------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |

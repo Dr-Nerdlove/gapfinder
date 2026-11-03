@@ -22,6 +22,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- **The app warns the admin when the backup has stopped.** The start page (admin only) shows the card "Sicherung prüfen" when the last backup or the last copy to Windows is more than 50 hours old, or the monthly trial restore is more than 35 days ago. "Verwaltung" has a new card "Sicherung" with the three times (backup, copy to Windows, trial restore). The backup script writes a small status file (`data/backup-status`) that the server shows to the admin. **Reaches the VM only when the owner reruns `setup.sh`**; until then the card says the state of the backup is unknown. The frontend copes with a server that does not know the new route yet (it shows nothing).
 - "Meine Abstimmungen" now shows the date of a fixed appointment, e.g. "Termin steht: Sa 12.12., 13:00–15:00"
   or "Termin steht: 14.–28. Feb." (same writing as on the poll page). Long dates wrap on narrow phones. While the
   server is not updated yet, the list keeps showing "Termin steht ✓".

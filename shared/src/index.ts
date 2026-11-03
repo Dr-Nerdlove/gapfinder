@@ -16,6 +16,21 @@ export interface HealthResponse {
 }
 
 /**
+ * `GET /api/admin/backup-status` (admin only): when the VM's backup script last did what, from the file it writes.
+ * Times are ISO 8601 (UTC); a time that is missing or unreadable is null. Missing from servers older than this.
+ */
+export interface BackupStatus {
+  /** False when the VM has not written a status file (yet): backups not set up, or `setup.sh` not rerun. */
+  known: boolean;
+  /** The last regular backup saved in the VM. */
+  lastBackupAt: string | null;
+  /** The last run after which all backups were also in the Windows folder. */
+  lastCopyAt: string | null;
+  /** The last trial restore (or restore) that decrypted and checked a backup. */
+  lastCheckAt: string | null;
+}
+
+/**
  * Machine-readable reason of a failed request. The frontend turns it into German text; the server never sends
  * text meant for users. Only ever add codes: an older frontend treats unknown codes as a generic error.
  */
