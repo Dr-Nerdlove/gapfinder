@@ -5,6 +5,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.2.0] - 2026-11-03
+
+Each calendar can now count as busy separately for the two kinds of search: "Stunden" and "Ganze Tage". For
+example, a work calendar can block weekday evenings without blocking a holiday. The check before fixing a poll's
+date uses the matching switch too. Existing settings carry over to both switches, so nothing changes until someone
+switches one. The search choices are now called "Stunden" and "Ganze Tage", and sharing a link on Android shows
+Lückenfüller's own icon again. The app updates about 2 minutes after the release; the server updates itself within
+about an hour, and until then only the "Stunden" switch is shown. Nothing has to be done on the VM.
+
 ### Added
 
 - **Busy setting per kind of search.** Each calendar can now count as busy separately for searches by hours and
