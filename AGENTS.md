@@ -245,6 +245,18 @@ missing, with a recommendation, and let the people choose.
     connect.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
+- **Versions and releases:** First release `v1.0.0` (2026-11-03). The version lives in the four `package.json`
+  files (kept equal, `npm version <x.y.z> --workspaces --include-workspace-root --no-git-tag-version`) and in
+  `CHANGELOG.md`; the app shows it on the start page ("Version 1.0.0"), together with a note whether the server has
+  the same commit as the app (`APP_BUILD`, set by `deploy.yml`, against the server's `APP_VERSION`, both `sha-<7>`).
+  Between releases the commit is what tells whether the server is up to date. **The owner decides when a new version
+  is released; the assistant suggests it** after a bigger change (a new feature or anything the users notice) and
+  names the number: new feature `1.x.0`, fix `1.0.x`, breaking change `2.0.0`. Nothing is released without the
+  owner's word. A release is one pull request (version in the `package.json` files, `CHANGELOG.md` with
+  "[Unreleased]" turned into "[x.y.z] - date" and a short summary, nothing else) and, after the merge and the owner's
+  OK, the tag `vX.Y.Z` and a GitHub release with notes in plain English, made by hand with the GitHub tools (a release
+  with text only, no files, so "published files are built by CI" does not apply). There is no release workflow: a
+  push to `main` deploys as always, with or without a release.
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
   CI: `.github/workflows/ci.yml` (checks) and `deploy.yml` (Pages + server image).
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP

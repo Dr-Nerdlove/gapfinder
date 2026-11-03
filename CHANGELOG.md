@@ -5,6 +5,28 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-11-03
+
+The first release. Lückenfüller is a mobile-first web app for a group of friends: everyone links their calendars,
+the app finds the times when everybody is free, everyone votes on the proposals, and the chosen date goes to
+everyone's calendar.
+
+**How to use it.** The admin creates an invite link for each friend. A friend opens the link, picks a username and
+a password, links a calendar through its subscription link (Google, Apple, Outlook and others) and is ready.
+To find a date, choose people, a period and a duration; the app shows when everyone, or almost everyone, is free.
+Pick some of those times as proposals and share one link: everybody who has it, guests too, votes with
+Ja / Vielleicht / Nein. The creator (or the admin) fixes one proposal, and everybody can add it to their calendar.
+All text in the app is German.
+
+**How the server is updated.** The app (GitHub Pages) updates itself right after every change on `main`. The
+server runs in a small Linux VM on the home PC, looks for a new version about once an hour and installs it
+by itself; if the new version does not start properly, it goes back to the previous one. The start page shows the
+release number and whether the server has the same state as the app. Changes in `deploy/vm/` reach the VM only
+when `setup.sh` is rerun (the entries below say when). The server is off at night from 1 to 7 o'clock; the
+app then says so. Nothing has to be done on the VM for 1.0.0 itself.
+
+The list below is everything built so far, newest first.
+
 ### Changed
 
 - **Server guide: monthly backup check.** The trial restore section now says to run `list` first and look at the dates, because `check` opens the newest backup even if it is old, and that the trial restore cannot run by itself. Documentation only; nothing to do on the VM.
@@ -22,6 +44,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- **The start page shows the release number and whether the server is up to date.** "Server erreichbar" now says
+  "Version 1.0.0" and, in words, "Der Server ist auf dem neuesten Stand." or "Der Server wird gerade aktualisiert."
+  (the app is updated at once, the server within an hour). The commit stays visible in small letters ("Stand
+  sha-…"). Only the app changes; the server and the VM stay as they are, and an older app build or a local
+  development build shows no hint.
 - **The app warns the admin when the backup has stopped.** The start page (admin only) shows the card "Sicherung prüfen" when the last backup or the last copy to Windows is more than 50 hours old, or the monthly trial restore is more than 35 days ago. "Verwaltung" has a new card "Sicherung" with the three times (backup, copy to Windows, trial restore). The backup script writes a small status file (`data/backup-status`) that the server shows to the admin. **Reaches the VM only when the owner reruns `setup.sh`**; until then the card says the state of the backup is unknown. The frontend copes with a server that does not know the new route yet (it shows nothing).
 - "Meine Abstimmungen" now shows the date of a fixed appointment, e.g. "Termin steht: Sa 12.12., 13:00–15:00"
   or "Termin steht: 14.–28. Feb." (same writing as on the poll page). Long dates wrap on narrow phones. While the

@@ -48,3 +48,18 @@ export async function checkHealth(apiUrl: string, options: HealthOptions = {}): 
     clearTimeout(timer);
   }
 }
+
+export type ServerFreshness = "current" | "updating" | "unknown";
+
+/**
+ * Compares the commit the server reports with the commit this app was built from. The app is updated at once on a
+ * deploy and the server within an hour, so a difference means the server is still being updated. Without a known
+ * commit on either side (local development, an older build) nothing can be said.
+ */
+export function serverFreshness(serverVersion: string, appBuild: string): ServerFreshness {
+  const known = (version: string): boolean => /^sha-[0-9a-f]+$/.test(version);
+  if (!known(serverVersion) || !known(appBuild)) {
+    return "unknown";
+  }
+  return serverVersion === appBuild ? "current" : "updating";
+}

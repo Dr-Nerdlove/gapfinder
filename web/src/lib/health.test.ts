@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkHealth } from "./health";
+import { checkHealth, serverFreshness } from "./health";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -56,5 +56,22 @@ describe("checkHealth", () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(aborted).toBe(true);
     await expect(pending).resolves.toEqual({ kind: "offline", reason: "timeout" });
+  });
+});
+
+describe("serverFreshness", () => {
+  it("is current when server and app come from the same commit", () => {
+    expect(serverFreshness("sha-abc1234", "sha-abc1234")).toBe("current");
+  });
+
+  it("is updating when the commits differ", () => {
+    expect(serverFreshness("sha-abc1234", "sha-def5678")).toBe("updating");
+    expect(serverFreshness("sha-def5678", "sha-abc1234")).toBe("updating");
+  });
+
+  it("is unknown without a commit on either side", () => {
+    expect(serverFreshness("dev", "sha-abc1234")).toBe("unknown");
+    expect(serverFreshness("sha-abc1234", "dev")).toBe("unknown");
+    expect(serverFreshness("", "")).toBe("unknown");
   });
 });
