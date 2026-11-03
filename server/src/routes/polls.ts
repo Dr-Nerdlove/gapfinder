@@ -274,6 +274,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       const { readable, skipped } = await collectBusyTimes(
         ctx,
         participants.map((participant) => participant.id),
+        poll.kind === "days" ? "days" : "hours",
       );
       const span = proposalSpan(poll.kind, proposal);
       const busyIds = new Set(readable.filter((person) => isBusyDuring(person.busy, span)).map((person) => person.id));

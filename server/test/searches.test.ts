@@ -284,6 +284,33 @@ describe("POST /api/searches: who is searched", () => {
     ]);
   });
 
+  it("uses the hour switch for hour searches and the day switch for day searches", async () => {
+    const patch = (id: number, body: object) =>
+      call(e, "PATCH", `/api/calendars/${id}`, { token: e.me.token, body });
+    const e = await setup();
+    const work = await addCalendar(e, e.me.token, GOOGLE_LINK, [busyOn("2026-11-07T12:00:00Z", "2026-11-07T13:00:00Z", "Arbeit")]);
+    const hoursSlots = async () => {
+      const result = (await search(e, hoursBody())).json<SearchResult>();
+      if (result.mode !== "hours") throw new Error("hours expected");
+      return result.days[0]!.slots.length;
+    };
+    const dayStretches = async () => {
+      const result = (await search(e, daysBody({ days: 7 }))).json<SearchResult>();
+      if (result.mode !== "days") throw new Error("days expected");
+      return result.stretches.length;
+    };
+
+    // Hours on, days off: the event blocks the hour search only.
+    expect((await patch(work.id, { countsAsBusyDays: false })).statusCode).toBe(200);
+    expect(await hoursSlots()).toBe(2);
+    expect(await dayStretches()).toBe(1);
+
+    // The reverse: days on, hours off.
+    await patch(work.id, { countsAsBusy: false, countsAsBusyDays: true });
+    expect(await hoursSlots()).toBe(1);
+    expect(await dayStretches()).toBe(0);
+  });
+
   it("does not read more than 8 calendars at the same time", async () => {
     const e = await setup();
     const links: string[] = [];

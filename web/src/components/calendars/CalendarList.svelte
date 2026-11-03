@@ -47,7 +47,7 @@
   }
 
   async function update(calendar: Calendar, changes: Parameters<typeof api.updateCalendar>[1]): Promise<Calendar | null> {
-    const eventsMayHaveChanged = changes.countsAsBusy !== undefined || changes.link !== undefined;
+    const eventsMayHaveChanged = changes.countsAsBusy !== undefined || changes.countsAsBusyDays !== undefined || changes.link !== undefined;
     rowError = null;
     busy = true;
     const result = await session.run((o) => api.updateCalendar(calendar.id, changes, o));
@@ -100,11 +100,22 @@
     }
   }
 
-  async function toggleBusy(event: Event, calendar: Calendar): Promise<void> {
+  async function toggleBusy(event: Event, calendar: Calendar, kind: "hours" | "days"): Promise<void> {
     const box = event.currentTarget as HTMLInputElement;
-    const saved = await update(calendar, { countsAsBusy: box.checked });
+    const saved = await update(calendar, kind === "hours" ? { countsAsBusy: box.checked } : { countsAsBusyDays: box.checked });
     // A failed change must not leave the switch in the new position.
-    if (!saved) box.checked = calendar.countsAsBusy;
+    if (!saved) box.checked = kind === "hours" ? calendar.countsAsBusy : (calendar.countsAsBusyDays ?? true);
+  }
+
+  /** The hint under the switches; nothing when the calendar counts everywhere. */
+  function busyHint(calendar: Calendar): string | null {
+    const hours = calendar.countsAsBusy;
+    // An old server does not send the days switch; then both searches share the one setting.
+    const days = calendar.countsAsBusyDays ?? hours;
+    if (!hours && !days) return "Termine aus diesem Kalender machen dich nicht belegt.";
+    if (hours && !days) return "Bei der Suche nach ganzen Tagen zählen diese Termine nicht.";
+    if (!hours && days) return "Bei der Suche nach Stunden zählen diese Termine nicht.";
+    return null;
   }
 
   async function confirmRemove(): Promise<void> {
@@ -137,13 +148,25 @@
           </div>
         {/if}
 
-        <label class="switch">
-          <input type="checkbox" role="switch" checked={calendar.countsAsBusy} {disabled} onchange={(e) => toggleBusy(e, calendar)} />
-          <span class="track" aria-hidden="true"></span>
-          <span class="label">Zählt als belegt</span>
-        </label>
-        {#if !calendar.countsAsBusy}
-          <p class="provider">Termine aus diesem Kalender machen dich nicht belegt.</p>
+        <div class="busy" role="group" aria-labelledby="busy-label-{calendar.id}">
+          <span class="busy-title" id="busy-label-{calendar.id}">Zählt als belegt für:</span>
+          <div class="switches">
+            <label class="switch">
+              <input type="checkbox" role="switch" checked={calendar.countsAsBusy} {disabled} onchange={(e) => toggleBusy(e, calendar, "hours")} />
+              <span class="track" aria-hidden="true"></span>
+              <span class="label">Stunden</span>
+            </label>
+            {#if calendar.countsAsBusyDays !== undefined}
+              <label class="switch">
+                <input type="checkbox" role="switch" checked={calendar.countsAsBusyDays} {disabled} onchange={(e) => toggleBusy(e, calendar, "days")} />
+                <span class="track" aria-hidden="true"></span>
+                <span class="label">Ganze Tage</span>
+              </label>
+            {/if}
+          </div>
+        </div>
+        {#if busyHint(calendar)}
+          <p class="provider">{busyHint(calendar)}</p>
         {/if}
 
         {#if editing?.id === calendar.id}
@@ -256,6 +279,22 @@
     background: var(--md-sys-color-error-container);
     color: var(--md-sys-color-on-error-container);
     font-weight: 500;
+  }
+
+  .busy {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .busy-title {
+    font-size: 0.875rem;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .switches {
+    display: flex;
+    flex-wrap: wrap;
+    column-gap: 24px;
   }
 
   .switch {

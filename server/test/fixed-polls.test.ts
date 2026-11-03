@@ -391,6 +391,30 @@ describe("the check before fixing", () => {
     expect(names((await check(e, poll, 0)).json<FixCheck>().busy)).toEqual([]);
   });
 
+  it("uses the hour switch for a timed date and the day switch for a whole-day date", async () => {
+    const e = await setup();
+    const patch = (id: number, body: object) => call(e, "PATCH", `/api/calendars/${id}`, { token: e.anna.token, body });
+    const list = async () => (await call(e, "GET", "/api/calendars", { token: e.anna.token })).json<{ calendars: { id: number }[] }>();
+    // Busy on Saturday 2026-11-07 18:00 (timed proposal) and on 2026-11-10 (whole-day proposal).
+    await addCalendar(e, e.anna.token, APPLE_LINK, [
+      busy("2026-11-07T18:00:00Z", "2026-11-07T18:30:00Z"),
+      busy("2026-11-10", "2026-11-11"),
+    ]);
+    const id = (await list()).calendars[0]!.id;
+    const timed = await createPoll(e, timedBody({ participants: [e.anna.id] }));
+    const days = await createPoll(e, daysBody({ participants: [e.anna.id] }));
+
+    // Hours on, days off.
+    await patch(id, { countsAsBusyDays: false });
+    expect(names((await check(e, timed, 0)).json<FixCheck>().busy)).toEqual(["Anna K."]);
+    expect(names((await check(e, days, 0)).json<FixCheck>().busy)).toEqual([]);
+
+    // The reverse.
+    await patch(id, { countsAsBusy: false, countsAsBusyDays: true });
+    expect(names((await check(e, timed, 0)).json<FixCheck>().busy)).toEqual([]);
+    expect(names((await check(e, days, 0)).json<FixCheck>().busy)).toEqual(["Anna K."]);
+  });
+
   it("is only a warning: the date can be fixed afterwards", async () => {
     const { e, poll } = await checkSetup();
     expect((await check(e, poll, 0)).json<FixCheck>().busy).toHaveLength(1);

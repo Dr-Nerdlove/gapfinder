@@ -106,6 +106,31 @@ describe("migrations", () => {
     expect(indexes).toContain("calendars_user_id");
   });
 
+  it("migration 6 copies the old busy setting to the days setting and keeps new calendars on", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 5));
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    const insert = db.prepare(
+      "INSERT INTO calendars (user_id, name, provider, link_encrypted, counts_busy, created_at, updated_at) VALUES (1, ?, 'google', 'v1.x', ?, 'a', 'a')",
+    );
+    insert.run("on", 1);
+    insert.run("off", 0);
+
+    runMigrations(db);
+
+    expect(db.prepare("SELECT name, counts_busy, counts_busy_days FROM calendars ORDER BY id").all()).toEqual([
+      { name: "on", counts_busy: 1, counts_busy_days: 1 },
+      { name: "off", counts_busy: 0, counts_busy_days: 0 },
+    ]);
+    db.prepare(
+      "INSERT INTO calendars (user_id, name, provider, link_encrypted, created_at, updated_at) VALUES (1, 'new', 'google', 'v1.x', 'a', 'a')",
+    ).run();
+    expect(db.prepare("SELECT counts_busy_days FROM calendars WHERE name = 'new'").get()).toEqual({ counts_busy_days: 1 });
+  });
+
   it("migration 3: calendars belong to a user, keep an empty name, accept only ok/broken and go with the user", () => {
     const db = openDatabase(":memory:");
     db.prepare(
@@ -200,7 +225,7 @@ describe("migrations", () => {
     runMigrations(db);
 
     expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
-    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5]);
+    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6]);
     // The old poll is not fixed and still readable.
     expect(db.prepare("SELECT title, fixed_proposal_id, fixed_at, fixed_sequence FROM polls").get()).toEqual({
       title: "x",

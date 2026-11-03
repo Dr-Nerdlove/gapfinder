@@ -4,7 +4,7 @@
   import * as api from "../../lib/api";
   import { calendarDisplayName } from "../../lib/calendars";
   import { errorMessage } from "../../lib/messages";
-  import { previewDays, problemNotices } from "../../lib/preview";
+  import { busyNote, entryIsOff, previewDays, problemNotices } from "../../lib/preview";
   import { session } from "../../lib/session.svelte";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
@@ -76,11 +76,11 @@
           <h3>{day.heading}</h3>
           <ul>
             {#each day.entries as entry, index (index)}
-              <li class:off={!entry.countsAsBusy}>
+              <li class:off={entryIsOff(entry)}>
                 <span class="time">{entry.timeLabel}</span>
                 <span class="what">
                   <span class="title">{entry.title}</span>
-                  <span class="calendar">{names.get(entry.calendarId) ?? ""}{#if !entry.countsAsBusy}{" · zählt nicht"}{/if}</span>
+                  <span class="calendar">{names.get(entry.calendarId) ?? ""}{busyNote(entry)}</span>
                 </span>
               </li>
             {/each}

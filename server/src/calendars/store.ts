@@ -10,6 +10,7 @@ export interface CalendarRow {
   provider: CalendarProvider;
   link_encrypted: string;
   counts_busy: number;
+  counts_busy_days: number;
   is_default: number;
   status: CalendarStatus;
   created_at: string;
@@ -23,6 +24,7 @@ export function toCalendar(row: CalendarRow): Calendar {
     name: row.name,
     provider: row.provider,
     countsAsBusy: row.counts_busy === 1,
+    countsAsBusyDays: row.counts_busy_days === 1,
     isDefault: row.is_default === 1,
     status: row.status,
     createdAt: row.created_at,
@@ -53,8 +55,8 @@ export function insertCalendar(
   const isDefault = countCalendars(db, calendar.userId) === 0 ? 1 : 0;
   const result = db
     .prepare(
-      `INSERT INTO calendars (user_id, name, provider, link_encrypted, counts_busy, is_default, status, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 1, ?, 'ok', ?, ?)`,
+      `INSERT INTO calendars (user_id, name, provider, link_encrypted, counts_busy, counts_busy_days, is_default, status, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 1, 1, ?, 'ok', ?, ?)`,
     )
     .run(calendar.userId, calendar.name, calendar.provider, calendar.linkEncrypted, isDefault, calendar.now, calendar.now);
   return Number(result.lastInsertRowid);
@@ -63,7 +65,11 @@ export function insertCalendar(
 export function updateSettings(
   db: DatabaseSync,
   id: number,
-  changes: { name?: string | undefined; countsAsBusy?: boolean | undefined },
+  changes: {
+    name?: string | undefined;
+    countsAsBusy?: boolean | undefined;
+    countsAsBusyDays?: boolean | undefined;
+  },
   now: string,
 ): void {
   if (changes.name !== undefined) {
@@ -72,6 +78,13 @@ export function updateSettings(
   if (changes.countsAsBusy !== undefined) {
     db.prepare("UPDATE calendars SET counts_busy = ?, updated_at = ? WHERE id = ?").run(
       changes.countsAsBusy ? 1 : 0,
+      now,
+      id,
+    );
+  }
+  if (changes.countsAsBusyDays !== undefined) {
+    db.prepare("UPDATE calendars SET counts_busy_days = ?, updated_at = ? WHERE id = ?").run(
+      changes.countsAsBusyDays ? 1 : 0,
       now,
       id,
     );

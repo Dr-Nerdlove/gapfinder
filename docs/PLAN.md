@@ -97,6 +97,10 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 - A user can link several calendars and mark one as **default calendar** (decides which "add to calendar"
   button the user sees first).
 - Per calendar: "counts as busy" on/off (e.g. switch off a birthday calendar).
+  - Decided 2026-11-03: two switches per calendar, **"Stunden"** (hour search, and fixing a timed poll date) and
+    **"Ganze Tage"** (multi-day search, and fixing a whole-day poll date). Existing calendars take over their old
+    setting for both. The search choices are renamed to "Stunden" and "Ganze Tage" to match. The old field
+    `countsAsBusy` is kept (it means the hour search) so older servers and apps keep working.
 - Events marked as "free" (`TRANSP:TRANSPARENT`) never count as busy. All-day events count as busy unless
   their calendar is switched off.
 - The links are stored **encrypted**; only the server reads them. They never reach other users or the admin.
@@ -145,10 +149,10 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
 
 1. Choose friends.
 2. Choose either
-   - **weekdays + duration**, optionally with a time window (e.g. Saturday, 5 hours, 18:00–23:00). Without a
-     time window the default window is **09:00–23:00**; or
-   - a **multi-day period** (e.g. 7 days in a row), optionally starting on a given weekday. A day is free when
-     it has **no busy event at all**.
+   - **weekdays + duration** (the choice "Stunden"), optionally with a time window (e.g. Saturday, 5 hours,
+     18:00–23:00). Without a time window the default window is **09:00–23:00**; or
+   - a **multi-day period** (the choice "Ganze Tage"; e.g. 7 days in a row), optionally starting on a given
+     weekday. A day is free when it has **no busy event at all**.
    - Optional buffer before and after (travel time).
 3. Choose the search range: next 30 / 90 days, half a year, a year, a month, or a custom range of months.
 4. Results are **grouped per day** ("Sa 12.12.: alle frei 14:00–23:00") instead of listing every start time.

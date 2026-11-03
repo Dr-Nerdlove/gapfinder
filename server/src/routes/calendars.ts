@@ -47,6 +47,7 @@ const updateBody = {
   properties: {
     name: { type: "string", maxLength: 1000 },
     countsAsBusy: { type: "boolean" },
+    countsAsBusyDays: { type: "boolean" },
     isDefault: { const: true },
     link: { type: "string", maxLength: CALENDAR_LINK_MAX_LENGTH },
   },
@@ -104,7 +105,7 @@ export function registerCalendarRoutes(app: FastifyInstance, ctx: AppContext): v
       const { user } = authOf(request);
       const id = idParam(request);
       if (!findCalendar(ctx.db, user.id, id)) throw notFound();
-      const { name, countsAsBusy, isDefault, link } = request.body;
+      const { name, countsAsBusy, countsAsBusyDays, isDefault, link } = request.body;
       const newName = name === undefined ? undefined : checkedCalendarName(name);
 
       // A new link needs the key and is tried before anything is changed.
@@ -114,7 +115,7 @@ export function registerCalendarRoutes(app: FastifyInstance, ctx: AppContext): v
       const changed = inTransaction(ctx.db, () => {
         // The calendar may have been deleted while the link was being checked.
         if (!findCalendar(ctx.db, user.id, id)) return false;
-        updateSettings(ctx.db, id, { name: newName, countsAsBusy }, now);
+        updateSettings(ctx.db, id, { name: newName, countsAsBusy, countsAsBusyDays }, now);
         if (checked) replaceLink(ctx.db, id, checked, now);
         if (isDefault === true) setDefault(ctx.db, user.id, id, now);
         return true;

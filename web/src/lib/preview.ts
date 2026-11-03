@@ -78,6 +78,8 @@ export interface PreviewEntry {
   timeLabel: string;
   /** False: the event does not make the person busy (shown greyed with "zählt nicht"). */
   countsAsBusy: boolean;
+  /** Same for the multi-day search; an older server does not send it, then it equals `countsAsBusy`. */
+  countsAsBusyDays: boolean;
   /** Start of the part of the event on this day, for sorting. */
   sortStart: number;
 }
@@ -94,6 +96,19 @@ export interface GroupRange {
   /** ISO 8601 UTC, from `CalendarPreview.from` / `.to`: days outside are left out. */
   from?: string;
   to?: string;
+}
+
+/** True when the event makes the person busy in no search at all (shown greyed). */
+export function entryIsOff(entry: Pick<PreviewEntry, "countsAsBusy" | "countsAsBusyDays">): boolean {
+  return !entry.countsAsBusy && !entry.countsAsBusyDays;
+}
+
+/** The note after the calendar name: empty when the event counts everywhere. */
+export function busyNote(entry: Pick<PreviewEntry, "countsAsBusy" | "countsAsBusyDays">): string {
+  if (entry.countsAsBusy && entry.countsAsBusyDays) return "";
+  if (entry.countsAsBusy) return " · zählt nur für Stunden";
+  if (entry.countsAsBusyDays) return " · zählt nur für ganze Tage";
+  return " · zählt nicht";
 }
 
 /** "Mo, 2.11." for a German date. */
@@ -177,6 +192,7 @@ export function groupPreviewByDay(events: readonly PreviewEvent[], range: GroupR
           kind,
           timeLabel,
           countsAsBusy: event.countsAsBusy,
+          countsAsBusyDays: event.countsAsBusyDays ?? event.countsAsBusy,
           sortStart: Math.max(startMs, dayStart),
         });
       }

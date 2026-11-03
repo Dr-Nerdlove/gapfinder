@@ -159,6 +159,15 @@ export const migrations: readonly Migration[] = [
       created_at TEXT NOT NULL
     ) STRICT;`,
   },
+  {
+    id: 6,
+    name: "busy per search kind",
+    // Additive only (one new column with a default): `counts_busy` keeps meaning the hour search, so an older
+    // server (after a rollback) still runs and uses `counts_busy` for both kinds of search. Existing calendars
+    // take over their old setting for the multi-day search.
+    sql: `ALTER TABLE calendars ADD COLUMN counts_busy_days INTEGER NOT NULL DEFAULT 1;
+    UPDATE calendars SET counts_busy_days = counts_busy;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */
