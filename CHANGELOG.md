@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The app's own icon when sharing a link.** The share sheet on Android showed the icon of another website on the
+  same address (github.io) instead of Lückenfüller's, because the app only offered its icon as SVG, which Chrome
+  on Android cannot use there. The app now also offers it as PNG.
+
 ## [1.1.0] - 2026-11-03
 
 Usernames are now set by the admin and stay that way. When inviting someone, the admin types the exact username

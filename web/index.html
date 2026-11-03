@@ -9,6 +9,10 @@
     <meta name="description" content="Gemeinsame freie Zeit finden" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="icon" type="image/svg+xml" href="./icon.svg" />
+    <!-- Chrome on Android cannot use the SVG icon; without a PNG it falls back to an icon of another
+         project on the same github.io host (seen in the share sheet). -->
+    <link rel="icon" type="image/png" sizes="512x512" href="./icon.png" />
+    <link rel="apple-touch-icon" href="./icon.png" />
     <title>Lückenfüller</title>
   </head>
   <body>
