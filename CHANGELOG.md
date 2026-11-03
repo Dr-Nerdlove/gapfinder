@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Usernames are fixed by the admin.** The admin types the exact username when inviting someone (e.g. "Samuel
+  Kr."); a name that a user or an open invite already has is refused. Invited people see their username but can no
+  longer choose it, and nobody can change their own username in the profile any more; only the admin renames
+  users. `admin-link` takes the exact username too. Older app versions keep working with the server.
+
 ### Added
 
 - **GitHub releases are made automatically.** When a change on `main` carries a new version number (the release

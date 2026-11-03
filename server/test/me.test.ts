@@ -1,6 +1,6 @@
 import type { ApiErrorBody, Me, SessionResponse } from "@lueckenfueller/shared";
 import { afterEach, describe, expect, it } from "vitest";
-import { addUser, addUserWithSession, call, createTestEnv, DEFAULT_PASSWORD, type TestEnv } from "./helpers.js";
+import { addUserWithSession, call, createTestEnv, DEFAULT_PASSWORD, type TestEnv } from "./helpers.js";
 
 let env: TestEnv | undefined;
 afterEach(async () => {
@@ -31,34 +31,25 @@ describe("GET /api/me", () => {
 });
 
 describe("PATCH /api/me", () => {
-  it("renames the user (normalized)", async () => {
-    const e = await setup();
-    const response = await call(e, "PATCH", "/api/me", { token: e.token, body: { username: "  Vince   R.  " } });
-    expect(response.statusCode).toBe(200);
-    expect(response.json<Me>().username).toBe("Vince R.");
-    expect((await call(e, "GET", "/api/me", { token: e.token })).json<Me>().username).toBe("Vince R.");
-  });
+  it.each(["Vince R.", "vincent r.", "Vincent R.", "", "<b>"])(
+    "refuses to change the username (%j) and changes nothing",
+    async (username) => {
+      const e = await setup();
+      const response = await call(e, "PATCH", "/api/me", { token: e.token, body: { username } });
+      expect(response.statusCode).toBe(403);
+      expect(response.json<ApiErrorBody>().code).toBe("forbidden");
+      expect((await call(e, "GET", "/api/me", { token: e.token })).json<Me>().username).toBe("Vincent R.");
+    },
+  );
 
-  it("allows changing only the case of one's own name", async () => {
+  it("refuses a username even together with a valid seed colour, and does not apply the colour", async () => {
     const e = await setup();
-    const response = await call(e, "PATCH", "/api/me", { token: e.token, body: { username: "vincent r." } });
-    expect(response.statusCode).toBe(200);
-    expect(response.json<Me>().username).toBe("vincent r.");
-  });
-
-  it("refuses a name another user has, compared without case", async () => {
-    const e = await setup();
-    await addUser(e, "Anna K.");
-    const response = await call(e, "PATCH", "/api/me", { token: e.token, body: { username: "anna  k." } });
-    expect(response.statusCode).toBe(409);
-    expect(response.json<ApiErrorBody>().code).toBe("username_taken");
-  });
-
-  it.each(["A", "x".repeat(33), "<b>", "1234", ""])("refuses the invalid name %j", async (username) => {
-    const e = await setup();
-    const response = await call(e, "PATCH", "/api/me", { token: e.token, body: { username } });
-    expect(response.statusCode).toBe(400);
-    expect(response.json<ApiErrorBody>()).toMatchObject({ code: "validation", field: "username" });
+    const response = await call(e, "PATCH", "/api/me", {
+      token: e.token,
+      body: { username: "Vince R.", seedColor: "#aabbcc" },
+    });
+    expect(response.statusCode).toBe(403);
+    expect((await call(e, "GET", "/api/me", { token: e.token })).json<Me>().seedColor).toBeNull();
   });
 
   it("sets, normalizes and resets the seed colour", async () => {
@@ -66,8 +57,8 @@ describe("PATCH /api/me", () => {
     const set = await call(e, "PATCH", "/api/me", { token: e.token, body: { seedColor: "#AABBCC" } });
     expect(set.json<Me>().seedColor).toBe("#aabbcc");
     // Fields left out stay as they are.
-    const rename = await call(e, "PATCH", "/api/me", { token: e.token, body: { username: "Vince R." } });
-    expect(rename.json<Me>().seedColor).toBe("#aabbcc");
+    const same = await call(e, "PATCH", "/api/me", { token: e.token, body: {} });
+    expect(same.json<Me>()).toMatchObject({ seedColor: "#aabbcc", username: "Vincent R." });
     const reset = await call(e, "PATCH", "/api/me", { token: e.token, body: { seedColor: null } });
     expect(reset.json<Me>().seedColor).toBeNull();
   });

@@ -221,19 +221,19 @@ command in the VM:
 sudo systemctl start lueckenfueller-update
 ```
 
-Then run these two commands. Replace "Vorname Nachname" with your own name; it is only used to suggest your
-username (e.g. "Vincent Richter" becomes "Vincent R."):
+Then run these two commands. Replace "Vorname" with the username you want to have (it is used exactly as typed, e.g.
+"Vincent R."; it is also what you log in with; without text it is "Admin"):
 
 ```bash
 cd /opt/lueckenfueller
 ```
 
 ```bash
-sudo docker compose exec api node server/dist/cli.js admin-link "Vorname Nachname"
+sudo docker compose exec api node server/dist/cli.js admin-link "Vorname"
 ```
 
 It prints a link that looks like `https://dr-nerdlove.github.io/gapfinder/#/einladung/...`. Copy it, open it on
-your phone **within 14 days** and choose your username and your password. The link works only once. Afterwards
+your phone **within 14 days** and choose your password. The link works only once. Afterwards
 you are logged in as admin; your friends' invite links you create in the app itself.
 
 If the link has expired or got lost, just run the second command again for a new one.

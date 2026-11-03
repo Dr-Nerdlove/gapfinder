@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { normalizeName } from "@lueckenfueller/shared";
   import * as api from "../lib/api";
   import Button from "../components/Button.svelte";
   import CalendarFeed from "../components/CalendarFeed.svelte";
@@ -12,15 +11,10 @@
   import { errorMessage } from "../lib/messages";
   import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
-  import { checkNewPassword, checkUsername } from "../lib/validation";
+  import { checkNewPassword } from "../lib/validation";
 
   const user = $derived(sessionState.user);
   const locked = $derived(sessionState.offline);
-
-  let username = $state(sessionState.user?.username ?? "");
-  let nameBusy = $state(false);
-  let nameError = $state("");
-  let nameDone = $state("");
 
   let colorBusy = $state(false);
   let colorError = $state("");
@@ -33,26 +27,6 @@
   let passwordDone = $state("");
 
   let loggingOut = $state(false);
-
-  async function saveName(event: SubmitEvent): Promise<void> {
-    event.preventDefault();
-    nameError = "";
-    nameDone = "";
-    const problem = checkUsername(username);
-    if (problem) {
-      nameError = problem;
-      return;
-    }
-    nameBusy = true;
-    const result = await session.updateMe({ username: normalizeName(username) });
-    nameBusy = false;
-    if (result.ok) {
-      username = result.data.username;
-      nameDone = "Gespeichert.";
-    } else {
-      nameError = errorMessage(result);
-    }
-  }
 
   async function pickColor(seed: string | null): Promise<void> {
     colorError = "";
@@ -94,20 +68,8 @@
   <OfflineNotice />
   {#if user}
     <Card title="Benutzername">
-      <form onsubmit={saveName}>
-        <TextField
-          label="Benutzername"
-          name="username"
-          autocomplete="username"
-          hint="So sehen dich deine Freunde."
-          error={nameError}
-          bind:value={username}
-          required
-          disabled={nameBusy || locked}
-        />
-        <Message kind="success" text={nameDone} />
-        <div><Button type="submit" disabled={nameBusy || locked}>Speichern</Button></div>
-      </form>
+      <p><strong>{user.username}</strong></p>
+      <p class="note">Ändern kann ihn nur der Admin.</p>
     </Card>
 
     <Card title="Farbe">

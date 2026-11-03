@@ -48,7 +48,8 @@ export interface InviteInfo {
 
 /** `POST /api/invites/:token/accept` (no login needed) → `SessionResponse` (201). */
 export interface AcceptInviteRequest {
-  username: string;
+  /** Ignored by the server (the invite fixes the username); older frontends still send it. */
+  username?: string;
   password: string;
 }
 
@@ -63,7 +64,10 @@ export interface CompletePasswordResetRequest {
   password: string;
 }
 
-/** `PATCH /api/me` → `Me`. Fields left out stay as they are; `seedColor: null` goes back to the default. */
+/**
+ * `PATCH /api/me` → `Me`. Fields left out stay as they are; `seedColor: null` goes back to the default.
+ * `username` is refused with `forbidden`: only the admin renames users.
+ */
 export interface UpdateMeRequest {
   username?: string;
   seedColor?: string | null;
@@ -110,9 +114,15 @@ export interface AdminInvite {
   expiresAt: string;
 }
 
-/** `POST /api/admin/invites` → `CreatedInvite` (201). `name` is the person's name, e.g. "Vincent Richter". */
+/**
+ * `POST /api/admin/invites` → `CreatedInvite` (201). `username` is the exact username the person gets, e.g.
+ * "Samuel Kr." (`username_taken` when a user or an open invite has it). `name` is the legacy field: a full
+ * name the server turns into a suggestion ("Vincent Richter" → "Vincent R."); used only when `username` is
+ * absent. The frontend sends both with the same value, so an older server keeps working.
+ */
 export interface CreateInviteRequest {
-  name: string;
+  username?: string;
+  name?: string;
 }
 
 /** The token is shown only once; the frontend builds the link `#/einladung/<token>`. */

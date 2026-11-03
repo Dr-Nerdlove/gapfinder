@@ -25,12 +25,12 @@ function run(e: TestEnv, args: string[]): { code: number; out: string; err: stri
 describe("cli admin-link", () => {
   it("prints a link under APP_URL that creates an admin account", async () => {
     env = await createTestEnv();
-    const result = run(env, ["admin-link", "Vincent Richter"]);
+    const result = run(env, ["admin-link", "  Vincent   R. "]);
     expect(result.code).toBe(0);
     const match = /(https:\/\/friends\.example\.github\.io\/app\/#\/einladung\/)([A-Za-z0-9_-]{43})/.exec(result.out);
     expect(match).not.toBeNull();
     expect(result.out).toMatch(/works once and until \w+,? \d+ \w+ \d{4}.* \d\d:\d\d \w+\./);
-    expect(result.out).toContain("Suggested username: Vincent R.");
+    expect(result.out).toContain("Username: Vincent R.");
 
     const info = await call(env, "GET", `/api/invites/${match![2]}`);
     expect(info.json()).toMatchObject({ suggestedUsername: "Vincent R." });
@@ -41,14 +41,25 @@ describe("cli admin-link", () => {
     expect(accepted.json<SessionResponse>().user.isAdmin).toBe(true);
   });
 
-  it("suggests Admin without a name and expires after 14 days", async () => {
+  it("uses Admin without a name and expires after 14 days", async () => {
     env = await createTestEnv();
     const result = run(env, ["admin-link"]);
     expect(result.code).toBe(0);
-    expect(result.out).toContain("Suggested username: Admin");
+    expect(result.out).toContain("Username: Admin");
     const token = /#\/einladung\/(\S+)/.exec(result.out)![1]!;
     env.clock.advanceDays(INVITE_VALID_DAYS);
     expect((await call(env, "GET", `/api/invites/${token}`)).statusCode).toBe(404);
+  });
+
+  it("takes the text exactly (no shortening of the last name) and refuses bad or taken names", async () => {
+    env = await createTestEnv();
+    const exact = run(env, ["admin-link", "Samuel", "Kr."]);
+    expect(exact.out).toContain("Username: Samuel Kr.");
+    expect(run(env, ["admin-link", "<b>"]).code).toBe(1);
+    await addUserWithSession(env, "Taken T.");
+    const taken = run(env, ["admin-link", "taken t."]);
+    expect(taken.code).toBe(1);
+    expect(taken.err).toContain("already taken");
   });
 
   it("is the only way to get an admin invite", async () => {

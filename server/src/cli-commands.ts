@@ -1,4 +1,4 @@
-import { normalizeName, suggestUsername, usernameKey } from "@lueckenfueller/shared";
+import { normalizeName, usernameKey, usernameProblem } from "@lueckenfueller/shared";
 import type { DatabaseSync } from "node:sqlite";
 import { createInvite } from "./accounts/invites.js";
 import { createPasswordReset } from "./accounts/resets.js";
@@ -9,8 +9,8 @@ import type { Config } from "./config.js";
 export const USAGE = `Usage: node server/dist/cli.js <command>
 
 Commands:
-  admin-link [full name]   Create a link to set up an admin account (valid once, for 14 days).
-                           The name only suggests the username, e.g. "Vincent Richter" -> "Vincent R.".
+  admin-link [username]    Create a link to set up an admin account (valid once, for 14 days).
+                           The text is the exact username of the account (default "Admin"), e.g. "Vincent R.".
   password-link <username> Create a link to set a new password for an existing account (valid once, 24 hours).
   backup <file>            Write a consistent copy of the database to <file> (must not exist yet).
   check-backup <file>      Check a backup file without changing it; fails when it is damaged.
@@ -61,19 +61,24 @@ export function runCli(args: readonly string[], deps: CliDeps): number {
   }
 }
 
-function adminLink(args: readonly string[], { db, config, now, out }: CliDeps): number {
-  const suggested = suggestUsername(args.join(" "));
-  const invite = createInvite(
-    db,
-    { suggestedUsername: suggested === "" ? "Admin" : suggested, isAdmin: true, createdBy: null },
-    now(),
-  );
-  out("Admin invite created. Open this link on your phone and choose a username and a password:");
+function adminLink(args: readonly string[], { db, config, now, out, err }: CliDeps): number {
+  const given = normalizeName(args.join(" "));
+  const username = given === "" ? "Admin" : given;
+  if (usernameProblem(username) !== null) {
+    err(`"${username}" is not a valid username (2 to 32 letters, digits, space and . ' _ -).`);
+    return 1;
+  }
+  if (findUserByKey(db, usernameKey(username))) {
+    err(`The username "${username}" is already taken.`);
+    return 1;
+  }
+  const invite = createInvite(db, { suggestedUsername: username, isAdmin: true, createdBy: null }, now());
+  out("Admin invite created. Open this link on your phone and choose a password:");
   out("");
   out(`${config.appUrl}#/einladung/${invite.token}`);
   out("");
   out(`The link works once and until ${describeExpiry(invite.expiresAt)}.`);
-  out(`Suggested username: ${invite.suggestedUsername}`);
+  out(`Username: ${invite.suggestedUsername}`);
   return 0;
 }
 

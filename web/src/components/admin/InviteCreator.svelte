@@ -1,9 +1,10 @@
 <script lang="ts">
   import type { CreatedInvite } from "@lueckenfueller/shared";
-  import { INVITE_NAME_MAX_LENGTH, INVITE_VALID_DAYS, normalizeName, suggestUsername } from "@lueckenfueller/shared";
+  import { INVITE_VALID_DAYS, normalizeName, USERNAME_MAX_LENGTH } from "@lueckenfueller/shared";
   import * as api from "../../lib/api";
   import { buildInviteLink } from "../../lib/links";
   import { errorMessage } from "../../lib/messages";
+  import { checkUsername } from "../../lib/validation";
   import { session, sessionState } from "../../lib/session.svelte";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
@@ -19,18 +20,17 @@
   let link = $state("");
   let linkFor = $state("");
 
-  const suggestion = $derived(suggestUsername(name));
-
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     error = "";
     const clean = normalizeName(name);
-    if (clean === "") {
-      error = "Bitte gib den Namen ein.";
+    const problem = checkUsername(clean);
+    if (problem) {
+      error = problem;
       return;
     }
     busy = true;
-    const result = await session.run((o) => api.createInvite({ name: clean }, o));
+    const result = await session.run((o) => api.createInvite(api.inviteRequest(clean), o));
     busy = false;
     if (!result.ok) {
       error = errorMessage(result);
@@ -46,14 +46,14 @@
 <Card title="Freunde einladen">
   <form onsubmit={submit}>
     <TextField
-      label="Name (Vor- und Nachname)"
+      label="Benutzername"
       name="invite-name"
       autocomplete="off"
-      maxlength={INVITE_NAME_MAX_LENGTH}
+      hint="Genau so, wie er in der App erscheinen und zum Anmelden genutzt werden soll, z. B. „Samuel Kr.“"
+      maxlength={USERNAME_MAX_LENGTH}
       bind:value={name}
       disabled={busy || sessionState.offline}
     />
-    {#if suggestion}<p class="preview">Benutzername-Vorschlag: {suggestion}</p>{/if}
     <Message text={error} />
     <div><Button type="submit" disabled={busy || sessionState.offline}>Einladungslink erstellen</Button></div>
   </form>
@@ -72,9 +72,5 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-  }
-
-  .preview {
-    font-weight: 500;
   }
 </style>

@@ -2,6 +2,7 @@ import {
   GUEST_VOTE_WRITES_PER_IP,
   POLL_MAX_GUEST_VOTES,
   POLLS_PER_USER,
+  usernameKey,
   type ApiErrorBody,
   type GuestVoteCreated,
   type NewShareLink,
@@ -12,6 +13,7 @@ import {
 import { Writable } from "node:stream";
 import { afterEach, describe, expect, it } from "vitest";
 import { purgeExpired } from "../src/accounts/cleanup.js";
+import { updateUsername } from "../src/accounts/users.js";
 import { TOKEN_FAILURES_PER_IP } from "../src/auth/rate-limit.js";
 import { hashToken } from "../src/auth/tokens.js";
 import { insertGuestVote } from "../src/polls/store.js";
@@ -405,8 +407,7 @@ describe("viewing a poll by its link", () => {
       { proposalId: poll.proposals[1]!.id, answer: "maybe" },
     ]);
 
-    const renamed = await call(e, "PATCH", "/api/me", { token: e.anna.token, body: { username: "Anna Neu" } });
-    expect(renamed.statusCode).toBe(200);
+    updateUsername(e.db, e.anna.id, "Anna Neu", usernameKey("Anna Neu"));
     const after = (await call(e, "GET", link(poll))).json<PollView>();
     expect(after.votes.map((v) => v.name)).toEqual(["Anna Neu", "ben m.", "Zoe", "Alex"]);
   });

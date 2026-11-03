@@ -13,7 +13,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   not_found: "Das gibt es nicht (mehr).",
   invalid_credentials: "Benutzername oder Passwort stimmt nicht.",
   rate_limited: "Zu viele Versuche. Bitte warte einen Moment.",
-  username_taken: "Diesen Benutzernamen gibt es schon. Bitte wähle einen anderen.",
+  username_taken: "Diesen Benutzernamen gibt es schon (oder er ist schon eingeladen).",
   invite_invalid: "Diese Einladung gilt nicht mehr. Bitte den Admin um eine neue.",
   reset_invalid: "Dieser Link zum Zurücksetzen gilt nicht mehr. Bitte den Admin um einen neuen.",
   wrong_password: "Das aktuelle Passwort stimmt nicht.",

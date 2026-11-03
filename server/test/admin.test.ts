@@ -23,7 +23,7 @@ const adminRoutes: [string, string, unknown?][] = [
   ["DELETE", "/api/admin/users/1"],
   ["POST", "/api/admin/users/1/password-reset"],
   ["GET", "/api/admin/invites"],
-  ["POST", "/api/admin/invites", { name: "Some One" }],
+  ["POST", "/api/admin/invites", { username: "Some One" }],
   ["DELETE", "/api/admin/invites/1"],
 ];
 
@@ -83,6 +83,25 @@ describe("PATCH /api/admin/users/:id", () => {
     );
   });
 
+  it("refuses a name an open invite has, but allows it once the invite is withdrawn", async () => {
+    const e = await setup();
+    const invited = (
+      await call(e, "POST", "/api/admin/invites", { token: e.admin.token, body: { username: "Samuel Kr." } })
+    ).json<{ id: number }>();
+    const refused = await call(e, "PATCH", `/api/admin/users/${e.friend.id}`, {
+      token: e.admin.token,
+      body: { username: "samuel kr." },
+    });
+    expect(refused.statusCode).toBe(409);
+    expect(refused.json<ApiErrorBody>().code).toBe("username_taken");
+    await call(e, "DELETE", `/api/admin/invites/${invited.id}`, { token: e.admin.token });
+    const ok = await call(e, "PATCH", `/api/admin/users/${e.friend.id}`, {
+      token: e.admin.token,
+      body: { username: "samuel kr." },
+    });
+    expect(ok.statusCode).toBe(200);
+  });
+
   it("refuses a taken name (without case), invalid names and unknown ids", async () => {
     const e = await setup();
     const taken = await call(e, "PATCH", `/api/admin/users/${e.friend.id}`, {
@@ -121,7 +140,7 @@ describe("DELETE /api/admin/users/:id", () => {
 
   it("keeps the invite a deleted admin created", async () => {
     const e = await setup();
-    const created = await call(e, "POST", "/api/admin/invites", { token: e.admin.token, body: { name: "New Friend" } });
+    const created = await call(e, "POST", "/api/admin/invites", { token: e.admin.token, body: { username: "New Friend" } });
     const second = await addUserWithSession(e, "Second Admin", { isAdmin: true });
     const own = createInvite(e.db, { suggestedUsername: "Own", isAdmin: false, createdBy: second.id }, e.clock.now());
     await call(e, "DELETE", `/api/admin/users/${second.id}`, { token: e.admin.token });
@@ -155,7 +174,7 @@ describe("DELETE /api/admin/invites/:id", () => {
     const e = await setup();
     expect((await call(e, "DELETE", "/api/admin/invites/9999", { token: e.admin.token })).statusCode).toBe(404);
     const created = (
-      await call(e, "POST", "/api/admin/invites", { token: e.admin.token, body: { name: "New Friend" } })
+      await call(e, "POST", "/api/admin/invites", { token: e.admin.token, body: { username: "New Friend" } })
     ).json<{ id: number; token: string }>();
     await call(e, "POST", `/api/invites/${created.token}/accept`, {
       body: { username: "New F.", password: "long enough password" },
@@ -173,7 +192,7 @@ describe("secrets in responses", () => {
       await call(e, "GET", "/api/me", { token: e.friend.token }),
       await call(e, "PATCH", "/api/me", { token: e.friend.token, body: { seedColor: "#112233" } }),
       await call(e, "GET", "/api/admin/users", { token: e.admin.token }),
-      await call(e, "POST", "/api/admin/invites", { token: e.admin.token, body: { name: "New Friend" } }),
+      await call(e, "POST", "/api/admin/invites", { token: e.admin.token, body: { username: "New Friend" } }),
       await call(e, "GET", "/api/admin/invites", { token: e.admin.token }),
       await call(e, "POST", `/api/admin/users/${e.friend.id}/password-reset`, { token: e.admin.token }),
       await call(e, "POST", "/api/auth/login", { body: { username: "Vincent R.", password: e.friend.password } }),
