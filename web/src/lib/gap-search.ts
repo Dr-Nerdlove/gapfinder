@@ -309,7 +309,8 @@ export function sanitizeSettings(raw: unknown, today: string): SearchSettings {
     settings.windowStart = SEARCH_DEFAULT_WINDOW.start;
     settings.windowEnd = SEARCH_DEFAULT_WINDOW.end;
   }
-  if (inRange(r["bufferMinutes"], 0, SEARCH_MAX_BUFFER_MINUTES, 15)) settings.bufferMinutes = r["bufferMinutes"];
+  // Older saved searches may hold quarter hours: round them up to the next half hour.
+  if (inRange(r["bufferMinutes"], 0, SEARCH_MAX_BUFFER_MINUTES, 15)) settings.bufferMinutes = Math.ceil(r["bufferMinutes"] / 30) * 30;
   if (inRange(r["days"], 1, SEARCH_MAX_PERIOD_DAYS, 1)) settings.days = r["days"];
   if (r["startWeekday"] === null || isWeekday(r["startWeekday"])) settings.startWeekday = r["startWeekday"] as Weekday | null;
   if (typeof r["range"] === "string" && Object.prototype.hasOwnProperty.call(RANGE_LABELS, r["range"])) {

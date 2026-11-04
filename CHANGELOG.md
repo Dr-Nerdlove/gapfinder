@@ -7,6 +7,9 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- **Buffer in half hours.** "Puffer vor und nach Terminen" in the gap search now offers half-hour steps (none,
+  30 minutes, 1 hour ... 2 hours) instead of quarter hours. A quarter-hour value saved on a device is rounded up to
+  the next half hour.
 - **"Mindestens" in whole hours.** The minimum length in the gap search now offers only full hours (1 hour, 2 hours,
   3 hours ...) instead of half-hour steps. A half-hour value saved on a device is rounded up to the next full hour.
 

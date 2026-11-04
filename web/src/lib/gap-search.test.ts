@@ -163,7 +163,7 @@ describe("what the device remembers", () => {
 
   it("gives back what was saved", () => {
     const storage = new MemoryStorage();
-    const mine = settings({ kind: "days", days: 10, startWeekday: 5, range: "months", fromMonth: "2026-12", toMonth: "2027-01", bufferMinutes: 45 });
+    const mine = settings({ kind: "days", days: 10, startWeekday: 5, range: "months", fromMonth: "2026-12", toMonth: "2027-01", bufferMinutes: 60 });
     saveSettings(mine, storage);
     expect(loadSettings(TODAY, storage)).toEqual(mine);
   });
@@ -181,6 +181,12 @@ describe("what the device remembers", () => {
   it("rounds a saved half-hour duration up to a full hour", () => {
     expect(sanitizeSettings({ durationMinutes: 90 }, TODAY).durationMinutes).toBe(120);
     expect(sanitizeSettings({ durationMinutes: 120 }, TODAY).durationMinutes).toBe(120);
+  });
+
+  it("rounds a saved quarter-hour buffer up to a half hour", () => {
+    expect(sanitizeSettings({ bufferMinutes: 15 }, TODAY).bufferMinutes).toBe(30);
+    expect(sanitizeSettings({ bufferMinutes: 45 }, TODAY).bufferMinutes).toBe(60);
+    expect(sanitizeSettings({ bufferMinutes: 90 }, TODAY).bufferMinutes).toBe(90);
   });
 
   it("keeps each valid value and replaces only the invalid ones", () => {
