@@ -24,6 +24,16 @@ export interface LueckenfuellerPlugin {
   share(o: { title: string; text: string; url: string }): Promise<void>;
   /** Hands a file to another app, e.g. the .ics to the calendar. `base64` is the plain file content, base64 coded. */
   openFile(o: { name: string; mimeType: string; base64: string }): Promise<void>;
+  /**
+   * The phone's Material You colours (Android 12+, API 31+), read from the current theme so they follow the
+   * wallpaper. Each palette maps the shade (`"0"`, `"10"`, `"50"`, `"100"`, ... `"1000"`) to `#rrggbb`. Below
+   * Android 12, or when the phone has none, `available` is false and `palettes` is missing. An older app shell
+   * without this method rejects.
+   */
+  systemColors(): Promise<{
+    available: boolean;
+    palettes?: Record<"accent1" | "accent2" | "accent3" | "neutral1" | "neutral2", Record<string, string>>;
+  }>;
   /** Opens an address in the browser or the matching app; also `webcal:`, `mailto:` and `tel:`. */
   openExternal(o: { url: string }): Promise<void>;
 }

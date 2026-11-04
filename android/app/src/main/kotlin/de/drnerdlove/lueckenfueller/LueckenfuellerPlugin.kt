@@ -97,6 +97,40 @@ class LueckenfuellerPlugin : Plugin() {
         }
     }
 
+    /**
+     * The phone's Material You palettes (Android 12+). Read by name like `android.R.color.system_accent1_600`, so a
+     * colour that a phone lacks drops out instead of failing. Resolved with the activity's theme, which carries
+     * the current wallpaper colours.
+     */
+    @PluginMethod
+    fun systemColors(call: PluginCall) {
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                call.resolve(JSObject().put("available", false))
+                return
+            }
+            val resources = activity.resources
+            val theme = activity.theme
+            val palettes = JSObject()
+            var found = false
+            for (palette in SYSTEM_PALETTES) {
+                val shades = JSObject()
+                for (shade in SYSTEM_SHADES) {
+                    val id = resources.getIdentifier("system_${palette}_$shade", "color", "android")
+                    if (id == 0) continue
+                    shades.put(shade.toString(), String.format("#%06X", 0xFFFFFF and resources.getColor(id, theme)))
+                    found = true
+                }
+                palettes.put(palette, shades)
+            }
+            val answer = JSObject().put("available", found)
+            if (found) answer.put("palettes", palettes)
+            call.resolve(answer)
+        } catch (e: Exception) {
+            call.reject("Die Systemfarben ließen sich nicht lesen.", e)
+        }
+    }
+
     @PluginMethod
     fun share(call: PluginCall) {
         val text = call.getString("text").orEmpty()
@@ -157,6 +191,8 @@ class LueckenfuellerPlugin : Plugin() {
 
     internal companion object {
         const val SHARED_FOLDER = "shared"
+        val SYSTEM_PALETTES = listOf("accent1", "accent2", "accent3", "neutral1", "neutral2")
+        val SYSTEM_SHADES = listOf(0, 10, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000)
         val ALLOWED_SCHEMES = setOf("https", "http", "webcal", "mailto", "tel")
 
         /** A plain file name: no folders, no leading dots, no odd characters. */

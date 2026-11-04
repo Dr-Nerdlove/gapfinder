@@ -187,7 +187,10 @@ missing, with a recommendation, and let the people choose.
   `scripts/android-apk.sh`) checks the synced Capacitor files, runs the Kotlin unit tests and the debug build, and
   on pushes builds a signed test APK (artifact `lueckenfueller-apk`) when the secrets exist. A cloud session builds
   Android with JDK 21 and the SDK installed into the scratchpad as in `docs/android-app.md`, then runs the script;
-  Maven Central sometimes answers 429: `--max-workers=2` and one retry (the script does both).
+  Maven Central sometimes answers 429: `--max-workers=2` and one retry (the script does both). The script refuses
+  to run while files under `android/` are uncommitted (its stale-sync check). CI's `vm-scripts` job runs
+  `shellcheck deploy/vm/*.sh deploy/vm/test/*.sh scripts/*.sh`; a cloud session has no shellcheck, but
+  `pip install --target <scratchpad>/sc shellcheck-py` gives one in `<scratchpad>/sc/bin`.
 - **Release:** On every push to `main`, `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
   image to GHCR (`ghcr.io/dr-nerdlove/lueckenfueller-api`, tags `latest` and `sha-<short>`). The VM updates
   itself hourly from GHCR and rolls back an image that is not healthy (`deploy/vm/update.sh`, guide

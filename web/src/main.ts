@@ -8,10 +8,19 @@ import { navigate } from "./lib/router";
 import { startSession } from "./lib/session.svelte";
 import { loadSeed } from "./lib/session-storage";
 import { startTheme } from "./lib/theme";
+import { createThemeChoice } from "./lib/theme-choice";
+import { watchThemeChoice } from "./lib/theme-state.svelte";
 import { openHashOf } from "./lib/worker-message";
 
-// The last seed colour is applied first, so the right colours show before the server has answered.
-const theme = startTheme(loadSeed());
+// The last colours are applied first, so the right ones show before the server (or the app) has answered: inside
+// the Android app the phone's colours (when available and not switched off), otherwise the last seed colour.
+const colors = createThemeChoice({
+  inApp: isAndroidApp(),
+  read: async () => Lueckenfueller.systemColors(),
+  seed: loadSeed(),
+});
+watchThemeChoice(colors);
+startTheme(colors);
 
 // Inside the Android app, links to other sites open in the browser or the matching app.
 if (isAndroidApp()) {
@@ -22,7 +31,7 @@ if (isAndroidApp()) {
 
 mount(App, { target: document.getElementById("app")! });
 
-void startSession((user) => theme.setSeed(user?.seedColor));
+void startSession((user) => colors.setSeed(user?.seedColor));
 
 // The service worker shows push messages. Only in the real build: in development it would get in the way.
 // Not inside the Android app: it shows its notifications natively.

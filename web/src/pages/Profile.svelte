@@ -8,10 +8,12 @@
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
   import SeedColorPicker from "../components/SeedColorPicker.svelte";
+  import Switch from "../components/Switch.svelte";
   import TextField from "../components/TextField.svelte";
   import { errorMessage } from "../lib/messages";
   import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
+  import { setSystemColorsEnabled, systemColorState } from "../lib/theme-state.svelte";
   import { checkNewPassword } from "../lib/validation";
 
   const user = $derived(sessionState.user);
@@ -74,6 +76,13 @@
     </Card>
 
     <Card title="Farbe">
+      {#if systemColorState.available}
+        <Switch label="Farben vom Handy übernehmen" checked={systemColorState.enabled} onchange={setSystemColorsEnabled} />
+        <p class="note">In der App nutzt Lückenfüller dann die Farben deines Handys. Im Browser gilt deine Profilfarbe.</p>
+        {#if systemColorState.enabled}
+          <p class="note">Die Farbe unten gilt im Browser und in der App, wenn der Schalter aus ist.</p>
+        {/if}
+      {/if}
       <SeedColorPicker value={user.seedColor} disabled={colorBusy || locked} onpick={pickColor} />
       <Message text={colorError} />
     </Card>

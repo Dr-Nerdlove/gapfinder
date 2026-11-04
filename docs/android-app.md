@@ -22,6 +22,22 @@ browser version, and it adds what a web page cannot do on Android: notifications
 - All notifications use one channel, **"Abstimmungen"**. Texts are made in the app, in German time (Europe/Berlin).
 - If the server answers 401 (key gone: logout, password change, switched off elsewhere), the check switches itself off.
 
+## Colours (Material You)
+
+- On Android 12 and newer (API 31+) the app wears the phone's system colours instead of the profile's seed colour.
+  Below Android 12 nothing changes: the seed colour applies and the profile shows no switch.
+- The plugin method `systemColors()` (`LueckenfuellerPlugin.kt`) reads the five palettes `system_accent1`,
+  `system_accent2`, `system_accent3`, `system_neutral1`, `system_neutral2` with 13 shades each (0, 10, 50, 100, 200
+  ... 1000) by resource name, with the activity's theme (so it follows the wallpaper).
+- The web app (`web/src/lib/system-colors.ts`) maps Android shade N to Material tone 100 - N/10 and builds the same
+  colour variables as for a seed colour with the library's `Scheme`, so primary is accent1 shade 600 (light) / 200
+  (dark), the surfaces come from neutral1, outlines from neutral2. Android has no error palette; the error colours
+  are Material's standard red. An incomplete answer (any shade missing) means: seed colour.
+- The profile switch "Farben vom Handy übernehmen" is per device (stored in the app's web storage, on by default).
+  The last palettes are cached there too, so the colours show at start before the plugin has answered. The app
+  reads them again whenever it becomes visible, so a new wallpaper shows when you come back to the app.
+- An older app shell without `systemColors()` simply keeps the seed colour (no error shown).
+
 ## For the owner: the signing key (once)
 
 An Android app's identity is its signature. If the key is lost, no update can be installed over the old app any more:
