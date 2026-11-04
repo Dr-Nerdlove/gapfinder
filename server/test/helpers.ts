@@ -59,7 +59,8 @@ export async function createTestEnv(
 ): Promise<TestEnv> {
   const clock = new TestClock();
   const db = openDatabase(":memory:");
-  const app = await buildApp(testConfig(overrides), { ...options, now: clock.now, db });
+  // Tests never reach a push service; the ones that look at push messages pass their own `sendPush`.
+  const app = await buildApp(testConfig(overrides), { sendPush: async () => {}, ...options, now: clock.now, db });
   return { app, db, clock };
 }
 
