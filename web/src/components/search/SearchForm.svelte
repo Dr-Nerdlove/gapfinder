@@ -106,7 +106,6 @@
                 disabled={searching}
                 onchange={() => togglePerson(person.id)}
               />
-              <span class="dot" style:background={person.seedColor ?? "var(--md-sys-color-primary)"} aria-hidden="true"></span>
               <span class="name">{person.username}</span>
             </label>
           </li>
@@ -268,13 +267,6 @@
     height: 24px;
     margin: 0;
     accent-color: var(--md-sys-color-primary);
-  }
-
-  .dot {
-    flex: none;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
   }
 
   .name {

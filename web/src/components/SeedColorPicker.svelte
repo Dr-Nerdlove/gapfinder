@@ -111,7 +111,23 @@
     padding: 0;
     border: 1px solid var(--md-sys-color-outline);
     border-radius: 50%;
+    overflow: hidden;
     background: transparent;
     cursor: pointer;
+  }
+
+  /* The browser draws the colour as a square inside the field; fill the whole circle with it instead. */
+  input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+  }
+
+  input[type="color"]::-webkit-color-swatch {
+    border: none;
+    border-radius: 50%;
+  }
+
+  input[type="color"]::-moz-color-swatch {
+    border: none;
+    border-radius: 50%;
   }
 </style>
