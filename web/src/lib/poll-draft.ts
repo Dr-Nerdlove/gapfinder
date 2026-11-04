@@ -15,6 +15,7 @@ import { addDays, berlinToday, formatClock, formatDay, type PollPick } from "./g
 
 const MINUTE_MS = 60_000;
 const QUARTER_MS = 15 * MINUTE_MS;
+const HALF_HOUR_MS = 30 * MINUTE_MS;
 const TIME_ZONE = "Europe/Berlin";
 
 // ---------- German wall time → instant ----------
@@ -113,24 +114,27 @@ export type DraftItem =
   | { kind: "timed"; id: string; label: string; gap: Slot; start: string; end: string }
   | { kind: "days"; id: string; label: string; gapFirst: string; gapLast: string; first: string; last: string };
 
-/** Every 15 minutes inside a gap, as instants (`toISOString()`), the first one not before the gap starts. */
-export function quarterInstants(gap: Slot): string[] {
-  const from = Math.ceil(Date.parse(gap.start) / QUARTER_MS) * QUARTER_MS;
-  const to = Math.floor(Date.parse(gap.end) / QUARTER_MS) * QUARTER_MS;
-  const out: string[] = [];
-  for (let t = from; t <= to && out.length < 200; t += QUARTER_MS) out.push(new Date(t).toISOString());
-  return out;
+/**
+ * Every half hour inside a gap, as instants (`toISOString()`), plus the start and the end of the gap themselves
+ * (rounded in to a quarter hour), so a gap that begins at 14:15 can be used completely.
+ */
+export function timeInstants(gap: Slot): string[] {
+  const first = Math.ceil(Date.parse(gap.start) / QUARTER_MS) * QUARTER_MS;
+  const last = Math.floor(Date.parse(gap.end) / QUARTER_MS) * QUARTER_MS;
+  const times = new Set<number>([first, last]);
+  for (let t = Math.ceil(first / HALF_HOUR_MS) * HALF_HOUR_MS; t <= last && times.size < 200; t += HALF_HOUR_MS) times.add(t);
+  return [...times].filter((t) => t >= first && t <= last).sort((x, y) => x - y).map((t) => new Date(t).toISOString());
 }
 
-/** The instants a proposal can start at: all but the last quarter hour of the gap. */
+/** The instants a proposal can start at: all but the last time of the gap. */
 export function startOptions(gap: Slot): string[] {
-  return quarterInstants(gap).slice(0, -1);
+  return timeInstants(gap).slice(0, -1);
 }
 
 /** The instants a proposal that starts at `start` can end at: after the start, at most 24 hours long. */
 export function endOptions(gap: Slot, start: string): string[] {
   const begin = Date.parse(start);
-  return quarterInstants(gap).filter((t) => Date.parse(t) > begin && Date.parse(t) - begin <= POLL_MAX_TIMED_MINUTES * MINUTE_MS);
+  return timeInstants(gap).filter((t) => Date.parse(t) > begin && Date.parse(t) - begin <= POLL_MAX_TIMED_MINUTES * MINUTE_MS);
 }
 
 /** The end after `minutes` from the start, or the last possible end when the gap is shorter. */

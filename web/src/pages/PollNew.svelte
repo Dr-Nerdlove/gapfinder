@@ -105,7 +105,7 @@
             </div>
             <div class="field">
               <label for="deadline-time">Uhrzeit</label>
-              <input id="deadline-time" type="time" step="900" bind:value={deadlineTime} />
+              <input id="deadline-time" type="time" step="1800" bind:value={deadlineTime} />
             </div>
           </div>
         </fieldset>

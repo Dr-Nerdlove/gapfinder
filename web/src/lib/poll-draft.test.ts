@@ -11,7 +11,7 @@ import {
   endOptions,
   instantLabel,
   pollSource,
-  quarterInstants,
+  timeInstants,
   selectionLabel,
   startOptions,
   suggestedEnd,
@@ -108,19 +108,23 @@ describe("choosing free times", () => {
 });
 
 describe("times inside a gap", () => {
-  it("lists every quarter hour, the end included", () => {
-    const options = quarterInstants({ start: "2026-12-12T13:00:00.000Z", end: "2026-12-12T14:00:00.000Z" });
-    expect(options).toEqual([
-      "2026-12-12T13:00:00.000Z",
+  it("lists every half hour, the end included", () => {
+    const options = timeInstants({ start: "2026-12-12T13:00:00.000Z", end: "2026-12-12T14:00:00.000Z" });
+    expect(options).toEqual(["2026-12-12T13:00:00.000Z", "2026-12-12T13:30:00.000Z", "2026-12-12T14:00:00.000Z"]);
+  });
+
+  it("adds the start and the end of a gap that does not sit on a half hour", () => {
+    expect(timeInstants({ start: "2026-12-12T13:15:00.000Z", end: "2026-12-12T14:45:00.000Z" })).toEqual([
       "2026-12-12T13:15:00.000Z",
       "2026-12-12T13:30:00.000Z",
-      "2026-12-12T13:45:00.000Z",
       "2026-12-12T14:00:00.000Z",
+      "2026-12-12T14:30:00.000Z",
+      "2026-12-12T14:45:00.000Z",
     ]);
   });
 
-  it("starts at the first quarter after a gap that begins in between", () => {
-    expect(quarterInstants({ start: "2026-12-12T13:07:00.000Z", end: "2026-12-12T13:40:00.000Z" })).toEqual([
+  it("rounds a gap that begins in between to the next quarter hour", () => {
+    expect(timeInstants({ start: "2026-12-12T13:07:00.000Z", end: "2026-12-12T13:40:00.000Z" })).toEqual([
       "2026-12-12T13:15:00.000Z",
       "2026-12-12T13:30:00.000Z",
     ]);
@@ -129,13 +133,13 @@ describe("times inside a gap", () => {
   it("cannot start at the very end of the gap", () => {
     const starts = startOptions(gap);
     expect(starts[0]).toBe("2026-12-12T13:00:00.000Z");
-    expect(starts[starts.length - 1]).toBe("2026-12-12T21:45:00.000Z");
+    expect(starts[starts.length - 1]).toBe("2026-12-12T21:30:00.000Z");
   });
 
   it("ends after the start and at most 24 hours later", () => {
     const long: Slot = { start: "2026-12-12T00:00:00.000Z", end: "2026-12-14T00:00:00.000Z" };
     const ends = endOptions(long, "2026-12-12T00:00:00.000Z");
-    expect(ends[0]).toBe("2026-12-12T00:15:00.000Z");
+    expect(ends[0]).toBe("2026-12-12T00:30:00.000Z");
     expect(ends[ends.length - 1]).toBe("2026-12-13T00:00:00.000Z");
   });
 

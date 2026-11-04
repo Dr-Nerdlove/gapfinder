@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- Creating a poll: start and end of a proposal are offered in half-hour steps, plus the start and the end of the free
+  time itself (so a free time from 14:15 can still be used completely). The deadline time of a poll is offered in
+  half hours as well. The server still accepts quarter hours, so existing polls are not affected.
+
 ## [1.5.1] - 2026-11-04
 
 The gap search has shorter, clearer lists: "Mindestens" offers whole hours, and the buffer and the time window
