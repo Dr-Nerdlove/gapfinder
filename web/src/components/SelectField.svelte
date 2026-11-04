@@ -32,6 +32,7 @@
   }
 
   label {
+    margin-block: auto;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
