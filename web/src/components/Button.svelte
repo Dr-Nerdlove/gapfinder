@@ -50,6 +50,7 @@
   .tonal {
     background: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
+    border: 1px solid var(--md-sys-color-outline);
   }
 
   .text {

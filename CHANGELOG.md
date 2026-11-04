@@ -7,6 +7,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- **Tidier start page.** "Lücken suchen" now spans the whole width, and the other places (Meine Abstimmungen,
+  Kalender, Profil, Einführung) are listed below it as a menu with an arrow. Admins find "Verwaltung" in its own
+  section "Nur für Admins".
+- **Secondary buttons are easier to see.** Buttons such as "Abmelden" or "Erneut versuchen" now have a light border,
+  also in dark mode.
 - **Selected buttons are easier to see.** Chosen options (for example "Stunden", weekdays, "30 Tage", and the answers
   when voting) are now filled in the app's main colour and show a check mark, also in dark mode.
 
