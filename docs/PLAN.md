@@ -394,9 +394,12 @@ app) below.
       in the app registers the phone (`POST /api/app-devices`) and gets a key that can only read the
       notification list (`GET /api/app-notifications`, key in the `X-Device-Key` header, never in the URL). Only
       its hash is stored. It is deleted when the device is switched off, at logout, whenever the user's sessions
-      are ended (password change or reset) and with the account; an unused key goes after 90 days. A lost phone
-      then gives no access to polls, votes or calendars. The first answer names the newest notification, so a
-      newly switched on phone does not show the last 7 days.
+      are ended (password change or reset) and with the account; an unused key goes after 90 days. Why not the
+      login token: a check every 15 minutes would keep the login alive forever (it expires only after days
+      without use), and the check could go on with a stale login after a logout it missed; the key ends cleanly
+      instead and gives the background check no more rights than it needs. It does **not** protect a lost phone:
+      the app itself stays logged in there, like a browser does. The first answer names the newest
+      notification, so a newly switched on phone does not show the last 7 days.
     - **Signing key:** made by the owner inside the VM with one `docker run` command (keytool), then put into
       two GitHub secrets. It never passes through a chat or the repository.
     - **Update:** every release has its APK, but the app offers an update only when the Android shell itself
