@@ -41,8 +41,8 @@
     const minutes = (i + 1) * 60;
     return { value: String(minutes), label: durationLabel(minutes) };
   });
-  const clocks = Array.from({ length: 96 }, (_, i) => {
-    const value = `${String(Math.floor(i / 4)).padStart(2, "0")}:${String((i % 4) * 15).padStart(2, "0")}`;
+  const clocks = Array.from({ length: 48 }, (_, i) => {
+    const value = `${String(Math.floor(i / 2)).padStart(2, "0")}:${String((i % 2) * 30).padStart(2, "0")}`;
     return { value, label: `${value} Uhr` };
   });
   const buffers = Array.from({ length: SEARCH_MAX_BUFFER_MINUTES / 30 + 1 }, (_, i) => {

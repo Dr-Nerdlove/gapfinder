@@ -286,6 +286,12 @@ export function defaultSettings(today: string): SearchSettings {
 }
 
 const isClock = (v: unknown): v is string => typeof v === "string" && /^(?:[01]\d|2[0-3]):(?:00|15|30|45)$/.test(v);
+/** Rounds a clock time to a half hour, down or up (23:45 up is 00:00). */
+function roundClock(clock: string, direction: "down" | "up"): string {
+  const minutes = Number(clock.slice(0, 2)) * 60 + Number(clock.slice(3));
+  const rounded = ((direction === "down" ? Math.floor(minutes / 30) : Math.ceil(minutes / 30)) * 30) % (24 * 60);
+  return `${String(Math.floor(rounded / 60)).padStart(2, "0")}:${String(rounded % 60).padStart(2, "0")}`;
+}
 const isMonth = (v: unknown): v is string => typeof v === "string" && MONTH_PATTERN.test(v) && Number(v.slice(5)) >= 1 && Number(v.slice(5)) <= 12;
 const isWeekday = (v: unknown): v is Weekday => typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 7;
 const inRange = (v: unknown, min: number, max: number, step: number): v is number =>
@@ -303,8 +309,9 @@ export function sanitizeSettings(raw: unknown, today: string): SearchSettings {
   if (Array.isArray(r["weekdays"])) settings.weekdays = ALL_WEEKDAYS.filter((day) => (r["weekdays"] as unknown[]).includes(day));
   // Older saved searches may hold half hours: round them up to the next full hour.
   if (inRange(r["durationMinutes"], 30, SEARCH_MAX_DURATION_MINUTES, 30)) settings.durationMinutes = Math.ceil(r["durationMinutes"] / 60) * 60;
-  if (isClock(r["windowStart"])) settings.windowStart = r["windowStart"];
-  if (isClock(r["windowEnd"])) settings.windowEnd = r["windowEnd"];
+  // Older saved searches may hold quarter hours: widen the window to the half hours around it.
+  if (isClock(r["windowStart"])) settings.windowStart = roundClock(r["windowStart"], "down");
+  if (isClock(r["windowEnd"])) settings.windowEnd = roundClock(r["windowEnd"], "up");
   if (settings.windowStart === settings.windowEnd) {
     settings.windowStart = SEARCH_DEFAULT_WINDOW.start;
     settings.windowEnd = SEARCH_DEFAULT_WINDOW.end;
