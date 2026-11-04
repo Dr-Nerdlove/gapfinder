@@ -7,6 +7,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- **Time window in half hours.** "Zeitfenster von" and "bis" in the gap search now offer half-hour steps instead of
+  quarter hours. A quarter-hour window saved on a device is widened to the half hours around it (18:15–22:45
+  becomes 18:00–23:00).
+- **Buffer in half hours.** "Puffer vor und nach Terminen" in the gap search now offers half-hour steps (none,
+  30 minutes, 1 hour ... 2 hours) instead of quarter hours. A quarter-hour value saved on a device is rounded up to
+  the next half hour.
 - **"Mindestens" in whole hours.** The minimum length in the gap search now offers only full hours (1 hour, 2 hours,
   3 hours ...) instead of half-hour steps. A half-hour value saved on a device is rounded up to the next full hour.
 

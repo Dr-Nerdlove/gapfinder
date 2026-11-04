@@ -211,7 +211,7 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   - Settled with the owner before building: results are **not stored** (a poll in phase 4 is made from chosen
     results; the device remembers the last search settings); each day shows all its free windows that are long
     enough, with the buffer already taken off, and today only from now on; the time window may **cross
-    midnight** (20:00–02:00 belongs to the day it starts); duration in whole hours (the API still accepts half hours); buffer 0–2 hours, only for
+    midnight** (20:00–02:00 belongs to the day it starts); time window in half hours and duration in whole hours (the API still accepts quarter and half hours); buffer 0–2 hours in half hours (the API still accepts quarter hours), only for
     weekdays + duration (in a multi-day search the whole day is empty anyway); search range at most a year;
     at most 50 people per search and 30 searches per person every 15 minutes. A new list of all accounts (only
     username and colour) is visible to everyone with an account.

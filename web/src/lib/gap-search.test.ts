@@ -163,7 +163,7 @@ describe("what the device remembers", () => {
 
   it("gives back what was saved", () => {
     const storage = new MemoryStorage();
-    const mine = settings({ kind: "days", days: 10, startWeekday: 5, range: "months", fromMonth: "2026-12", toMonth: "2027-01", bufferMinutes: 45 });
+    const mine = settings({ kind: "days", days: 10, startWeekday: 5, range: "months", fromMonth: "2026-12", toMonth: "2027-01", bufferMinutes: 60 });
     saveSettings(mine, storage);
     expect(loadSettings(TODAY, storage)).toEqual(mine);
   });
@@ -181,6 +181,21 @@ describe("what the device remembers", () => {
   it("rounds a saved half-hour duration up to a full hour", () => {
     expect(sanitizeSettings({ durationMinutes: 90 }, TODAY).durationMinutes).toBe(120);
     expect(sanitizeSettings({ durationMinutes: 120 }, TODAY).durationMinutes).toBe(120);
+  });
+
+  it("widens a saved quarter-hour window to the half hours around it", () => {
+    const widened = sanitizeSettings({ windowStart: "18:15", windowEnd: "22:45" }, TODAY);
+    expect([widened.windowStart, widened.windowEnd]).toEqual(["18:00", "23:00"]);
+    const late = sanitizeSettings({ windowStart: "20:45", windowEnd: "23:45" }, TODAY);
+    expect([late.windowStart, late.windowEnd]).toEqual(["20:30", "00:00"]);
+    const kept = sanitizeSettings({ windowStart: "17:30", windowEnd: "21:00" }, TODAY);
+    expect([kept.windowStart, kept.windowEnd]).toEqual(["17:30", "21:00"]);
+  });
+
+  it("rounds a saved quarter-hour buffer up to a half hour", () => {
+    expect(sanitizeSettings({ bufferMinutes: 15 }, TODAY).bufferMinutes).toBe(30);
+    expect(sanitizeSettings({ bufferMinutes: 45 }, TODAY).bufferMinutes).toBe(60);
+    expect(sanitizeSettings({ bufferMinutes: 90 }, TODAY).bufferMinutes).toBe(90);
   });
 
   it("keeps each valid value and replaces only the invalid ones", () => {
