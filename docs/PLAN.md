@@ -384,6 +384,11 @@ app) below.
     of the owner's Game Night project, with the fingerprint check). The app updates itself like Marvel Remix:
     it offers a newer version, keeps a downloaded APK until it is installed (so a cancelled "install unknown
     apps" prompt does not mean downloading again), and deletes older ones.
+  - Where the update comes from (decided by the owner on 2026-11-04): the app downloads it directly from the
+    latest GitHub release (the repository is public), not from the own server. The home server stays out of
+    it: no new route, nothing to change in the firewall. Every release has its APK attached.
+  - On the phone only the newest downloaded APK is kept until it is installed; older ones are deleted
+    (decided by the owner on 2026-11-04).
 
 ### Look
 
@@ -420,7 +425,7 @@ phase in brackets.
 5. **Fixing and sending the date** (Sonnet): re-check, `.ics`, add-to-calendar buttons, personal feed.
 6. **Notifications** (Opus to plan, Sonnet for the steps): 6a server (stored notifications, settings,
    Web Push, reminder), 6b screens (profile card, reminder button, service worker, privacy page).
-7. **Android app** (Opus): Capacitor shell, background check, self-update, APK in the release.
+7. **Android app** (Opus): Capacitor shell, background check, self-update (loads from the latest GitHub release), APK in the release.
 8. **Optional later:** direct Google/Outlook connection, offline vote queue.
 
 ## Server updates
