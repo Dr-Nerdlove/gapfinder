@@ -1,0 +1,98 @@
+{
+  "texts": [
+    {
+      "name": "poll created",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "poll_created",
+        "actorName": "Anna"
+      },
+      "expected": {
+        "title": "Neue Abstimmung: Grillen",
+        "body": "Anna fragt, wann du Zeit hast. Stimm jetzt ab.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:poll_created"
+      }
+    },
+    {
+      "name": "vote",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "vote",
+        "actorName": "Anna"
+      },
+      "expected": {
+        "title": "Grillen",
+        "body": "Anna hat abgestimmt.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:vote"
+      }
+    },
+    {
+      "name": "all voted",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "all_voted",
+        "actorName": "Ben"
+      },
+      "expected": {
+        "title": "Alle haben abgestimmt: Grillen",
+        "body": "Zuletzt hat Ben abgestimmt.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:all_voted"
+      }
+    },
+    {
+      "name": "reminder",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "reminder",
+        "actorName": "Anna"
+      },
+      "expected": {
+        "title": "Erinnerung: Grillen",
+        "body": "Anna bittet dich, abzustimmen.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:reminder"
+      }
+    },
+    {
+      "name": "date fixed",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "date_fixed",
+        "actorName": "Anna",
+        "proposal": {
+          "id": 1,
+          "start": "2026-12-12T13:00:00.000Z",
+          "end": "2026-12-12T16:00:00.000Z"
+        }
+      },
+      "expected": {
+        "title": "Termin steht: Grillen",
+        "body": "Anna hat den Termin festgelegt: Sa 12.12., 14:00–17:00.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:date_fixed"
+      }
+    }
+  ],
+  "targets": [
+    {
+      "name": "poll under the scope",
+      "shareToken": "a b",
+      "scope": "https://x.github.io/app/",
+      "url": "https://x.github.io/app/#/abstimmung/a%20b"
+    },
+    {
+      "name": "no poll",
+      "shareToken": null,
+      "scope": "https://x.github.io/app/",
+      "url": "https://x.github.io/app/"
+    }
+  ]
+}

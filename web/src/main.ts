@@ -1,6 +1,8 @@
 import { mount } from "svelte";
 import App from "./App.svelte";
 import "./app.css";
+import { installExternalLinks } from "./lib/external-links";
+import { Lueckenfueller, isAndroidApp } from "./lib/native";
 import { WORKER_SCOPE, WORKER_URL } from "./lib/push";
 import { navigate } from "./lib/router";
 import { startSession } from "./lib/session.svelte";
@@ -10,6 +12,13 @@ import { openHashOf } from "./lib/worker-message";
 
 // The last seed colour is applied first, so the right colours show before the server has answered.
 const theme = startTheme(loadSeed());
+
+// Inside the Android app, links to other sites open in the browser or the matching app.
+if (isAndroidApp()) {
+  installExternalLinks(document, () => window.location.href, (url) => {
+    void Lueckenfueller.openExternal({ url }).catch(() => undefined);
+  });
+}
 
 mount(App, { target: document.getElementById("app")! });
 

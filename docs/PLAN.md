@@ -389,6 +389,29 @@ app) below.
     it: no new route, nothing to change in the firewall. Every release has its APK attached.
   - On the phone only the newest downloaded APK is kept until it is installed; older ones are deleted
     (decided by the owner on 2026-11-04).
+  - Further decisions (owner, 2026-11-04, all recommendations taken):
+    - **Login of the background check:** its own **device key**, not the login token. Switching notifications on
+      in the app registers the phone (`POST /api/app-devices`) and gets a key that can only read the
+      notification list (`GET /api/app-notifications`, key in the `X-Device-Key` header, never in the URL). Only
+      its hash is stored. It is deleted when the device is switched off, at logout, whenever the user's sessions
+      are ended (password change or reset) and with the account; an unused key goes after 90 days. Why not the
+      login token: a check every 15 minutes would keep the login alive forever (it expires only after days
+      without use), and the check could go on with a stale login after a logout it missed; the key ends cleanly
+      instead and gives the background check no more rights than it needs. It does **not** protect a lost phone:
+      the app itself stays logged in there, like a browser does. The first answer names the newest
+      notification, so a newly switched on phone does not show the last 7 days.
+    - **Signing key:** made by the owner inside the VM with one `docker run` command (keytool), then put into
+      two GitHub secrets. It never passes through a chat or the repository.
+    - **Update:** every release has its APK, but the app offers an update only when the Android shell itself
+      changed (its own shell version, not the app version), because the content comes from GitHub Pages anyway.
+    - **Three pull requests:** 7a server and web app (device key, the app's notification switch, share, `.ics`
+      and calendar buttons through Android), 7b the Android app (shell, background check, signing, APK in the
+      release), 7c self-update.
+    - The Android project (`android/`) is kept in the repository, not generated in every build as in Game Night,
+      because it carries own native code (background check, update).
+    - Inside the app, "Teilen", ".ics herunterladen" and links to other sites (Google/Outlook, `webcal://`)
+      go through the Android app (`web/src/lib/native.ts`), because the Android web view cannot share, download
+      or open other apps on its own. In the browser nothing changes.
 
 ### Look
 
@@ -425,7 +448,9 @@ phase in brackets.
 5. **Fixing and sending the date** (Sonnet): re-check, `.ics`, add-to-calendar buttons, personal feed.
 6. **Notifications** (Opus to plan, Sonnet for the steps): 6a server (stored notifications, settings,
    Web Push, reminder), 6b screens (profile card, reminder button, service worker, privacy page).
-7. **Android app** (Opus): Capacitor shell, background check, self-update (loads from the latest GitHub release), APK in the release.
+7. **Android app** (Opus to plan, Sonnet for the steps): 7a server and web app (device key, notification switch
+   and share, `.ics` and links through the app), 7b Capacitor shell, background check, signing, APK in the release,
+   7c self-update (loads from the latest GitHub release).
 8. **Optional later:** direct Google/Outlook connection, offline vote queue.
 
 ## Server updates

@@ -78,6 +78,16 @@ export interface PushUnsubscribeRequest {
   endpoint: string;
 }
 
+/** Answer to registering a phone with the Android app: its key (shown once) and where to start reading. */
+export interface AppDeviceRegistered {
+  deviceKey: string;
+  lastNotificationId: number;
+}
+
+export interface AppDeviceRemoveRequest {
+  deviceKey: string;
+}
+
 /** `GET /api/notifications?after=<id>` (login): the caller's own notifications newer than `after`, oldest first, at most 100. */
 export interface NotificationList {
   items: NotificationItem[];

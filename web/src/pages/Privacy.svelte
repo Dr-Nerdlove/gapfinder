@@ -39,6 +39,11 @@
         und dessen Schlüssel. Das bleibt, bis du sie auf dem Gerät ausschaltest, dich dort abmeldest, der Browser das Gerät als nicht mehr
         erreichbar meldet oder dein Konto gelöscht wird.
       </li>
+      <li>
+        Nutzt du die Android-App, speichert der Server für jedes Handy einen Geräteschlüssel, aber nur dessen Prüfwert, nicht den Schlüssel
+        selbst. Er gilt nur zum Abholen deiner Benachrichtigungen und wird gelöscht, wenn du sie auf diesem Handy ausschaltest, dich dort
+        abmeldest, dein Passwort änderst oder das Handy 90 Tage nicht benutzt wurde.
+      </li>
       <li>Deine Einstellungen für Benachrichtigungen, also welche du bekommen willst.</li>
       <li>
         Jede Benachrichtigung wird 7 Tage für dich aufbewahrt (für die spätere Android-App) und dann gelöscht.

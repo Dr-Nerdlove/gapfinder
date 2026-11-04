@@ -1,6 +1,7 @@
 import { SESSION_VALID_DAYS } from "@lueckenfueller/shared";
 import type { DatabaseSync } from "node:sqlite";
 import { generateToken, hashToken } from "../auth/tokens.js";
+import { removeAppDevicesOfUser } from "../notifications/app-devices.js";
 import { addDays, ONE_HOUR_MS } from "../time.js";
 import type { UserRow } from "./users.js";
 
@@ -49,8 +50,9 @@ export function deleteSession(db: DatabaseSync, tokenHash: string): void {
   db.prepare("DELETE FROM sessions WHERE token_hash = ?").run(tokenHash);
 }
 
-/** Ends all sessions of a user, except the one with `keepTokenHash` when given. */
+/** Ends all sessions of a user, except the one with `keepTokenHash` when given. The user's app devices end too. */
 export function deleteSessionsOfUser(db: DatabaseSync, userId: number, keepTokenHash?: string): void {
+  removeAppDevicesOfUser(db, userId);
   if (keepTokenHash === undefined) {
     db.prepare("DELETE FROM sessions WHERE user_id = ?").run(userId);
   } else {

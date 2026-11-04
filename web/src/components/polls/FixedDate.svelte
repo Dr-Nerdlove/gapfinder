@@ -3,6 +3,8 @@
   import * as api from "../../lib/api";
   import { eventOf, googleCalendarUrl, outlookCalendarUrl } from "../../lib/fix-date";
   import { errorMessage } from "../../lib/messages";
+  import { Lueckenfueller, isAndroidApp } from "../../lib/native";
+  import { deliverIcs } from "../../lib/native-actions";
   import { proposalLabel } from "../../lib/poll-view";
   import Button from "../Button.svelte";
   import Message from "../Message.svelte";
@@ -20,7 +22,18 @@
   let downloading = $state(false);
   let problem = $state("");
 
-  /** Fetches the file in the app (so a sleeping server shows a message) and hands it to the browser. */
+  function downloadInBrowser(text: string): void {
+    const url = URL.createObjectURL(new Blob([text], { type: "text/calendar" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "termin.ics";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  /** Fetches the file in the app (so a sleeping server shows a message) and hands it to the browser (or, in the Android app, to the calendar). */
   async function download(): Promise<void> {
     downloading = true;
     problem = "";
@@ -30,14 +43,11 @@
       problem = errorMessage(result);
       return;
     }
-    const url = URL.createObjectURL(new Blob([result.data], { type: "text/calendar" }));
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = "termin.ics";
-    document.body.append(link);
-    link.click();
-    link.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 10000);
+    try {
+      await deliverIcs({ isApp: isAndroidApp(), app: Lueckenfueller, download: downloadInBrowser }, result.data);
+    } catch {
+      problem = "Die Datei konnte nicht geöffnet werden. Versuche es noch einmal.";
+    }
   }
 </script>
 

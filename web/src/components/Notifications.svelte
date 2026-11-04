@@ -2,7 +2,10 @@
   import type { NotificationSettings } from "@lueckenfueller/shared";
   import { onMount } from "svelte";
   import * as api from "../lib/api";
+  import { APP_BLOCKED_TEXT, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "../lib/app-device";
+  import { API_URL } from "../lib/config";
   import { errorMessage } from "../lib/messages";
+  import { Lueckenfueller, isAndroidApp } from "../lib/native";
   import {
     PUSH_UNAVAILABLE_TEXT,
     SETTING_LABELS,
@@ -28,8 +31,9 @@
   import Message from "./Message.svelte";
   import Switch from "./Switch.svelte";
 
-  type Device = "checking" | "on" | "off" | "blocked" | "ios-home-screen" | "ios-too-old" | "unsupported";
+  type Device = "checking" | "on" | "off" | "blocked" | "ios-home-screen" | "ios-too-old" | "unsupported" | "app-failed";
 
+  const inApp = isAndroidApp();
   const locked = $derived(sessionState.offline);
   const swNavigator = navigator as unknown as ServiceWorkerNavigator;
   const blockedText = blockedHelpText(platformOf(navigator.userAgent, navigator.maxTouchPoints));
@@ -49,6 +53,14 @@
 
   /** Looks at this browser: support, permission and an existing subscription. */
   async function loadDevice(): Promise<void> {
+    if (inApp) {
+      try {
+        device = appDeviceState(await Lueckenfueller.notificationStatus());
+      } catch {
+        device = "app-failed";
+      }
+      return;
+    }
     const support = pushSupport(detectEnv(navigator, window));
     if (support !== "supported") {
       device = support;
@@ -80,12 +92,19 @@
     if (deviceBusy) return;
     deviceBusy = true;
     deviceProblem = "";
-    const result = await turnDeviceOn({
-      requestPermission: () => Notification.requestPermission(),
-      registerWorker,
-      getPublicKey: () => session.run((o) => api.getPushPublicKey(o)),
-      subscribeOnServer: (body) => session.run((o) => api.subscribePush(body, o)),
-    });
+    const result = inApp
+      ? await turnAppDeviceOn({
+          apiUrl: API_URL,
+          register: () => session.run((o) => api.registerAppDevice(o)),
+          remove: (body) => session.run((o) => api.deleteAppDevice(body, o)),
+          enable: (o) => Lueckenfueller.enableNotifications(o),
+        })
+      : await turnDeviceOn({
+          requestPermission: () => Notification.requestPermission(),
+          registerWorker,
+          getPublicKey: () => session.run((o) => api.getPushPublicKey(o)),
+          subscribeOnServer: (body) => session.run((o) => api.subscribePush(body, o)),
+        });
     deviceBusy = false;
     if (result.ok) {
       device = "on";
@@ -106,10 +125,15 @@
     if (deviceBusy) return;
     deviceBusy = true;
     deviceProblem = "";
-    const result = await turnDeviceOff({
-      currentSubscription: () => browserSubscription(swNavigator) as Promise<SubscriptionLike | null>,
-      unsubscribeOnServer: (body) => session.run((o) => api.unsubscribePush(body, o)),
-    });
+    const result = inApp
+      ? await turnAppDeviceOff({
+          disable: () => Lueckenfueller.disableNotifications(),
+          remove: (body) => session.run((o) => api.deleteAppDevice(body, o)),
+        })
+      : await turnDeviceOff({
+          currentSubscription: () => browserSubscription(swNavigator) as Promise<SubscriptionLike | null>,
+          unsubscribeOnServer: (body) => session.run((o) => api.unsubscribePush(body, o)),
+        });
     deviceBusy = false;
     // The browser is always switched off; only the server may have missed it.
     device = "off";
@@ -160,7 +184,12 @@
       {:else if device === "off"}
         <div><Button disabled={deviceBusy || locked} onclick={turnOn}>Auf diesem Gerät einschalten</Button></div>
       {:else if device === "blocked"}
-        <p>Benachrichtigungen sind für Lückenfüller gesperrt. {blockedText}</p>
+        {#if inApp}
+          <p>{APP_BLOCKED_TEXT}</p>
+          <div><Button variant="tonal" onclick={loadDevice}>Erneut prüfen</Button></div>
+        {:else}
+          <p>Benachrichtigungen sind für Lückenfüller gesperrt. {blockedText}</p>
+        {/if}
       {:else if device === "ios-home-screen"}
         <p>
           Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: In Safari auf „Teilen“ tippen, dann „Zum
@@ -168,6 +197,8 @@
         </p>
       {:else if device === "ios-too-old"}
         <p>Dafür braucht dein iPhone mindestens iOS 16.4.</p>
+      {:else if device === "app-failed"}
+        <p>Benachrichtigungen konnten auf diesem Handy nicht geprüft werden. Starte die App neu und versuche es noch einmal.</p>
       {:else}
         <p>Dieser Browser kann keine Benachrichtigungen empfangen.</p>
       {/if}
