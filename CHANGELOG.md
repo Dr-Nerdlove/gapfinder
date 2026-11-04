@@ -5,6 +5,18 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Calendar subscription shows German time.** The "Lückenfüller" calendar feed now names Europe/Berlin as its time
+  zone, so apps like Google Calendar no longer show it as UTC. The times of the events were already right and do not
+  change.
+- **Own colour in the profile is a filled circle** instead of a square inside a circle.
+
+### Changed
+
+- **No colour dots in "Wer kommt mit?".** The dots only repeated each friend's profile colour and had no meaning in
+  the search, so they are gone.
+
 ## [1.3.0] - 2026-11-04
 
 New users now get a short guided tour on the start page after their first login on a device; it can be opened

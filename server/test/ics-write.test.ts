@@ -97,13 +97,14 @@ describe("writeCalendar", () => {
     ]);
   });
 
-  it("adds the name and the refresh hints only for the feed", () => {
+  it("adds the name, time zone and refresh hints only for the feed", () => {
     const feed = linesOf(writeCalendar([], { feed: true }));
     expect(feed).toContain("X-WR-CALNAME:Lückenfüller");
+    expect(feed).toContain("X-WR-TIMEZONE:Europe/Berlin");
     expect(feed).toContain("REFRESH-INTERVAL;VALUE=DURATION:PT1H");
     expect(feed).toContain("X-PUBLISHED-TTL:PT1H");
     const single = writeCalendar([timed], { feed: false });
-    expect(single).not.toMatch(/X-WR-CALNAME|REFRESH-INTERVAL|X-PUBLISHED-TTL/);
+    expect(single).not.toMatch(/X-WR-CALNAME|X-WR-TIMEZONE|REFRESH-INTERVAL|X-PUBLISHED-TTL/);
   });
 
   it("writes an empty feed as a valid calendar without events", () => {
