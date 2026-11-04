@@ -13,7 +13,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 ### Fixed
 
 - **Fields side by side line up.** In the gap search, the "Mindestens" field now sits at the same height as the
-  "Puffer vor und nach Terminen" field, even when a label takes two lines.
+  "Puffer vor und nach Terminen" field, and the short label is centred next to the two-line one.
 
 ## [1.4.0] - 2026-11-04
 

@@ -32,13 +32,13 @@
   }
 
   label {
+    margin-block: auto;
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
   }
 
   select {
-    margin-top: auto;
     min-height: 48px;
     padding: 0 12px;
     border: 1px solid var(--md-sys-color-outline);
