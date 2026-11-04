@@ -3,6 +3,7 @@
   import * as api from "../lib/api";
   import Button from "../components/Button.svelte";
   import Card from "../components/Card.svelte";
+  import MenuItem from "../components/MenuItem.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import ServerStatus from "../components/ServerStatus.svelte";
   import Tour from "../components/Tour.svelte";
@@ -76,15 +77,22 @@
 <div class="stack">
   {#if sessionState.user}
     <Card title="Hallo {sessionState.user.username}">
-      <div class="actions">
-        <Button href="#/suche">Lücken suchen</Button>
-        <Button variant="tonal" href="#/abstimmungen">Meine Abstimmungen</Button>
-        <Button variant="tonal" href="#/kalender">Kalender</Button>
-        <Button variant="tonal" href="#/profil">Profil</Button>
-        <Button variant="tonal" onclick={() => (tourOpen = true)}>Einführung</Button>
-        {#if sessionState.user.isAdmin}
-          <Button variant="tonal" href="#/verwaltung">Verwaltung</Button>
-        {/if}
+      <div class="menu-card">
+        <Button href="#/suche" full>Lücken suchen</Button>
+        <nav aria-label="Menü">
+          <ul class="menu">
+            <li><MenuItem label="Meine Abstimmungen" href="#/abstimmungen" /></li>
+            <li><MenuItem label="Kalender" href="#/kalender" /></li>
+            <li><MenuItem label="Profil" href="#/profil" /></li>
+            <li><MenuItem label="Einführung" onclick={() => (tourOpen = true)} /></li>
+          </ul>
+          {#if sessionState.user.isAdmin}
+            <p class="admin-label">Nur für Admins</p>
+            <ul class="menu">
+              <li><MenuItem label="Verwaltung" href="#/verwaltung" /></li>
+            </ul>
+          {/if}
+        </nav>
       </div>
     </Card>
     {#if calendarList && calendarList.calendars.length === 0}
@@ -145,6 +153,33 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
+  }
+
+  .menu-card,
+  nav {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .menu {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    border: 1px solid var(--md-sys-color-outline);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .menu li + li {
+    border-top: 1px solid var(--md-sys-color-outline);
+  }
+
+  .admin-label {
+    margin: 0 0 -4px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--md-sys-color-on-surface-variant);
   }
 
   .actions {
