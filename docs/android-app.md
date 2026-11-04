@@ -1,0 +1,90 @@
+# Android app
+
+The Android app is a thin shell around the web app, made with [Capacitor](https://capacitorjs.com/) (project in
+`android/`, Kotlin for the native parts). It loads the live app from GitHub Pages, so it is always as current as the
+browser version, and it adds what a web page cannot do on Android: notifications from a background check, sharing, the
+`.ics` download and opening other apps. Decisions and reasons: [`PLAN.md`](PLAN.md), "Android app (phase 7)".
+
+- App id `de.drnerdlove.lueckenfueller`; version number = the root `package.json` (`versionCode` = major * 10000 +
+  minor * 100 + patch).
+- Capacitor documents `server.url` as "not intended for use in production". We use it deliberately (decided
+  2026-11-04) so the content never needs a new APK; `server.errorPath` shows `android-www/offline.html` when the page
+  cannot be loaded (no network, GitHub down).
+- The web app does not register its service worker inside the app; the app has its own notification path.
+
+## Background check and notifications
+
+- Switching notifications on in the app registers the phone with the server and stores a device key (it can only
+  read the notification list).
+- Android's WorkManager runs the check about every **15 minutes**; when the phone has been idle for long, Android
+  delays it. A notification can therefore arrive up to ~15 minutes late, or later.
+- The home server is off from 01:00 to 07:00: the check just fails quietly and tries again later.
+- All notifications use one channel, **"Abstimmungen"**. Texts are made in the app, in German time (Europe/Berlin).
+- If the server answers 401 (key gone: logout, password change, switched off elsewhere), the check switches itself off.
+
+## For the owner: the signing key (once)
+
+An Android app's identity is its signature. If the key is lost, no update can be installed over the old app any more:
+everybody has to uninstall and reinstall. So: **never put the key into the repository, never replace it** unless
+it has to be, and keep your own copy.
+
+1. Open a shell in the VM and make the key in a folder only root can read:
+
+   ```sh
+   sudo install -d -m 700 /root/signing && cd /root/signing
+   sudo docker run --rm -it -v /root/signing:/work -w /work eclipse-temurin:21-jdk \
+     keytool -genkeypair -keystore lueckenfueller.keystore -storetype PKCS12 -alias lueckenfueller \
+     -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Lueckenfueller"
+   ```
+
+   It asks for a password twice. Use a long one; the store and the key share it (PKCS12).
+2. Print what you need. The first command asks for the password and shows the certificate: the fingerprint is the
+   line that starts with `SHA256:`. The second prints the keystore as one long line:
+
+   ```sh
+   sudo docker run --rm -it -v /root/signing:/work -w /work eclipse-temurin:21-jdk \
+     keytool -list -v -keystore lueckenfueller.keystore -alias lueckenfueller
+   sudo base64 -w0 /root/signing/lueckenfueller.keystore; echo
+   ```
+
+3. On GitHub: **Settings, Secrets and variables, Actions, New repository secret**:
+   `ANDROID_KEYSTORE_BASE64` = the long line, `ANDROID_KEYSTORE_PASSWORD` = the password.
+4. Put the SHA-256 fingerprint (upper case, colon separated, one line) into `android/signing-fingerprint.txt` in a
+   pull request. It is not secret; every build compares the APK's signature with it and fails on a mismatch.
+5. **Keep a copy of the keystore file and the password yourself**, in a safe place outside GitHub (password manager).
+   Then delete the files from the VM: `sudo shred -u /root/signing/lueckenfueller.keystore`.
+
+## Installing
+
+- **Test APK (every push):** GitHub, Actions, the run of the push, section "Artifacts", `lueckenfueller-apk` (kept
+  14 days). Unzip it on the phone or PC and open the `.apk`. Only exists once the secrets are set.
+- **Release APK:** on the release page under "Assets": `lueckenfueller-<version>.apk`. Every release has one
+  (`release.yml` builds it and fails without it). Download on the phone, open it, allow installing from this source
+  once. An installed version is replaced and the login stays, because the signature is the same.
+
+## Building and testing locally
+
+Needs JDK 21 and the Android SDK (compileSdk 36). `npm ci` at the root first (`android/` uses
+`node_modules/@capacitor/android`).
+
+```sh
+mkdir -p "$ANDROID_HOME/cmdline-tools" && cd "$ANDROID_HOME/cmdline-tools"
+curl -O https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+unzip commandlinetools-linux-11076708_latest.zip && mv cmdline-tools latest
+yes | latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0" "build-tools;36.0.0" "platform-tools"
+```
+
+Then, from the repository root, `bash scripts/android-apk.sh` does what CI does: `npx cap sync android` (fails if the
+committed sync output was stale), unit tests, debug build, and, with `ANDROID_KEYSTORE_BASE64` and
+`ANDROID_KEYSTORE_PASSWORD` set, the signed release and its fingerprint check. Or by hand in `android/`:
+`./gradlew testDebugUnitTest assembleDebug`. Maven Central sometimes answers 429: use `--max-workers=2` and try once
+more (the script does).
+
+## Rules for changes
+
+- The files Capacitor copies into `android/` and `android-www` are committed; CI checks they are current. After
+  changing `capacitor.config.json` or `android-www`, run `npx cap sync android` and commit the result.
+- Raise `SHELL_VERSION` in `android/app/build.gradle` by one whenever the shell changes in a way users need a new APK
+  for (the app will offer an update only then, phase 7c).
+- `NotificationText.kt` is a port of `web/src/lib/notification-text.ts`. The shared cases file `web/src/lib/notification-text.cases.json` is tested by both and
+  keeps them equal; a new notification kind needs a text in both.

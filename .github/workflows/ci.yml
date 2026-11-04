@@ -23,6 +23,50 @@ jobs:
       - run: npm test
       - run: npm run build
 
+  android:
+    # Tests and debug build always; a signed test APK on pushes once the signing secrets exist
+    # (docs/android-app.md). Pull requests never build a signed APK.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - name: Decide whether a signed test APK is built
+        id: signing
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          set -eu
+          echo "label=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          if [ "$GITHUB_EVENT_NAME" != "push" ]; then
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No signed test APK was built: only pushes build one (this is a $GITHUB_EVENT_NAME run). Tests and debug build still run."
+          elif [ -z "$KEYSTORE" ] || [ -z "$PASSWORD" ]; then
+            echo "sign=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No signed test APK was built: the secrets ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD are not set (docs/android-app.md). Tests and debug build still run."
+          else
+            echo "sign=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build the Android app
+        id: apk
+        uses: ./.github/actions/android-apk
+        with:
+          keystore-base64: ${{ steps.signing.outputs.sign == 'true' && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
+          keystore-password: ${{ steps.signing.outputs.sign == 'true' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          label: ${{ steps.signing.outputs.label }}
+      - name: Keep the signed test APK
+        if: steps.signing.outputs.sign == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: lueckenfueller-apk
+          path: ${{ steps.apk.outputs.apk }}
+          retention-days: 14
+          if-no-files-found: error
+
   vm-scripts:
     runs-on: ubuntu-latest
     steps:

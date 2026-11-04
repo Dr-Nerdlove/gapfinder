@@ -7,6 +7,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- An Android app: install it from the APK on the GitHub release page. It shows the same app as the browser and
+  tells you about new polls, votes and fixed dates with notifications (checked about every 15 minutes, not at night
+  while the server sleeps). An installed version is replaced by a newer APK and the login stays.
+
 - Groundwork on the server for the Android app's notifications: each phone gets its own key, which can only read that
   person's notifications. It is removed when the app switches notifications off, at a password change, and after 90
   days without use.

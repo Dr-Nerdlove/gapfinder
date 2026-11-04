@@ -409,6 +409,17 @@ app) below.
       release), 7c self-update.
     - The Android project (`android/`) is kept in the repository, not generated in every build as in Game Night,
       because it carries own native code (background check, update).
+    - **7b decisions (owner, 2026-11-04):**
+      - App id `de.drnerdlove.lueckenfueller`.
+      - The app loads the live web app from GitHub Pages through `server.url`, although Capacitor documents it as
+        "not intended for use in production": no new APK for content changes, no new CORS origin. `server.errorPath`
+        (`android-www/offline.html`) is shown when the page cannot be loaded.
+      - A signed test APK on every push (Actions artifact `lueckenfueller-apk`, 14 days) once the secrets exist, and an
+        APK in every release, built by `release.yml`; no release without the APK (missing secrets or a signature that
+        differs from `android/signing-fingerprint.txt` stop it).
+      - The owner keeps the copy of the signing key themselves (outside GitHub); lost key = everybody reinstalls.
+      - One notification channel, "Abstimmungen". Texts are made in the app in Europe/Berlin time, like the web app.
+      - The web app does not register its service worker inside the app (the app has its own notification path).
     - Inside the app, "Teilen", ".ics herunterladen" and links to other sites (Google/Outlook, `webcal://`)
       go through the Android app (`web/src/lib/native.ts`), because the Android web view cannot share, download
       or open other apps on its own. In the browser nothing changes.

@@ -1,0 +1,57 @@
+name: Build the Android app
+description: >-
+  Checks that the committed Capacitor files are current, runs the Android unit tests and the debug build and,
+  when the signing secrets are given, builds the signed release APK and checks its fingerprint against
+  android/signing-fingerprint.txt. Needs a checkout and `npm ci` first. The work is in scripts/android-apk.sh.
+
+inputs:
+  keystore-base64:
+    description: The signing keystore, base64 (secret ANDROID_KEYSTORE_BASE64). Empty means no signed APK.
+    required: false
+    default: ''
+  keystore-password:
+    description: Store and key password (secret ANDROID_KEYSTORE_PASSWORD).
+    required: false
+    default: ''
+  require-signing:
+    description: '"true" makes missing secrets an error (releases).'
+    required: false
+    default: 'false'
+  label:
+    description: Optional text for the APK file name, e.g. sha-abc1234.
+    required: false
+    default: ''
+
+outputs:
+  apk:
+    description: Path of the signed APK (empty when none was built).
+    value: ${{ steps.build.outputs.apk }}
+  fingerprint:
+    description: SHA-256 fingerprint of the signing certificate (empty when none was built).
+    value: ${{ steps.build.outputs.fingerprint }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-java@v5
+      with:
+        distribution: temurin
+        java-version: 21
+        cache: gradle
+        cache-dependency-path: |
+          android/**/*.gradle*
+          android/gradle/wrapper/gradle-wrapper.properties
+    - id: build
+      shell: bash
+      env:
+        ANDROID_KEYSTORE_BASE64: ${{ inputs.keystore-base64 }}
+        ANDROID_KEYSTORE_PASSWORD: ${{ inputs.keystore-password }}
+        REQUIRE_SIGNING: ${{ inputs.require-signing == 'true' && '1' || '0' }}
+        APK_LABEL: ${{ inputs.label }}
+        APK_OUT_DIR: ${{ runner.temp }}/apk
+        KEYSTORE_FILE: ${{ runner.temp }}/lueckenfueller.keystore
+      run: bash scripts/android-apk.sh
+    - name: Delete the decoded keystore
+      if: always()
+      shell: bash
+      run: rm -f "$RUNNER_TEMP/lueckenfueller.keystore"
