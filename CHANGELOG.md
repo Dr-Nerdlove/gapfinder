@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.5.1] - 2026-11-04
+
+The gap search has shorter, clearer lists: "Mindestens" offers whole hours, and the buffer and the time window
+("Zeitfenster von" and "bis") offer half hours. Settings saved on a phone are adjusted to the new steps the next time
+the search is opened. The Back button now works as expected: "← Start" goes back to the start page, and on the start
+page Back leaves the app. The app updates about 2 minutes after the release. Nothing has to be done on the VM.
+
 ### Changed
 
 - **Time window in half hours.** "Zeitfenster von" and "bis" in the gap search now offer half-hour steps instead of
