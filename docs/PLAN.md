@@ -271,7 +271,7 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   - Built as two pull requests: 4a the server, 4b the screens.
   - Settled with the owner before building 4b (preview mock-up, all recommendations taken): free times are
     chosen with a check on each time (each free time of a day is its own choice; near misses too) and a bar
-    "N Termine gewählt – Abstimmung anlegen" at the bottom; start and end are two selects in 15-minute steps
+    "N Termine gewählt – Abstimmung anlegen" at the bottom; start and end are two selects in half-hour steps (plus the start and end of the free time itself, which can sit on a quarter hour), the poll deadline time in half hours
     inside the gap; the state is a table people × dates with sums, the best date (most "Ja", then fewest
     "Nein") highlighted and "Noch nicht abgestimmt" below; "Meine Abstimmungen" is its own page
     `#/abstimmungen` with a button on the start page. Routes: `#/abstimmung/<token>` (no login needed),

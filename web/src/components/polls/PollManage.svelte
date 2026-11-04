@@ -66,7 +66,7 @@
         </div>
         <div class="field">
           <label for="manage-time">Uhrzeit</label>
-          <input id="manage-time" type="time" step="900" bind:value={time} />
+          <input id="manage-time" type="time" step="1800" bind:value={time} />
         </div>
       </div>
     </fieldset>
