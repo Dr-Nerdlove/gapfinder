@@ -5,6 +5,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- **"Mindestens" in whole hours.** The minimum length in the gap search now offers only full hours (1 hour, 2 hours,
+  3 hours ...) instead of half-hour steps. A half-hour value saved on a device is rounded up to the next full hour.
+
 ### Fixed
 
 - **Back works as expected.** "← Start" now steps back to the start page instead of adding a new step, and
