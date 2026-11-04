@@ -25,7 +25,8 @@ mount(App, { target: document.getElementById("app")! });
 void startSession((user) => theme.setSeed(user?.seedColor));
 
 // The service worker shows push messages. Only in the real build: in development it would get in the way.
-if (import.meta.env.PROD && "serviceWorker" in navigator) {
+// Not inside the Android app: it shows its notifications natively.
+if (import.meta.env.PROD && !isAndroidApp() && "serviceWorker" in navigator) {
   const register = (): void => {
     navigator.serviceWorker.register(WORKER_URL, { scope: WORKER_SCOPE }).catch(() => undefined);
   };

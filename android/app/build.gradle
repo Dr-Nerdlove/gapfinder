@@ -1,0 +1,90 @@
+import groovy.json.JsonSlurper
+
+apply plugin: 'com.android.application'
+apply plugin: 'org.jetbrains.kotlin.android'
+
+// The app version is the version of the root package.json (one number for web, server and app).
+def rootVersion = new JsonSlurper().parse(file('../../package.json')).version
+def versionParts = rootVersion.tokenize('.').collect { it.toInteger() }
+
+android {
+    namespace = "de.drnerdlove.lueckenfueller"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "de.drnerdlove.lueckenfueller"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode versionParts[0] * 10000 + versionParts[1] * 100 + versionParts[2]
+        versionName rootVersion
+        // Raise this by one whenever the Android shell (anything under android/ or capacitor.config.json)
+        // changes in a way users need a new APK for. The app offers an update only when it changed (phase 7c).
+        buildConfigField "int", "SHELL_VERSION", "1"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    buildFeatures {
+        buildConfig = true
+    }
+    signingConfigs {
+        // Release signing comes only from the environment; there is no fallback to the debug key.
+        release {
+            def keystorePath = System.getenv('LUECKENFUELLER_KEYSTORE')
+            def keystorePassword = System.getenv('LUECKENFUELLER_KEYSTORE_PASSWORD')
+            if (keystorePath && keystorePassword) {
+                storeFile file(keystorePath)
+                storePassword keystorePassword
+                keyAlias 'lueckenfueller'
+                keyPassword keystorePassword
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    implementation "androidx.work:work-runtime-ktx:$androidxWorkVersion"
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+// A release build without the signing variables must fail, not fall back to the debug key.
+gradle.taskGraph.whenReady { graph ->
+    def releaseTasks = graph.allTasks.findAll { it.project == project && it.name.toLowerCase().contains('release') && (it.name.startsWith('assemble') || it.name.startsWith('bundle') || it.name.startsWith('package')) }
+    if (releaseTasks && !(System.getenv('LUECKENFUELLER_KEYSTORE') && System.getenv('LUECKENFUELLER_KEYSTORE_PASSWORD'))) {
+        throw new GradleException('Release build needs signing: set LUECKENFUELLER_KEYSTORE (path to the keystore) and LUECKENFUELLER_KEYSTORE_PASSWORD (store and key password; key alias is "lueckenfueller").')
+    }
+}

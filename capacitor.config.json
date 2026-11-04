@@ -1,0 +1,11 @@
+{
+  "appId": "de.drnerdlove.lueckenfueller",
+  "appName": "Lückenfüller",
+  "webDir": "android-www",
+  "server": {
+    "url": "https://dr-nerdlove.github.io/gapfinder/",
+    "errorPath": "offline.html",
+    "cleartext": false,
+    "allowNavigation": ["dr-nerdlove.github.io"]
+  }
+}

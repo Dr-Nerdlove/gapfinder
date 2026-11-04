@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Keine Verbindung</title>
+<style>
+  :root { --bg: #fef7ff; --fg: #1d1b20; --muted: #49454f; --primary: #6750a4; --on-primary: #ffffff; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141218; --fg: #e6e0e9; --muted: #cac4d0; --primary: #d0bcff; --on-primary: #381e72; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; display: flex; align-items: center; justify-content: center;
+    padding: 24px; background: var(--bg); color: var(--fg);
+    font-family: Roboto, system-ui, sans-serif; text-align: center; }
+  main { max-width: 22rem; }
+  h1 { font-size: 1.5rem; font-weight: 500; margin: 0 0 12px; }
+  p { margin: 0 0 28px; line-height: 1.5; color: var(--muted); }
+  button { font: inherit; font-weight: 500; border: 0; border-radius: 20px; padding: 10px 24px;
+    background: var(--primary); color: var(--on-primary); }
+  button:active { opacity: .85; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Keine Verbindung</h1>
+  <p>Lückenfüller braucht eine Internetverbindung. Bitte prüfe dein WLAN oder deine mobilen Daten und versuche es dann noch einmal.</p>
+  <button type="button" id="reload">Neu laden</button>
+</main>
+<script>
+  document.getElementById("reload").addEventListener("click", function () {
+    location.href = "https://dr-nerdlove.github.io/gapfinder/";
+  });
+</script>
+</body>
+</html>

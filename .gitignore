@@ -21,3 +21,12 @@ data/
 *.swp
 .DS_Store
 Thumbs.db
+
+# Android
+android/local.properties
+android/.gradle/
+android/**/build/
+*.keystore
+*.jks
+*.apk
+*.aab
