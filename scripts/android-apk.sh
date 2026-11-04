@@ -94,7 +94,7 @@ NAME="lueckenfueller-$VERSION${APK_LABEL:+-$APK_LABEL}.apk"
 cp android/app/build/outputs/apk/release/app-release.apk "$OUT/$NAME"
 
 # apksigner, not keytool: keytool only reads the old JAR signature (v1). pipefail (set above) matters in the pipes below.
-APKSIGNER="$(ls -d "$SDK"/build-tools/*/apksigner | sort -V | tail -1)"
+APKSIGNER="$(printf '%s\n' "$SDK"/build-tools/*/apksigner | sort -V | tail -1)"
 [ -x "$APKSIGNER" ] || die "apksigner not found in $SDK/build-tools."
 "$APKSIGNER" verify --verbose "$OUT/$NAME" >/dev/null || die "apksigner says the APK signature is not valid."
 RAW="$("$APKSIGNER" verify --print-certs "$OUT/$NAME" | grep -m1 'SHA-256 digest' | sed 's/.*digest: *//')"
