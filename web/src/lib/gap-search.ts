@@ -301,7 +301,8 @@ export function sanitizeSettings(raw: unknown, today: string): SearchSettings {
   }
   if (r["kind"] === "hours" || r["kind"] === "days") settings.kind = r["kind"];
   if (Array.isArray(r["weekdays"])) settings.weekdays = ALL_WEEKDAYS.filter((day) => (r["weekdays"] as unknown[]).includes(day));
-  if (inRange(r["durationMinutes"], 30, SEARCH_MAX_DURATION_MINUTES, 30)) settings.durationMinutes = r["durationMinutes"];
+  // Older saved searches may hold half hours: round them up to the next full hour.
+  if (inRange(r["durationMinutes"], 30, SEARCH_MAX_DURATION_MINUTES, 30)) settings.durationMinutes = Math.ceil(r["durationMinutes"] / 60) * 60;
   if (isClock(r["windowStart"])) settings.windowStart = r["windowStart"];
   if (isClock(r["windowEnd"])) settings.windowEnd = r["windowEnd"];
   if (settings.windowStart === settings.windowEnd) {

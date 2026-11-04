@@ -178,6 +178,11 @@ describe("what the device remembers", () => {
     expect(() => saveSettings(settings(), brokenStorage)).not.toThrow();
   });
 
+  it("rounds a saved half-hour duration up to a full hour", () => {
+    expect(sanitizeSettings({ durationMinutes: 90 }, TODAY).durationMinutes).toBe(120);
+    expect(sanitizeSettings({ durationMinutes: 120 }, TODAY).durationMinutes).toBe(120);
+  });
+
   it("keeps each valid value and replaces only the invalid ones", () => {
     const result = sanitizeSettings(
       {

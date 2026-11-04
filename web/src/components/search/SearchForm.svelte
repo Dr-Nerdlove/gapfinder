@@ -37,8 +37,8 @@
 
   let { settings = $bindable(), others, today, searching, locked, problem, onsearch }: Props = $props();
 
-  const durations = Array.from({ length: SEARCH_MAX_DURATION_MINUTES / 30 }, (_, i) => {
-    const minutes = (i + 1) * 30;
+  const durations = Array.from({ length: SEARCH_MAX_DURATION_MINUTES / 60 }, (_, i) => {
+    const minutes = (i + 1) * 60;
     return { value: String(minutes), label: durationLabel(minutes) };
   });
   const clocks = Array.from({ length: 96 }, (_, i) => {
