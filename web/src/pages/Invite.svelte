@@ -52,7 +52,7 @@
     busy = true;
     const result = await session.acceptInvite(token, username, password);
     busy = false;
-    if (result.ok) navigate("#/");
+    if (result.ok) navigate("#/", { replace: true });
     else if (result.kind === "error" && result.code === "invite_invalid") load = { kind: "invalid" };
     else error = errorMessage(result);
   }

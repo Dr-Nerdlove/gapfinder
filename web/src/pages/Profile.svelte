@@ -61,7 +61,7 @@
     loggingOut = true;
     await session.logout();
     loggingOut = false;
-    navigate("#/");
+    navigate("#/", { replace: true });
   }
 </script>
 

@@ -50,7 +50,7 @@
     busy = true;
     const result = await session.completePasswordReset(token, password);
     busy = false;
-    if (result.ok) navigate("#/");
+    if (result.ok) navigate("#/", { replace: true });
     else if (result.kind === "error" && result.code === "reset_invalid") load = { kind: "invalid" };
     else error = errorMessage(result);
   }

@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Back works as expected.** "← Start" now steps back to the start page instead of adding a new step, and
+  redirects (after logging out, creating or deleting a poll, accepting an invite) replace the page they come from. On
+  the start page, Back now leaves the app instead of reopening an earlier menu.
+
 ## [1.5.0] - 2026-11-04
 
 The app is easier to read and use: the start page is now tidy, with "Lücken suchen" on top and the other places listed

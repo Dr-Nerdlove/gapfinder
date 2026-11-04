@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import { goToStart } from "../lib/router";
 
   interface Props {
     title: string;
@@ -13,7 +14,13 @@
 </script>
 
 <header>
-  {#if back}<a class="back" href="#/">← Start</a>{/if}
+  {#if back}<a
+      class="back"
+      href="#/"
+      onclick={(event) => {
+        event.preventDefault();
+        goToStart();
+      }}>← Start</a>{/if}
   <h1>{title}</h1>
   {#if subtitle}<p class="subtitle">{subtitle}</p>{/if}
 </header>
