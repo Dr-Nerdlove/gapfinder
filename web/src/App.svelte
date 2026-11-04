@@ -60,7 +60,7 @@
   main {
     max-width: 40rem;
     margin: 0 auto;
-    padding: calc(var(--gutter) + env(safe-area-inset-top)) calc(var(--gutter) + env(safe-area-inset-right))
+    padding: calc(var(--gutter) / 2 + env(safe-area-inset-top)) calc(var(--gutter) + env(safe-area-inset-right))
       calc(var(--gutter) + env(safe-area-inset-bottom)) calc(var(--gutter) + env(safe-area-inset-left));
   }
 </style>

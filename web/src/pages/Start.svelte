@@ -133,7 +133,7 @@
 
 <style>
   header {
-    padding: 48px 0 24px;
+    padding: 24px 0;
   }
 
   h1 {
