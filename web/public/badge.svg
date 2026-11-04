@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96">
+  <!-- Status-bar symbol: the app icon's two blocks and the bar in the gap, white shapes only (Android uses just the alpha channel). -->
+  <rect x="6" y="9" width="30" height="78" rx="8" fill="#ffffff"/>
+  <rect x="60" y="9" width="30" height="78" rx="8" fill="#ffffff"/>
+  <rect x="42" y="24" width="12" height="48" rx="6" fill="#ffffff"/>
+</svg>

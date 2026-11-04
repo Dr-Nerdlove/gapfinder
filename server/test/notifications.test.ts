@@ -195,7 +195,7 @@ describe("who is told about a vote", () => {
 });
 
 describe("everyone has voted", () => {
-  it("is sent once, when the last participant votes, in addition to the vote", async () => {
+  it("is sent once, when the last participant votes, instead of the vote", async () => {
     const e = await setup();
     const poll = await createPoll(e, [e.anna, e.ben]);
     await setSettings(e, e.ben, { allVotedOthers: true });
@@ -203,7 +203,7 @@ describe("everyone has voted", () => {
     await vote(e, poll, e.anna);
     expect(await kindsOf(e, e.owner)).toEqual(["vote"]);
     await vote(e, poll, e.ben);
-    expect(await kindsOf(e, e.owner)).toEqual(["vote", "vote", "all_voted"]);
+    expect(await kindsOf(e, e.owner)).toEqual(["vote", "all_voted"]);
     const all = (await notificationsOf(e, e.owner)).at(-1)!.data;
     expect(all).toMatchObject({ kind: "all_voted", actorName: "ben m." });
     // The others only get it when they switched it on; the last voter never.
@@ -211,7 +211,39 @@ describe("everyone has voted", () => {
     expect(await kindsOf(e, e.ben)).toEqual(["poll_created"]);
     // Changing a vote afterwards is not a new transition.
     await vote(e, poll, e.ben, "no");
-    expect(await kindsOf(e, e.owner)).toEqual(["vote", "vote", "all_voted", "vote"]);
+    expect(await kindsOf(e, e.owner)).toEqual(["vote", "all_voted", "vote"]);
+  });
+
+  it("replaces the vote message for the creator, so the last vote makes exactly one stored notification and one push", async () => {
+    const e = await setup();
+    await subscribeAll(e);
+    const poll = await createPoll(e, [e.anna, e.ben]);
+    await vote(e, poll, e.owner);
+    await vote(e, poll, e.anna);
+    await vote(e, poll, e.ben);
+    const items = await notificationsOf(e, e.owner);
+    expect(items.map((i) => i.data.kind)).toEqual(["vote", "all_voted"]);
+    expect(items[1]!.data).toMatchObject({ kind: "all_voted", actorName: "ben m." });
+    const kindsPushed = e.sent.filter((s) => s.target.endpoint === endpointOf(`u${e.owner.id}`)).map((s) => s.item.data.kind);
+    expect(kindsPushed).toEqual(["vote", "all_voted"]);
+  });
+
+  it("still sends the vote message to someone who switched all_voted off", async () => {
+    const e = await setup();
+    const poll = await createPoll(e, [e.anna, e.ben]);
+    await setSettings(e, e.owner, { allVotedOwn: false, voteOwn: true });
+    await vote(e, poll, e.owner);
+    await vote(e, poll, e.anna);
+    await vote(e, poll, e.ben);
+    expect(await kindsOf(e, e.owner)).toEqual(["vote", "vote"]);
+  });
+
+  it("sends the vote message as before when the vote is not the last", async () => {
+    const e = await setup();
+    const poll = await createPoll(e, [e.anna, e.ben]);
+    await vote(e, poll, e.owner);
+    await vote(e, poll, e.anna);
+    expect(await kindsOf(e, e.owner)).toEqual(["vote"]);
   });
 
   it("is also sent to an involved account who switched it on", async () => {

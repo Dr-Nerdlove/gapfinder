@@ -22,7 +22,16 @@ versions follow `vMAJOR.MINOR.PATCH`.
 - **Server groundwork.** The server creates the notifications and sends them by Web Push; a list for the later
   Android app is prepared as well.
 
-Notifications work once the server has updated itself, within about an hour. Nothing has to be done on the VM.
+### Fixed
+
+- **No double message when the last person votes.** The creator now gets only "Alle haben abgestimmt", which names
+  who voted last, instead of that message plus "hat abgestimmt". Whoever has switched "Alle haben abgestimmt" off
+  still gets the normal vote message.
+- **Android status bar.** The small symbol in the status bar now shows the Lückenfüller symbol (the two blocks with
+  the bar in the gap) instead of a white square. iPhones always show the app icon there.
+
+Notifications work once the server has updated itself, within about an hour. Nothing has to be done on the VM. The
+vote fix works once the server has updated itself; the new status bar symbol once the app is reloaded.
 
 ## [1.3.1] - 2026-11-04
 
