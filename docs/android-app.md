@@ -53,7 +53,9 @@ it has to be, and keep your own copy.
      -keyalg RSA -keysize 4096 -validity 10000 -dname "CN=Lueckenfueller"
    ```
 
-   It asks for a password twice. Use a long one; the store and the key share it (PKCS12).
+   It asks for a password twice. Use a long one; the store and the key share it (PKCS12). **ASCII only** (letters
+   a-z, A-Z, digits, plain symbols): keytool refuses umlauts, ß, € and the like with "Password is not ASCII" and
+   writes no keystore.
 2. Print what you need. The first command asks for the password and shows the certificate: the fingerprint is the
    line that starts with `SHA256:`. The second prints the keystore as one long line:
 
