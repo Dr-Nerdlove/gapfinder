@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { Lueckenfueller, isAndroidApp } from "../lib/native";
+  import { canShare as canShareOn, shareLink, type NativeShareEnv } from "../lib/native-actions";
   import Button from "./Button.svelte";
 
   interface Props {
@@ -14,7 +16,12 @@
   let { label, link, note, shareText, shareable = true }: Props = $props();
 
   const id = $props.id();
-  const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+  const shareEnv: NativeShareEnv = {
+    isApp: isAndroidApp(),
+    app: Lueckenfueller,
+    browserShare: typeof navigator !== "undefined" && typeof navigator.share === "function" ? (data) => navigator.share(data) : undefined,
+  };
+  const canShare = canShareOn(shareEnv);
   let feedback = $state("");
   let input = $state<HTMLInputElement>();
 
@@ -30,7 +37,7 @@
 
   async function share(): Promise<void> {
     try {
-      await navigator.share({ title: "Lückenfüller", text: shareText, url: link });
+      await shareLink(shareEnv, { title: "Lückenfüller", text: shareText, url: link });
     } catch {
       // The person closed the share sheet; nothing to do.
     }

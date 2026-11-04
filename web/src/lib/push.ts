@@ -158,7 +158,7 @@ export interface TurnOnDeps {
 export type TurnOnFailure = "blocked" | "dismissed" | "unavailable" | "offline" | "failed";
 export type TurnOnResult = { ok: true; endpoint: string } | { ok: false; reason: TurnOnFailure; message?: string };
 
-function failureOf(result: Extract<ApiResult<unknown>, { ok: false }>): TurnOnResult {
+export function failureOf(result: Extract<ApiResult<unknown>, { ok: false }>): TurnOnResult {
   if (result.kind === "offline") return { ok: false, reason: "offline" };
   if (result.status === 404) return { ok: false, reason: "unavailable" };
   return { ok: false, reason: "failed", message: errorMessage(result) };

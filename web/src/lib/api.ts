@@ -31,6 +31,8 @@ import type {
   PeopleList,
   PollList,
   PollView,
+  AppDeviceRegistered,
+  AppDeviceRemoveRequest,
   PushPublicKey,
   PushSubscriptionRequest,
   PushUnsubscribeRequest,
@@ -377,6 +379,14 @@ export const subscribePush = (body: PushSubscriptionRequest, o: CallOptions = {}
 /** Switches this device off (with the endpoint in a JSON body). */
 export const unsubscribePush = (body: PushUnsubscribeRequest, o: CallOptions = {}) =>
   request<void>("/api/push/subscriptions", { ...o, method: "DELETE", body });
+
+/** The Android app asks for a device key (shown once). Not on servers older than the app groundwork: they answer 404. */
+export const registerAppDevice = (o: CallOptions = {}) =>
+  request<AppDeviceRegistered>("/api/app-devices", { ...o, method: "POST" });
+
+/** The Android app gives its key back. */
+export const deleteAppDevice = (body: AppDeviceRemoveRequest, o: CallOptions = {}) =>
+  request<void>("/api/app-devices", { ...o, method: "DELETE", body });
 
 /** The creator reminds everyone who has not voted yet (`reminder_too_soon` within 24 hours). */
 export const sendReminder = (pollId: number, o: CallOptions = {}) =>

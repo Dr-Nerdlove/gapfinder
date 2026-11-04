@@ -20,6 +20,10 @@ export interface SessionDeps {
   onChange?: (state: SessionState) => void;
   /** Called when the logged-in user changes (also with null on logout), e.g. to switch the colours. */
   onUser?: (user: Me | null) => void;
+  /** The Android app's notifications: logout stops them and returns the device key, which is then deleted on the server. */
+  appDevice?: {
+    disable(): Promise<string | null>;
+  } | undefined;
   /** This device's push subscription: logout switches it off first (for the server) and then forgets it locally. */
   pushDevice?: {
     endpoint(): Promise<string | null>;
@@ -132,6 +136,12 @@ export function createSession(deps: SessionDeps = {}) {
     /** Ends the login on the server (if it is reachable) and always on this device. */
     async logout(): Promise<void> {
       // The device is switched off while the login still works; a failure here never stops the logout.
+      try {
+        const deviceKey = await deps.appDevice?.disable();
+        if (deviceKey && state.token) await run((o) => api.deleteAppDevice({ deviceKey }, o));
+      } catch {
+        // ignore
+      }
       if (state.token) {
         try {
           const endpoint = await deps.pushDevice?.endpoint();

@@ -12,6 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@capacitor/core": "8.5.0",
     "@lueckenfueller/shared": "*",
     "@material/material-color-utilities": "^0.4.0"
   },

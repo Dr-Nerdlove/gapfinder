@@ -1,32 +1,13 @@
-import type { NotificationData } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
+import cases from "./notification-text.cases.json";
 import { notificationTarget, notificationText, parsePushPayload, pickWindow } from "./notification-text";
 
 const base = { pollTitle: "Grillen", shareToken: "tok_1" };
-const P = { id: 1, start: "2026-12-12T13:00:00.000Z", end: "2026-12-12T16:00:00.000Z" };
 
 describe("notificationText", () => {
-  it("makes a text for every kind", () => {
-    const t = (d: NotificationData) => notificationText(d);
-    expect(t({ ...base, kind: "poll_created", actorName: "Anna" })).toEqual({
-      title: "Neue Abstimmung: Grillen",
-      body: "Anna fragt, wann du Zeit hast. Stimm jetzt ab.",
-      shareToken: "tok_1",
-      tag: "tok_1:poll_created",
-    });
-    expect(t({ ...base, kind: "vote", actorName: "Anna" })).toMatchObject({ title: "Grillen", body: "Anna hat abgestimmt.", tag: "tok_1:vote" });
-    expect(t({ ...base, kind: "all_voted", actorName: "Ben" })).toMatchObject({
-      title: "Alle haben abgestimmt: Grillen",
-      body: "Zuletzt hat Ben abgestimmt.",
-    });
-    expect(t({ ...base, kind: "reminder", actorName: "Anna" })).toMatchObject({
-      title: "Erinnerung: Grillen",
-      body: "Anna bittet dich, abzustimmen.",
-    });
-    expect(t({ ...base, kind: "date_fixed", actorName: "Anna", proposal: P })).toMatchObject({
-      title: "Termin steht: Grillen",
-      body: "Anna hat den Termin festgelegt: Sa 12.12., 14:00–17:00.",
-    });
+  it("makes a text for every kind (cases shared with the Android app's test)", () => {
+    expect(cases.texts.length).toBeGreaterThanOrEqual(5);
+    for (const c of cases.texts) expect(notificationText(c.data), c.name).toEqual(c.expected);
   });
 
   it("does not throw on an unknown kind or broken data", () => {
@@ -49,8 +30,8 @@ describe("notificationText", () => {
 
 describe("notificationTarget and pickWindow", () => {
   it("builds the poll address under the scope", () => {
-    expect(notificationTarget("a b", "https://x.github.io/app/")).toBe("https://x.github.io/app/#/abstimmung/a%20b");
-    expect(notificationTarget(null, "https://x.github.io/app/")).toBe("https://x.github.io/app/");
+    expect(cases.targets.length).toBeGreaterThanOrEqual(2);
+    for (const c of cases.targets) expect(notificationTarget(c.shareToken, c.scope), c.name).toBe(c.url);
   });
 
   it("picks the first window inside the scope", () => {

@@ -1,4 +1,5 @@
 import { createSession, type SessionState } from "./session-core";
+import { Lueckenfueller, isAndroidApp } from "./native";
 import { browserSubscription, type ServiceWorkerNavigator } from "./push";
 import type { Me } from "@lueckenfueller/shared";
 
@@ -10,6 +11,8 @@ let onUserChange: ((user: Me | null) => void) | undefined;
 export const session = createSession({
   onChange: (next) => Object.assign(sessionState, next),
   onUser: (user) => onUserChange?.(user),
+  // Inside the Android app, logout stops the app's notifications too.
+  appDevice: isAndroidApp() ? { disable: async () => (await Lueckenfueller.disableNotifications()).deviceKey } : undefined,
   // Logout switches this device's push messages off (nothing happens where there is no service worker).
   pushDevice: {
     endpoint: async () => (await browserSubscription(navigator as unknown as ServiceWorkerNavigator))?.endpoint ?? null,

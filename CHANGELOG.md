@@ -10,6 +10,8 @@ versions follow `vMAJOR.MINOR.PATCH`.
 - Groundwork on the server for the Android app's notifications: each phone gets its own key, which can only read that
   person's notifications. It is removed when the app switches notifications off, at a password change, and after 90
   days without use.
+- The web app is prepared for the Android app: inside it, the notifications switch, sharing, the .ics file and links to
+  other sites use the phone's own functions. In the browser nothing changes.
 
 ### Changed
 

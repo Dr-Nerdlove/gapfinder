@@ -222,6 +222,49 @@ describe("session", () => {
     });
   });
 
+  describe("logout in the Android app", () => {
+    function inApp(disable: () => Promise<string | null>, handler: (url: string, init: RequestInit) => Response = () => new Response(null, { status: 204 })) {
+      const storage = new MemoryStorage();
+      saveSession({ token: "old-token", user: anna }, storage);
+      const fetchImpl = vi.fn(async (url: string, init: RequestInit) => handler(url, init));
+      const session = createSession({ storage, fetchImpl: fetchImpl as unknown as typeof fetch, baseUrl: "http://api.test", appDevice: { disable } });
+      return { session, fetchImpl };
+    }
+    const calls = (f: { mock: { calls: unknown[][] } }) => f.mock.calls.map((c) => `${(c[1] as RequestInit).method ?? "GET"} ${c[0]}`);
+
+    it("stops the app's notifications and deletes the key with the login, before the logout", async () => {
+      const { session, fetchImpl } = inApp(async () => "key-1");
+      await session.logout();
+      expect(calls(fetchImpl)).toEqual(["DELETE http://api.test/api/app-devices", "POST http://api.test/api/auth/logout"]);
+      expect(JSON.parse(fetchImpl.mock.calls[0]![1].body as string)).toEqual({ deviceKey: "key-1" });
+      expect((fetchImpl.mock.calls[0]![1].headers as Record<string, string>)["Authorization"]).toBe("Bearer old-token");
+      expect(session.state.token).toBeNull();
+    });
+
+    it("sends no DELETE without a key", async () => {
+      const { session, fetchImpl } = inApp(async () => null);
+      await session.logout();
+      expect(calls(fetchImpl)).toEqual(["POST http://api.test/api/auth/logout"]);
+    });
+
+    it("logs out even when the app throws", async () => {
+      const { session, fetchImpl } = inApp(async () => {
+        throw new Error("boom");
+      });
+      await session.logout();
+      expect(calls(fetchImpl)).toEqual(["POST http://api.test/api/auth/logout"]);
+      expect(session.state.token).toBeNull();
+    });
+
+    it("logs out when the server is unreachable", async () => {
+      const { session } = inApp(async () => "key-1", () => {
+        throw new TypeError("Failed to fetch");
+      });
+      await session.logout();
+      expect(session.state.token).toBeNull();
+    });
+  });
+
   it("notes when the server is asleep and when it is back", async () => {
     let asleep = true;
     const { session } = setup(() => {
