@@ -149,6 +149,30 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     a stored link that cannot be decrypted counts as "not reachable", never as an error; the admin's user list
     carries only the number of broken calendars.
   - Built as two pull requests: 2a the VM side (key, backups, firewall), 2b the calendars in the app.
+- Decided 2026-11-03 (privacy question from a user: "can the admin read my appointments?"):
+  - **What is true:** in the app nobody but the owner sees contents (others: busy/free; admin: a count of broken
+    calendars). But whoever runs the VM can read every calendar: `CALENDAR_KEY` sits in the VM's `.env` next to
+    the database, so database + `.env` decrypt the links, and a Google or iCloud link shows the whole calendar,
+    future events included, without the app. A second path: the admin creates a password reset link and uses it
+    (the person notices: all their logins end). "Never, under any circumstances" is not reachable while the
+    server reads calendars for everyone: whoever runs the server can change what it does.
+  - **Chosen: explain it honestly** (page `#/privatsphaere`, linked from the calendar page and the tour) and
+    recommend Outlook's "Kann nur Verfügbarkeit anzeigen", which keeps titles out of the link itself. Google
+    and Apple have no such option for their links.
+  - **Kept for later (option B):** the link encrypted with a key that only the person's device holds; the
+    server reads the calendar only while the person uses the app and keeps only busy blocks (no titles), so
+    database + `.env` alone reveal nothing beyond busy/free. Costs: searches use the state from each person's
+    last visit (shown as "Stand vor X Tagen"), a new device or a password reset needs the link entered again,
+    busy blocks are stored (today nothing is). Existing links could be moved over automatically on the next
+    visit. A deliberately changed server could still catch a link while the person is online.
+  - **Rejected:** each phone fetches its own calendar so the server never sees the link: as far as known
+    (not verified, the cloud session cannot reach the providers) Google, Apple and Microsoft do not allow such
+    requests from a web page (CORS).
+- Decided 2026-11-03: **guided tour** for new users (6 steps, a modal on the start page), shown once per user
+  and device (stored in `localStorage`, marked seen as soon as it opens; without storage it is never shown on
+  its own), again any time with "Einführung" on the start page. Not stored on the server, so it needs no server
+  update. The **calendar guide** asks first which calendar the person uses and shows steps for phone and
+  computer; Google's section is called "Kalender integrieren" and works in the phone's browser (desktop view).
 
 ### Finding gaps
 

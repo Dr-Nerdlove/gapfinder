@@ -9,6 +9,7 @@
   import Poll from "./pages/Poll.svelte";
   import PollNew from "./pages/PollNew.svelte";
   import Polls from "./pages/Polls.svelte";
+  import Privacy from "./pages/Privacy.svelte";
   import Profile from "./pages/Profile.svelte";
   import Search from "./pages/Search.svelte";
   import Start from "./pages/Start.svelte";
@@ -46,6 +47,8 @@
     {#if sessionState.user}<PollNew />{:else}<Login />{/if}
   {:else if route.name === "poll"}
     <Poll token={route.token} />
+  {:else if route.name === "privacy"}
+    <Privacy />
   {:else if route.name === "admin"}
     {#if sessionState.user}<Admin />{:else}<Login />{/if}
   {:else}
