@@ -38,6 +38,7 @@
   }
 
   select {
+    margin-top: auto;
     min-height: 48px;
     padding: 0 12px;
     border: 1px solid var(--md-sys-color-outline);

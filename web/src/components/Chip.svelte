@@ -9,7 +9,14 @@
   let { label, selected, disabled = false, onclick }: Props = $props();
 </script>
 
-<button type="button" class="chip" class:selected aria-pressed={selected} {disabled} {onclick}>{label}</button>
+<button type="button" class="chip" class:selected aria-pressed={selected} {disabled} {onclick}>
+  {#if selected}
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M9 16.2 4.8 12l-1.4 1.4L9 19 21 7l-1.4-1.4z" />
+    </svg>
+  {/if}
+  {label}
+</button>
 
 <style>
   .chip {
@@ -22,12 +29,16 @@
     color: var(--md-sys-color-on-surface-variant);
     font: inherit;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
   }
 
   .chip.selected {
-    border-color: transparent;
-    background: var(--md-sys-color-secondary-container);
-    color: var(--md-sys-color-on-secondary-container);
+    border-color: var(--md-sys-color-primary);
+    background: var(--md-sys-color-primary);
+    color: var(--md-sys-color-on-primary);
     font-weight: 600;
   }
 

@@ -5,6 +5,16 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- **Selected buttons are easier to see.** Chosen options (for example "Stunden", weekdays, "30 Tage", and the answers
+  when voting) are now filled in the app's main colour and show a check mark, also in dark mode.
+
+### Fixed
+
+- **Fields side by side line up.** In the gap search, the "Mindestens" field now sits at the same height as the
+  "Puffer vor und nach Terminen" field, even when a label takes two lines.
+
 ## [1.4.0] - 2026-11-04
 
 The app can now send notifications: about a new poll, new votes, when everyone has voted, when the date is fixed, and
