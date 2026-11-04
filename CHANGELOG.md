@@ -7,8 +7,22 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
-- Groundwork for notifications on the server (new poll, votes, everyone voted, date fixed, reminders; Web Push and a
-  list for the later Android app). Nothing is visible in the app yet.
+- **Notifications.** The app can now tell you about a new poll, new votes, when everyone has voted, when the date is
+  fixed, and reminders, even when the app is closed. In the profile, the new card "Benachrichtigungen" switches them
+  on or off for each device (the browser asks for permission once) and has one switch for each kind of message.
+  Tapping a message opens the poll. On an iPhone this only works when the app was added to the home screen (iOS 16.4
+  or newer); the card says so. If the browser blocks notifications, the card explains how to allow them again.
+- **"Erinnerung senden" on the poll page.** The creator can remind those who have not voted yet. The button is
+  hidden once the date is fixed, the poll is closed or everyone has voted, it shows when the last reminder went out,
+  and a reminder can be sent at most once every 24 hours.
+- **Logging out switches the device off.** The device is removed from the notifications on the server and in the
+  browser, so nothing is shown after logout.
+- **Privacy page.** It now says what is stored for notifications (the device registration, the settings, and the
+  notifications themselves for 7 days) and that messages travel encrypted through the browser's push service.
+- **Server groundwork.** The server creates the notifications and sends them by Web Push; a list for the later
+  Android app is prepared as well.
+
+Notifications work once the server has updated itself, within about an hour. Nothing has to be done on the VM.
 
 ## [1.3.1] - 2026-11-04
 

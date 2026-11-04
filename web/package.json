@@ -6,9 +6,9 @@
   "scripts": {
     "predev": "npm run build -w shared",
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && vite build -c vite.sw.config.ts",
     "preview": "vite preview",
-    "check": "svelte-check --tsconfig ./tsconfig.json",
+    "check": "svelte-check --tsconfig ./tsconfig.json && tsc -p tsconfig.sw.json",
     "test": "vitest run"
   },
   "dependencies": {

@@ -148,6 +148,80 @@ describe("session", () => {
     expect(fetchImpl.mock.calls[0]![1].method).toBe("POST");
   });
 
+  describe("logout and the push device", () => {
+    const calls = (fetchImpl: { mock: { calls: unknown[][] } }) =>
+      fetchImpl.mock.calls.map(([url, init]) => `${(init as RequestInit).method} ${url as string}`);
+
+    function withDevice(endpoint: string | null, handler: (url: string, init: RequestInit) => Response = () => new Response(null, { status: 204 })) {
+      const forgotten: string[] = [];
+      const storage = new MemoryStorage();
+      saveSession({ token: "old-token", user: anna }, storage);
+      const fetchImpl = vi.fn(async (url: string, init: RequestInit) => handler(url, init));
+      const session = createSession({
+        storage,
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        baseUrl: "http://api.test",
+        pushDevice: {
+          endpoint: async () => endpoint,
+          forget: async () => {
+            forgotten.push("forget");
+          },
+        },
+      });
+      return { session, fetchImpl, forgotten };
+    }
+
+    it("switches the device off on the server before the logout, with the endpoint", async () => {
+      const { session, fetchImpl, forgotten } = withDevice("https://push.example/1");
+      await session.logout();
+      expect(calls(fetchImpl)).toEqual(["DELETE http://api.test/api/push/subscriptions", "POST http://api.test/api/auth/logout"]);
+      expect(JSON.parse(fetchImpl.mock.calls[0]![1].body as string)).toEqual({ endpoint: "https://push.example/1" });
+      expect((fetchImpl.mock.calls[0]![1].headers as Record<string, string>)["Authorization"]).toBe("Bearer old-token");
+      expect(forgotten).toEqual(["forget"]);
+      expect(session.state.token).toBeNull();
+    });
+
+    it("sends no DELETE without a subscription, but still forgets", async () => {
+      const { session, fetchImpl, forgotten } = withDevice(null);
+      await session.logout();
+      expect(calls(fetchImpl)).toEqual(["POST http://api.test/api/auth/logout"]);
+      expect(forgotten).toEqual(["forget"]);
+    });
+
+    it("forgets the device and logs out when the server is offline", async () => {
+      const { session, forgotten } = withDevice("https://push.example/1", () => {
+        throw new TypeError("Failed to fetch");
+      });
+      await session.logout();
+      expect(forgotten).toEqual(["forget"]);
+      expect(session.state.token).toBeNull();
+      expect(session.state.user).toBeNull();
+    });
+
+    it("logs out even when the push device throws", async () => {
+      const storage = new MemoryStorage();
+      saveSession({ token: "old-token", user: anna }, storage);
+      const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+      const session = createSession({
+        storage,
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        baseUrl: "http://api.test",
+        pushDevice: {
+          endpoint: async () => {
+            throw new Error("boom");
+          },
+          forget: async () => {
+            throw new Error("boom");
+          },
+        },
+      });
+      await session.logout();
+      expect(session.state.token).toBeNull();
+      expect(loadSession(storage)).toBeNull();
+      expect(calls(fetchImpl)).toEqual(["POST http://api.test/api/auth/logout"]);
+    });
+  });
+
   it("notes when the server is asleep and when it is back", async () => {
     let asleep = true;
     const { session } = setup(() => {

@@ -408,3 +408,31 @@ describe("fixing the date", () => {
     expect(await api.getEventIcs("t", { fetchImpl: asFetch(html) })).toMatchObject({ ok: false, kind: "error", code: "error", status: 502 });
   });
 });
+
+describe("notifications", () => {
+  it("calls the right routes with the right methods and bodies", async () => {
+    const fetchImpl = mockFetch(() => jsonResponse({}));
+    const o = { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl), token: "t" };
+    const settings = { pollCreated: true, voteOwn: true, voteOthers: false, allVotedOwn: true, allVotedOthers: false, dateFixed: true, reminder: true };
+    const sub = { endpoint: "https://push.example/abc", keys: { p256dh: "p", auth: "a" } };
+    await api.getNotificationSettings(o);
+    await api.updateNotificationSettings(settings, o);
+    await api.getPushPublicKey(o);
+    await api.subscribePush(sub, o);
+    await api.unsubscribePush({ endpoint: sub.endpoint }, o);
+    await api.sendReminder(7, o);
+    expect(fetchImpl.mock.calls.map(([url, init]) => `${init.method} ${url}`)).toEqual([
+      "GET http://api.test/api/me/notification-settings",
+      "PUT http://api.test/api/me/notification-settings",
+      "GET http://api.test/api/push/public-key",
+      "POST http://api.test/api/push/subscriptions",
+      "DELETE http://api.test/api/push/subscriptions",
+      "POST http://api.test/api/polls/7/reminders",
+    ]);
+    const body = (i: number) => JSON.parse(fetchImpl.mock.calls[i]![1].body as string);
+    expect(body(1)).toEqual(settings);
+    expect(body(3)).toEqual(sub);
+    expect(body(4)).toEqual({ endpoint: sub.endpoint });
+    expect(fetchImpl.mock.calls[5]![1].body).toBeUndefined();
+  });
+});

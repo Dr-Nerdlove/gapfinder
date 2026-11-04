@@ -1,4 +1,5 @@
 import { createSession, type SessionState } from "./session-core";
+import { browserSubscription, type ServiceWorkerNavigator } from "./push";
 import type { Me } from "@lueckenfueller/shared";
 
 /** Reactive login state for the components. */
@@ -9,6 +10,13 @@ let onUserChange: ((user: Me | null) => void) | undefined;
 export const session = createSession({
   onChange: (next) => Object.assign(sessionState, next),
   onUser: (user) => onUserChange?.(user),
+  // Logout switches this device's push messages off (nothing happens where there is no service worker).
+  pushDevice: {
+    endpoint: async () => (await browserSubscription(navigator as unknown as ServiceWorkerNavigator))?.endpoint ?? null,
+    forget: async () => {
+      await (await browserSubscription(navigator as unknown as ServiceWorkerNavigator))?.unsubscribe();
+    },
+  },
 });
 
 // The cached login is available immediately, before the first server answer.

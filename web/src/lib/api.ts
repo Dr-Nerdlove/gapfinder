@@ -27,9 +27,14 @@ import type {
   Me,
   PasswordResetInfo,
   NewShareLink,
+  NotificationSettings,
   PeopleList,
   PollList,
   PollView,
+  PushPublicKey,
+  PushSubscriptionRequest,
+  PushUnsubscribeRequest,
+  ReminderSent,
   SearchRequest,
   SearchResult,
   SessionResponse,
@@ -353,3 +358,26 @@ export const createCalendarFeed = (o: CallOptions = {}) =>
 
 export const deleteCalendarFeed = (o: CallOptions = {}) =>
   request<void>("/api/me/calendar-feed", { ...o, method: "DELETE" });
+
+// Notifications (`shared/src/notifications.ts`). Not on servers older than phase 6: they answer 404.
+
+export const getNotificationSettings = (o: CallOptions = {}) =>
+  request<NotificationSettings>("/api/me/notification-settings", o);
+
+/** Takes all settings at once and answers with what is stored. */
+export const updateNotificationSettings = (body: NotificationSettings, o: CallOptions = {}) =>
+  request<NotificationSettings>("/api/me/notification-settings", { ...o, method: "PUT", body });
+
+export const getPushPublicKey = (o: CallOptions = {}) => request<PushPublicKey>("/api/push/public-key", o);
+
+/** Switches this device on for push messages. */
+export const subscribePush = (body: PushSubscriptionRequest, o: CallOptions = {}) =>
+  request<void>("/api/push/subscriptions", { ...o, method: "POST", body });
+
+/** Switches this device off (with the endpoint in a JSON body). */
+export const unsubscribePush = (body: PushUnsubscribeRequest, o: CallOptions = {}) =>
+  request<void>("/api/push/subscriptions", { ...o, method: "DELETE", body });
+
+/** The creator reminds everyone who has not voted yet (`reminder_too_soon` within 24 hours). */
+export const sendReminder = (pollId: number, o: CallOptions = {}) =>
+  request<ReminderSent>(`/api/polls/${segment(pollId)}/reminders`, { ...o, method: "POST" });

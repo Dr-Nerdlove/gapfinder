@@ -22,6 +22,7 @@
   import FixDate from "../components/polls/FixDate.svelte";
   import FixedDate from "../components/polls/FixedDate.svelte";
   import PollManage from "../components/polls/PollManage.svelte";
+  import Reminder from "../components/polls/Reminder.svelte";
   import PollResults from "../components/polls/PollResults.svelte";
   import VoteForm from "../components/polls/VoteForm.svelte";
 
@@ -214,6 +215,10 @@
       />
     {:else if !fixed}
       <Card tone="notice"><p>{statusText(poll)}. Abstimmen geht nicht mehr.</p></Card>
+    {/if}
+
+    {#if screen.phase === "ready"}
+      <Reminder {poll} now={screen.updatedAt} {locked} onsent={refresh} />
     {/if}
 
     {#if poll.canManage && serverCanFix(poll)}

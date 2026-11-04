@@ -4,6 +4,7 @@
   import CalendarFeed from "../components/CalendarFeed.svelte";
   import Card from "../components/Card.svelte";
   import Message from "../components/Message.svelte";
+  import Notifications from "../components/Notifications.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
   import SeedColorPicker from "../components/SeedColorPicker.svelte";
@@ -78,6 +79,8 @@
     </Card>
 
     <CalendarFeed />
+
+    <Notifications />
 
     <Card title="Passwort ändern">
       <form onsubmit={savePassword}>
