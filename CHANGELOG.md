@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- Groundwork on the server for the Android app's notifications: each phone gets its own key, which can only read that
+  person's notifications. It is removed when the app switches notifications off, at a password change, and after 90
+  days without use.
+
 ### Changed
 
 - Creating a poll: start and end of a proposal are offered in half-hour steps, plus the start and the end of the free

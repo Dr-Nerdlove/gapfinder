@@ -204,6 +204,22 @@ export const migrations: readonly Migration[] = [
     CREATE INDEX notifications_user_id_id ON notifications (user_id, id);
     ALTER TABLE polls ADD COLUMN last_reminder_at TEXT;`,
   },
+  {
+    id: 8,
+    name: "app_devices",
+    // Additive only: one new table, so an older server (after a rollback) ignores it. One row per phone with the
+    // Android app; only the hash of its device key is stored. A key can do nothing but read the user's
+    // notifications. Rows go away with their user, when the app switches notifications off, with a password
+    // change and after 90 days without use.
+    sql: `CREATE TABLE app_devices (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      key_hash TEXT NOT NULL UNIQUE,
+      created_at TEXT NOT NULL,
+      last_used_at TEXT NOT NULL
+    ) STRICT;
+    CREATE INDEX app_devices_user_id ON app_devices (user_id);`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

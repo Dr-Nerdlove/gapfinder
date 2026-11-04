@@ -1,5 +1,7 @@
 import {
   DEFAULT_NOTIFICATION_SETTINGS,
+  type AppDeviceRegistered,
+  type AppDeviceRemoveRequest,
   type NotificationItem,
   type NotificationList,
   type NotificationSettings,
@@ -10,9 +12,10 @@ import {
   type UpdateNotificationSettingsRequest,
 } from "@lueckenfueller/shared";
 import type { FastifyInstance } from "fastify";
+import { findAppDeviceUser, registerAppDevice, removeAppDevice } from "../notifications/app-devices.js";
 import { authOf, createGuards } from "../auth/guards.js";
 import type { AppContext } from "../context.js";
-import { ApiError, forbidden, notFound, validation } from "../errors.js";
+import { ApiError, forbidden, notFound, unauthorized, validation } from "../errors.js";
 import { NOTIFICATION_KEPT_DAYS } from "../notifications/dispatch.js";
 import { areValidPushKeys, isAllowedPushEndpoint } from "../notifications/endpoint.js";
 import { loadSettings, saveSettings, SETTING_NAMES } from "../notifications/settings.js";
@@ -49,6 +52,12 @@ const unsubscribeBody = {
   type: "object",
   required: ["endpoint"],
   properties: { endpoint: { type: "string", maxLength: 4096 } },
+} as const;
+
+const removeDeviceBody = {
+  type: "object",
+  required: ["deviceKey"],
+  properties: { deviceKey: { type: "string", maxLength: 200 } },
 } as const;
 
 export function registerNotificationRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -100,29 +109,59 @@ export function registerNotificationRoutes(app: FastifyInstance, ctx: AppContext
     },
   );
 
+  /** The user's notifications after `after`, from the last 7 days; shared by the session and the device key routes. */
+  function listNotifications(userId: number, after: string | undefined): NotificationList {
+    if (after !== undefined && !/^\d{1,15}$/.test(after)) throw validation("after");
+    const keptSince = new Date(ctx.now().getTime() - NOTIFICATION_KEPT_DAYS * 24 * 60 * 60 * 1000).toISOString();
+    const rows = ctx.db
+      .prepare(
+        "SELECT id, data, created_at FROM notifications WHERE user_id = ? AND id > ? AND created_at >= ? ORDER BY id LIMIT ?",
+      )
+      .all(userId, after === undefined ? 0 : Number(after), keptSince, MAX_LIST) as unknown as {
+      id: number;
+      data: string;
+      created_at: string;
+    }[];
+    const items: NotificationItem[] = rows.map((row) => ({
+      id: row.id,
+      createdAt: row.created_at,
+      data: JSON.parse(row.data) as NotificationItem["data"],
+    }));
+    return { items };
+  }
+
   app.get<{ Querystring: { after?: string } }>(
     "/api/notifications",
     { onRequest: requireUser },
-    async (request): Promise<NotificationList> => {
-      const { user } = authOf(request);
-      const raw = request.query.after;
-      if (raw !== undefined && !/^\d{1,15}$/.test(raw)) throw validation("after");
-      const keptSince = new Date(ctx.now().getTime() - NOTIFICATION_KEPT_DAYS * 24 * 60 * 60 * 1000).toISOString();
-      const rows = ctx.db
-        .prepare(
-          "SELECT id, data, created_at FROM notifications WHERE user_id = ? AND id > ? AND created_at >= ? ORDER BY id LIMIT ?",
-        )
-        .all(user.id, raw === undefined ? 0 : Number(raw), keptSince, MAX_LIST) as unknown as {
-        id: number;
-        data: string;
-        created_at: string;
-      }[];
-      const items: NotificationItem[] = rows.map((row) => ({
-        id: row.id,
-        createdAt: row.created_at,
-        data: JSON.parse(row.data) as NotificationItem["data"],
-      }));
-      return { items };
+    async (request): Promise<NotificationList> => listNotifications(authOf(request).user.id, request.query.after),
+  );
+
+  // The Android app's background job calls this from native code with the phone's key. The key opens nothing else.
+  app.get<{ Querystring: { after?: string } }>("/api/app-notifications", async (request): Promise<NotificationList> => {
+    const key = request.headers["x-device-key"];
+    const userId = typeof key === "string" && key !== "" ? findAppDeviceUser(ctx.db, key, ctx.now()) : null;
+    if (userId === null) throw unauthorized();
+    return listNotifications(userId, request.query.after);
+  });
+
+  app.post("/api/app-devices", { onRequest: requireUser }, async (request, reply) => {
+    const { user } = authOf(request);
+    const deviceKey = registerAppDevice(ctx.db, user.id, ctx.now());
+    // A new phone starts after the newest notification, so it does not show the last 7 days.
+    const last = ctx.db.prepare("SELECT MAX(id) AS id FROM notifications WHERE user_id = ?").get(user.id) as {
+      id: number | null;
+    };
+    const body: AppDeviceRegistered = { deviceKey, lastNotificationId: last.id ?? 0 };
+    return reply.status(201).send(body);
+  });
+
+  app.delete<{ Body: AppDeviceRemoveRequest }>(
+    "/api/app-devices",
+    { onRequest: requireUser, schema: { body: removeDeviceBody } },
+    async (request, reply) => {
+      // Switching off something that is already off (or not yours) is fine.
+      removeAppDevice(ctx.db, authOf(request).user.id, request.body.deviceKey);
+      return reply.status(204).send();
     },
   );
 
