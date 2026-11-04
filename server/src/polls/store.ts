@@ -27,6 +27,8 @@ export interface PollRow {
   created_at: string;
   updated_at: string;
   expires_at: string;
+  /** When the creator last sent a reminder, or null. */
+  last_reminder_at: string | null;
 }
 
 /** A proposal as stored: the first two fields belong to `timed` polls, the last two to `days` polls. */
@@ -398,6 +400,7 @@ function votesOf(db: DatabaseSync, pollId: number): VoteView[] {
 export function buildPollView(db: DatabaseSync, poll: PollRow, viewer: UserRow | null, now: Date): PollView {
   const participants = participantsOf(db, poll.id);
   const myVote = viewer ? findAccountVote(db, poll.id, viewer.id) : undefined;
+  const canManage = viewer !== null && (viewer.id === poll.creator_id || viewer.is_admin === 1);
   return {
     id: poll.id,
     shareToken: poll.share_token,
@@ -416,6 +419,7 @@ export function buildPollView(db: DatabaseSync, poll: PollRow, viewer: UserRow |
     createdAt: poll.created_at,
     expiresAt: poll.expires_at,
     myVoteId: myVote?.id ?? null,
-    canManage: viewer !== null && (viewer.id === poll.creator_id || viewer.is_admin === 1),
+    canManage,
+    ...(canManage ? { lastReminderAt: poll.last_reminder_at } : {}),
   };
 }

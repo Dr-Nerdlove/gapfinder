@@ -225,7 +225,7 @@ describe("migrations", () => {
     runMigrations(db);
 
     expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
-    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6]);
+    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7]);
     // The old poll is not fixed and still readable.
     expect(db.prepare("SELECT title, fixed_proposal_id, fixed_at, fixed_sequence FROM polls").get()).toEqual({
       title: "x",
@@ -256,6 +256,32 @@ describe("migrations", () => {
     db.prepare("INSERT INTO calendar_feeds (user_id, token, created_at) VALUES (1, 'tok', 'a')").run();
     db.prepare("DELETE FROM users WHERE id = 1").run();
     expect(db.prepare("SELECT COUNT(*) AS n FROM calendar_feeds").get()).toEqual({ n: 0 });
+  });
+
+  it("migration 7 adds the notification tables to a database at migration 6 and keeps its data", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 6));
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    db.prepare(
+      "INSERT INTO polls (share_token, creator_id, title, kind, created_at, updated_at, expires_at) VALUES ('t', 1, 'x', 'days', 'a', 'a', 'z')",
+    ).run();
+
+    runMigrations(db);
+
+    expect(db.prepare("SELECT title, last_reminder_at FROM polls").get()).toEqual({ title: "x", last_reminder_at: null });
+    db.prepare("INSERT INTO notification_prefs (user_id) VALUES (1)").run();
+    expect(db.prepare("SELECT * FROM notification_prefs").get()).toMatchObject({ poll_created: 1, vote_own: 1, vote_others: 0 });
+    db.prepare("INSERT INTO push_subscriptions (user_id, endpoint, p256dh, auth, created_at) VALUES (1, 'e', 'p', 'a', 'a')").run();
+    db.prepare("INSERT INTO notifications (user_id, poll_id, data, created_at) VALUES (1, 1, '{}', 'a')").run();
+    // Deleting the poll takes its notifications, deleting the user everything else.
+    db.prepare("DELETE FROM polls WHERE id = 1").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM notifications").get()).toEqual({ n: 0 });
+    db.prepare("DELETE FROM users WHERE id = 1").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get()).toEqual({ n: 0 });
+    expect(db.prepare("SELECT COUNT(*) AS n FROM notification_prefs").get()).toEqual({ n: 0 });
   });
 
   it("waits for a locked database instead of failing at once", () => {

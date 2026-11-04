@@ -63,6 +63,7 @@ import {
   checkedTitle,
   type RawCreatePoll,
 } from "../polls/validation.js";
+import { missingVotes, notifyDateFixed, notifyPollCreated, notifyVote } from "../notifications/triggers.js";
 import { fixedEventOfPoll } from "../polls/feed.js";
 import { isBusyDuring, proposalSpan } from "../polls/fix-check.js";
 import { clientKey, enforceLimits, idParam } from "./shared.js";
@@ -185,6 +186,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
           expiresAt: checked.expiresAt.toISOString(),
         });
       });
+      notifyPollCreated(ctx, findPollById(ctx.db, pollId, now)!, user.username);
       return reply.status(201).send(viewFor(pollId, user));
     },
   );
@@ -250,6 +252,8 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       const { poll, user } = manageablePollOrFail(request);
       const proposal = proposalOrFail(poll, request.body.proposalId);
       fixProposal(ctx.db, poll, proposal.id, ctx.now());
+      // Fixing the date that is already fixed changes nothing, so nobody is told again.
+      if (poll.fixed_proposal_id !== proposal.id) notifyDateFixed(ctx, poll, proposal.id, user.id, user.username);
       return viewFor(poll.id, user);
     },
   );
@@ -367,7 +371,9 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       const poll = pollByLinkOrFail(request);
       assertOpen(poll);
       const answers = checkedAnswers(request.body.answers, proposalIdsOf(ctx.db, poll.id));
+      const missingBefore = missingVotes(ctx, poll.id);
       inTransaction(ctx.db, () => saveAccountVote(ctx.db, poll.id, user.id, answers, ctx.now()));
+      notifyVote(ctx, poll, user.id, user.username, missingBefore);
       return buildPollView(ctx.db, poll, user, ctx.now());
     },
   );
@@ -398,6 +404,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       const answers = checkedAnswers(request.body.answers, proposalIdsOf(ctx.db, poll.id));
       const { name, key } = checkedGuestName(request.body.name);
       const voteKey = generateToken();
+      const missingBefore = missingVotes(ctx, poll.id);
 
       // Checks and insert in one go: nobody can slip in between.
       const voteId = inTransaction(ctx.db, () => {
@@ -418,6 +425,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
         }
       });
       countGuestWrite(request);
+      notifyVote(ctx, poll, null, name, missingBefore);
       const created: GuestVoteCreated = {
         voteId,
         voteKey,
@@ -436,6 +444,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       assertOpen(poll);
       const answers = checkedAnswers(request.body.answers, proposalIdsOf(ctx.db, poll.id));
       const { name, key } = checkedGuestName(request.body.name);
+      const missingBefore = missingVotes(ctx, poll.id);
       inTransaction(ctx.db, () => {
         assertNameFree(poll, key, vote.id);
         try {
@@ -446,6 +455,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
         }
       });
       countGuestWrite(request);
+      notifyVote(ctx, poll, null, name, missingBefore);
       return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now());
     },
   );

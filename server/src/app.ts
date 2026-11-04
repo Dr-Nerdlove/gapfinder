@@ -13,11 +13,15 @@ import type { AppContext } from "./context.js";
 import { openDatabase } from "./db.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
 import { maskTokens } from "./log-masking.js";
+import { purgeOldNotifications } from "./notifications/dispatch.js";
+import { createWebPushSender, type SendPush } from "./notifications/send.js";
+import { loadVapidKeys, vapidSubject } from "./notifications/vapid.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerCalendarRoutes } from "./routes/calendars.js";
 import { registerFeedRoutes } from "./routes/feeds.js";
 import { registerInviteRoutes } from "./routes/invites.js";
+import { registerNotificationRoutes } from "./routes/notifications.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerPasswordResetRoutes } from "./routes/password-resets.js";
 import { registerPollRoutes } from "./routes/polls.js";
@@ -34,6 +38,8 @@ export interface BuildAppOptions {
   logStream?: Writable;
   /** Fetches calendar links instead of the real, network-using fetcher (tests never touch the network). */
   fetchCalendarText?: (url: URL) => Promise<FetchResult>;
+  /** Sends Web Push messages instead of the real sender (tests never touch the network). */
+  sendPush?: SendPush;
 }
 
 /** Builds the server without listening, so tests can use `app.inject`. */
@@ -72,6 +78,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   } else {
     app.log.error("CALENDAR_KEY does not match the key the stored calendar links were encrypted with");
   }
+  const vapid = loadVapidKeys(db);
   const ctx: AppContext = {
     config,
     db,
@@ -80,8 +87,12 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
     calendarKeyStatus,
     calendarCache: new CalendarCache(now),
     fetchCalendarText: options.fetchCalendarText ?? ((url) => fetchCalendarText(url)),
+    sendPush: options.sendPush ?? createWebPushSender(vapid, vapidSubject(config.corsOrigins)),
+    vapidPublicKey: vapid.publicKey,
+    log: app.log,
   };
   purgeExpired(db, now());
+  purgeOldNotifications(db, now());
 
   // A JSON content type without a body (e.g. logout) is an empty request, not a syntax error.
   const parseJson = app.getDefaultJsonParser("error", "error");
@@ -120,6 +131,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   registerCalendarRoutes(app, ctx);
   registerSearchRoutes(app, ctx);
   registerPollRoutes(app, ctx);
+  registerNotificationRoutes(app, ctx);
   registerFeedRoutes(app, ctx);
   registerInviteRoutes(app, ctx);
   registerPasswordResetRoutes(app, ctx);

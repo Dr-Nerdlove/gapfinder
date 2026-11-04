@@ -5,6 +5,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- Groundwork for notifications on the server (new poll, votes, everyone voted, date fixed, reminders; Web Push and a
+  list for the later Android app). Nothing is visible in the app yet.
+
 ## [1.3.1] - 2026-11-04
 
 Small fixes: the subscribed "Lückenfüller" calendar now shows German time as its time zone instead of UTC (the

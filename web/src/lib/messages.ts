@@ -32,6 +32,9 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   poll_not_fixed: "Für diese Abstimmung ist noch kein Termin festgelegt.",
   poll_full: "Bei dieser Abstimmung haben schon 100 Gäste abgestimmt. Mehr geht nicht.",
   poll_limit: "Du hast schon 20 Abstimmungen. Lösche erst eine alte.",
+  poll_fixed: "Der Termin steht schon fest. Eine Erinnerung ist nicht mehr nötig.",
+  reminder_too_soon: "Du hast schon vor Kurzem erinnert. Bitte warte bis morgen.",
+  push_endpoint_invalid: "Dieses Gerät kann keine Benachrichtigungen empfangen.",
   vote_name_taken: "Diesen Namen gibt es hier schon. Bitte nimm einen anderen, z. B. mit Nachnamen.",
   error: "Das hat nicht geklappt. Bitte versuche es noch einmal.",
 };

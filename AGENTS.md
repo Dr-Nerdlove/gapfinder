@@ -243,6 +243,11 @@ missing, with a recommendation, and let the people choose.
     0 DERP drops and 0 "connection reset" in 10 minutes, `tailscale netcheck` showed the home connection's
     public IPv4 (not the VPN's), backup and trial restore worked, SSH from a phone in the home Wi-Fi did not
     connect.
+  - Notifications: Web Push goes only to the known push services (https, port 443, fixed host list in
+    `server/src/notifications/endpoint.ts`), because the subscription address comes from the client. The server
+    sends structured data only (`NotificationData` in `shared`); the texts are made by the app. Logs name the kind
+    and the status, never an address or key. The VAPID keys live in `meta` (made on first start): losing them
+    invalidates all subscriptions.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Versions and releases:** First release `v1.0.0` (2026-11-03). The version lives in the four `package.json`

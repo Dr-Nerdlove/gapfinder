@@ -118,7 +118,7 @@ describe("creating polls", () => {
     expect(e.db.prepare("SELECT share_token FROM polls").get()).toEqual({ share_token: poll.shareToken });
     const viewed = await call(e, "GET", link(poll));
     expect(viewed.statusCode).toBe(200);
-    expect(viewed.json<PollView>()).toEqual({ ...poll, canManage: false });
+    expect(viewed.json<PollView>()).toEqual({ ...poll, canManage: false, lastReminderAt: undefined });
   });
 
   it("creates a poll of days and expires it 30 days after German midnight following the last day", async () => {

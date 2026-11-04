@@ -142,6 +142,11 @@ export interface PollView {
   myVoteId: number | null;
   /** The logged-in caller is the creator or an admin. */
   canManage: boolean;
+  /**
+   * When the creator last sent a reminder (`POST /api/polls/:id/reminders`); only filled for the creator or an
+   * admin. Added later: an older server does not send it, so the app must cope with it missing.
+   */
+  lastReminderAt?: string | null;
 }
 
 /** One poll in `GET /api/polls` (login): every poll the caller created, takes part in, or voted in. */

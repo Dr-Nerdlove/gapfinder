@@ -337,6 +337,54 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   treats the poll as not fixed; the profile card says the feature is not on the server yet (the missing route
   answers 404).
 
+### Notifications
+
+Decided with the owner on 2026-11-04 (all recommendations taken). Phase 6 (web, Web Push) and phase 7 (Android
+app) below.
+
+- **Kinds and who gets them** (accounts only; "involved" = the creator, the participants of the search and the
+  accounts that voted; the person who caused it never gets their own notification):
+  - **New poll** (`poll_created`): every participant except the creator.
+  - **Someone voted** (`vote`, a new or changed vote of an account or a guest; deleting a vote sends nothing):
+    the creator by default, the other involved accounts only if they switch it on.
+  - **Everyone has voted** (`all_voted`): once, when the last participant without a vote votes; the creator by
+    default, the others only if they switch it on.
+  - **Date fixed** (`date_fixed`, also when it is changed to another proposal; unfixing sends nothing): the
+    involved accounts that answered "Ja" or "Vielleicht" to exactly that proposal, and the participants who
+    have not voted. Whoever answered "Nein" to it gets nothing.
+  - **Reminder** (`reminder`): only the creator can send it, from the poll page, to the participants without a
+    vote; at most once per 24 hours per poll ("Erinnerung gesendet um 14:05"), not once the date is fixed.
+- **Settings:** each user switches every kind on or off in the profile. Defaults: new poll on, someone voted on
+  for one's own polls and off for others', everyone voted the same, date fixed on, reminder on. Separately,
+  each device is switched on once ("Benachrichtigungen auf diesem Gerät erlauben"); a user can have several.
+- **Guests** get no notifications for now (it would mean storing device data of people without an account).
+- **Texts:** the server sends no text, only structured data (kind, poll title, share token, who, which date);
+  the app (service worker) and later the Android app make the German text, like everywhere else.
+- **Stored on the server:** every notification is kept per recipient for **7 days** (then deleted), so the
+  Android app can fetch what is new; Web Push subscriptions (browser address and keys) until the browser
+  reports them gone, the user switches the device off or logs out, or the account is deleted. Both are
+  personal data, named on the privacy page.
+- **Web Push (phase 6):** the server makes its own key pair (VAPID) on first start and keeps it in `meta`, so
+  nothing has to be set up in the VM and a restored backup keeps working subscriptions. Messages are encrypted
+  for the browser; the browser's push service (Google, Mozilla, Apple, Microsoft) only passes them on. The
+  server only sends to the known push services (https, port 443, fixed host list), because the subscription
+  address comes from the client. Library: `web-push` (the encryption is too delicate to write by hand). The
+  firewall already allows it (TCP 443). iPhones get notifications only for the app added to the home screen
+  (iOS 16.4+); the app says so. An older server answers 404 for the new routes: the profile card then says
+  the feature is not on the server yet.
+- **Android app (phase 7):** for a friend who uses no browser (Pixel, Android 16/17, with Google services).
+  - A Capacitor app that loads the live app from GitHub Pages (like the browser does), so it is always up to
+    date and the API needs no new CORS origin; a new APK is only needed when the app shell changes.
+  - Notifications without Firebase: the app checks the server about every 15 minutes in the background
+    (WorkManager) for notifications newer than the last one it has seen, and shows them itself. They can
+    arrive up to ~15 minutes late (later when the phone has been idle for long). Rejected: Firebase (an extra
+    Google account, Google reads the text), ntfy/UnifiedPush (an extra app and service), a foreground service
+    as in the owner's Marvel Remix project (fits a one-hour game, not a poll that runs for days).
+  - Delivered as an APK attached to the GitHub release, signed with a fixed key from GitHub secrets (pattern
+    of the owner's Game Night project, with the fingerprint check). The app updates itself like Marvel Remix:
+    it offers a newer version, keeps a downloaded APK until it is installed (so a cancelled "install unknown
+    apps" prompt does not mean downloading again), and deletes older ones.
+
 ### Look
 
 - Mobile first, Material 3 ("Material You") style, follows the phone's light/dark mode.
@@ -370,7 +418,10 @@ phase in brackets.
 3. **Gap search** (Opus for the algorithm, Sonnet for the screens): steps 1–4 above, with thorough tests.
 4. **Sharing and voting** (Sonnet): share link, guest votes, live state.
 5. **Fixing and sending the date** (Sonnet): re-check, `.ics`, add-to-calendar buttons, personal feed.
-6. **Optional later:** direct Google/Outlook connection, offline vote queue.
+6. **Notifications** (Opus to plan, Sonnet for the steps): 6a server (stored notifications, settings,
+   Web Push, reminder), 6b screens (profile card, reminder button, service worker, privacy page).
+7. **Android app** (Opus): Capacitor shell, background check, self-update, APK in the release.
+8. **Optional later:** direct Google/Outlook connection, offline vote queue.
 
 ## Server updates
 
@@ -410,6 +461,7 @@ How it works (phase 1b, guide: [`server-setup.md`](server-setup.md)):
     Triggers trial was dropped), so it needs Web Push from the server: a service worker, a new key and library,
     stored subscriptions (personal data of guests), messages through Google/Mozilla/Apple, and on iPhones only
     for the app added to the home screen. Revisit if notifications are wanted elsewhere too (e.g. "Termin steht").
+    Notifications came with phase 6 (see "Notifications"); a 07:00 reminder is still not built.
 - **Review of the guides (done 2026-11-02):** README and `docs/` were checked against `deploy/vm/*.sh`, the
   units, `setup.sh`, the Dockerfile, `.nvmrc`, `package.json` and the CI files (commands, file names, messages,
   retention numbers, timer times, Node versions): no outdated steps found. Gap found and closed: the trial

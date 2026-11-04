@@ -107,6 +107,9 @@ const KNOWN_CODES: Record<ErrorCode, true> = {
   poll_not_fixed: true,
   poll_full: true,
   poll_limit: true,
+  poll_fixed: true,
+  reminder_too_soon: true,
+  push_endpoint_invalid: true,
   vote_name_taken: true,
   error: true,
 };

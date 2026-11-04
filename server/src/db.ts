@@ -168,6 +168,42 @@ export const migrations: readonly Migration[] = [
     sql: `ALTER TABLE calendars ADD COLUMN counts_busy_days INTEGER NOT NULL DEFAULT 1;
     UPDATE calendars SET counts_busy_days = counts_busy;`,
   },
+  {
+    id: 7,
+    name: "notifications",
+    // Additive only: new tables and one nullable column, so an older server (after a rollback) ignores them.
+    // `notification_prefs` has one row per user who changed a setting; a missing row means the defaults. All
+    // three tables go away with their user, and `notifications` with its poll. The `data` column holds the
+    // structured notification as JSON (kind, poll title, share token, who, which date) and is deleted after 7 days.
+    sql: `CREATE TABLE notification_prefs (
+      user_id INTEGER PRIMARY KEY REFERENCES users (id) ON DELETE CASCADE,
+      poll_created INTEGER NOT NULL DEFAULT 1,
+      vote_own INTEGER NOT NULL DEFAULT 1,
+      vote_others INTEGER NOT NULL DEFAULT 0,
+      all_voted_own INTEGER NOT NULL DEFAULT 1,
+      all_voted_others INTEGER NOT NULL DEFAULT 0,
+      date_fixed INTEGER NOT NULL DEFAULT 1,
+      reminder INTEGER NOT NULL DEFAULT 1
+    ) STRICT;
+    CREATE TABLE push_subscriptions (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      endpoint TEXT NOT NULL UNIQUE,
+      p256dh TEXT NOT NULL,
+      auth TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    ) STRICT;
+    CREATE INDEX push_subscriptions_user_id ON push_subscriptions (user_id);
+    CREATE TABLE notifications (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      poll_id INTEGER NOT NULL REFERENCES polls (id) ON DELETE CASCADE,
+      data TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    ) STRICT;
+    CREATE INDEX notifications_user_id_id ON notifications (user_id, id);
+    ALTER TABLE polls ADD COLUMN last_reminder_at TEXT;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

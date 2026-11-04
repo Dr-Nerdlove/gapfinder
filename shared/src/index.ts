@@ -4,6 +4,7 @@ export const API_VERSION = 1;
 export * from "./accounts.js";
 export * from "./calendars.js";
 export * from "./gaps.js";
+export * from "./notifications.js";
 export * from "./polls.js";
 
 /** Response of `GET /api/health`. */
@@ -83,6 +84,12 @@ export type ErrorCode =
   | "poll_full"
   /** The person already has the most polls allowed (`POLLS_PER_USER`). */
   | "poll_limit"
+  /** The poll already has a fixed date, so a reminder to vote makes no sense. */
+  | "poll_fixed"
+  /** A reminder for this poll was sent less than 24 hours ago (`retryAfterSeconds` says how long to wait). */
+  | "reminder_too_soon"
+  /** The push address is not one of the known push services (https, port 443), or its keys are malformed. */
+  | "push_endpoint_invalid"
   /** A guest's name is an account's username or another guest's name in this poll. */
   | "vote_name_taken"
   /** Anything else (server errors, unknown routes). */
