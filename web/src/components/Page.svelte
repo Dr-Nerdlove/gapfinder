@@ -24,7 +24,7 @@
 
 <style>
   header {
-    padding: 24px 0;
+    padding: 12px 0 24px;
   }
 
   .back {
