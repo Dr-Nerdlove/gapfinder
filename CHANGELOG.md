@@ -5,6 +5,14 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.5.0] - 2026-11-04
+
+The app is easier to read and use: the start page is now tidy, with "Lücken suchen" on top and the other places listed
+below it as a menu. Admins find "Verwaltung" in its own section. Chosen options, such as weekdays or the answers when
+voting, are filled in the app's main colour and show a check mark, and other buttons have a light border, so all of
+them are easy to see in dark mode too. In the gap search, the fields side by side now line up. The app updates about
+2 minutes after the release. Nothing has to be done on the VM.
+
 ### Changed
 
 - **Tidier start page.** "Lücken suchen" now spans the whole width, and the other places (Meine Abstimmungen,
