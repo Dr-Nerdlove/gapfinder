@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.3.1] - 2026-11-04
+
+Small fixes: the subscribed "Lückenfüller" calendar now shows German time as its time zone instead of UTC (the
+times of the events were already right). The colour dots next to the friends in "Wer kommt mit?" are gone, and the
+own colour in the profile is shown as a filled circle. The app updates about 2 minutes after the release, the
+calendar time zone once the server has updated itself, within about an hour. Nothing has to be done on the VM.
+
 ### Fixed
 
 - **Calendar subscription shows German time.** The "Lückenfüller" calendar feed now names Europe/Berlin as its time
