@@ -5,6 +5,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.4.0] - 2026-11-04
+
+The app can now send notifications: about a new poll, new votes, when everyone has voted, when the date is fixed, and
+reminders, even when the app is closed. They are switched on or off for each device in the profile, under
+"Benachrichtigungen". The creator of a poll can also remind those who have not voted yet with "Erinnerung senden". On
+an iPhone, notifications only work when the app was added to the home screen. The app updates about 2 minutes after
+the release, notifications work once the server has updated itself, within about an hour. Nothing has to be done on
+the VM.
+
 ### Added
 
 - **Notifications.** The app can now tell you about a new poll, new votes, when everyone has voted, when the date is
