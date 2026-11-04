@@ -34,6 +34,20 @@
         landen nie in der Datenbank, in einem Protokoll oder in einer Sicherung.
       </li>
       <li>Entfernst du einen Kalender oder wird dein Konto gelöscht, ist auch der Link weg.</li>
+      <li>
+        Schaltest du Benachrichtigungen für ein Gerät ein, speichert der Server die Adresse dieses Geräts beim Push-Dienst deines Browsers
+        und dessen Schlüssel. Das bleibt, bis du sie auf dem Gerät ausschaltest, dich dort abmeldest, der Browser das Gerät als nicht mehr
+        erreichbar meldet oder dein Konto gelöscht wird.
+      </li>
+      <li>Deine Einstellungen für Benachrichtigungen, also welche du bekommen willst.</li>
+      <li>
+        Jede Benachrichtigung wird 7 Tage für dich aufbewahrt (für die spätere Android-App) und dann gelöscht.
+      </li>
+      <li>
+        Die Nachrichten laufen verschlüsselt über den Push-Dienst deines Browsers (Google, Apple, Mozilla oder Microsoft). Dieser reicht
+        sie nur weiter und kann sie nicht lesen.
+      </li>
+      <li>Gäste bekommen keine Benachrichtigungen, und von ihren Geräten wird nichts gespeichert.</li>
     </ul>
   </Card>
 
