@@ -47,6 +47,10 @@ admin sees a warning on the start page when a backup is missing or the monthly t
 | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------- |
 | ![Poll state](docs/screenshots/polls/3-state.png) | ![Fixing the date](docs/screenshots/fix-date/2-fix-check.png) | ![Date fixed](docs/screenshots/fix-date/4-date-fixed-guest.png) |
 
+| Notifications (profile card)                                  | Reminder (poll creator)                                    | iPhone: add to the home screen first                                |
+| ------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
+| ![Notifications card](docs/screenshots/notifications/profile-card-on.png) | ![Reminder card](docs/screenshots/notifications/reminder-sent.png) | ![iPhone hint](docs/screenshots/notifications/profile-card-iphone.png) |
+
 ## Repository layout
 
 | Folder    | What it is                                                                                   |
