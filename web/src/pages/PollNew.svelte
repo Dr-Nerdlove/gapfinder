@@ -73,7 +73,7 @@
     busy = false;
     if (result.ok) {
       pollSource.clear();
-      navigate(`#/abstimmung/${encodeURIComponent(result.data.shareToken)}`);
+      navigate(`#/abstimmung/${encodeURIComponent(result.data.shareToken)}`, { replace: true });
     } else {
       problem = errorMessage(result);
     }

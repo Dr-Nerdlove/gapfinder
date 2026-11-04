@@ -122,13 +122,13 @@
   const newLink = (): Promise<void> =>
     manage(
       () => session.run((o) => api.newPollShareLink(poll!.id, o)),
-      (data) => navigate(`#/abstimmung/${encodeURIComponent(data.shareToken)}`),
+      (data) => navigate(`#/abstimmung/${encodeURIComponent(data.shareToken)}`, { replace: true }),
     );
 
   const remove = (): Promise<void> =>
     manage(
       () => session.run((o) => api.deletePoll(poll!.id, o)),
-      () => navigate("#/abstimmungen"),
+      () => navigate("#/abstimmungen", { replace: true }),
     );
 
   /** The check before fixing. A failed check never stops the person: the dialog then says so. */

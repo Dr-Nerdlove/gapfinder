@@ -22,7 +22,7 @@
 
   // Someone who is logged in has nothing to do on the login page.
   $effect(() => {
-    if (route.name === "login" && sessionState.user) navigate("#/");
+    if (route.name === "login" && sessionState.user) navigate("#/", { replace: true });
   });
 </script>
 
