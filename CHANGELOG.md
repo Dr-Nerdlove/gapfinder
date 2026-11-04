@@ -5,6 +5,16 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.3.0] - 2026-11-04
+
+New users now get a short guided tour on the start page after their first login on a device; it can be opened
+again at any time with "Einführung". A new privacy page explains in plain words what happens with a calendar and who
+can see what, and the guide for adding a calendar is simpler: it first asks which calendar you use and then shows
+short steps for phone and computer. In the search for whole days, short appointments no longer block a day: only
+all-day events and events of at least 6 hours count, also in the check before fixing a whole-day poll date. The app
+updates about 2 minutes after the release; the new rule for whole days takes effect once the server has updated
+itself, within about an hour. Nothing has to be done on the VM.
+
 ### Added
 
 - **Guided tour for new users.** It opens once on the start page after the first login on a device, and can be
