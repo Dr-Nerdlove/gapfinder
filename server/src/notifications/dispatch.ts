@@ -65,21 +65,32 @@ async function push(ctx: AppContext, stored: Stored[]): Promise<void> {
 }
 
 /**
- * Stores the notification for every recipient who wants it, and sends Web Push to their devices without making
- * the caller wait. Never throws: a failed notification must not fail the vote or the poll. Returns how many
- * accounts got it.
+ * Stores the notification for every recipient who wants it (and is not in `skip`), and sends Web Push to their
+ * devices without making the caller wait. Never throws: a failed notification must not fail the vote or the poll.
+ * Returns the ids of the accounts that got it.
  */
-export function notify(ctx: AppContext, pollId: number, data: NotificationData, recipients: Recipient[]): number {
+export function notifyUsers(
+  ctx: AppContext,
+  pollId: number,
+  data: NotificationData,
+  recipients: Recipient[],
+  skip: ReadonlySet<number> = new Set(),
+): Set<number> {
   try {
-    const stored = store(ctx, pollId, data, recipients);
+    const stored = store(ctx, pollId, data, skip.size > 0 ? recipients.filter((r) => !skip.has(r.userId)) : recipients);
     if (stored.length > 0) {
       void push(ctx, stored).catch(() => {
         // Already handled per message; this only keeps an unexpected error from becoming a crash.
       });
     }
-    return stored.length;
+    return new Set(stored.map((entry) => entry.userId));
   } catch (error) {
     ctx.log.warn({ kind: data.kind, err: (error as Error).name }, "Notification could not be stored");
-    return 0;
+    return new Set();
   }
+}
+
+/** Like `notifyUsers`, but returns only how many accounts got it. */
+export function notify(ctx: AppContext, pollId: number, data: NotificationData, recipients: Recipient[]): number {
+  return notifyUsers(ctx, pollId, data, recipients).size;
 }

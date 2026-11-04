@@ -1,7 +1,7 @@
 import type { NotificationData, Proposal } from "@lueckenfueller/shared";
 import type { AppContext } from "../context.js";
 import { proposalRowsOf, type PollRow } from "../polls/store.js";
-import { notify } from "./dispatch.js";
+import { notify, notifyUsers } from "./dispatch.js";
 import {
   allVotedRecipients,
   dateFixedRecipients,
@@ -29,13 +29,16 @@ export function missingVotes(ctx: AppContext, pollId: number): number {
 
 /**
  * Someone voted (a new or changed vote; withdrawing sends nothing). `actorId` is null for a guest. `missingBefore`
- * is `missingVotes` from before the vote was saved: `all_voted` goes out once, when this vote filled the last gap.
+ * is `missingVotes` from before the vote was saved: `all_voted` goes out once, when this vote filled the last gap,
+ * and replaces `vote` for those who get it.
  */
 export function notifyVote(ctx: AppContext, poll: PollInfo, actorId: number | null, actorName: string, missingBefore: number): void {
-  notify(ctx, poll.id, { kind: "vote", ...base(poll), actorName }, voteRecipients(ctx.db, poll, actorId));
-  if (missingBefore > 0 && missingVotes(ctx, poll.id) === 0) {
-    notify(ctx, poll.id, { kind: "all_voted", ...base(poll), actorName }, allVotedRecipients(ctx.db, poll, actorId));
-  }
+  // The vote that closes the last gap says "all voted" and names the voter; whoever got that does not also get "vote".
+  const gotAllVoted =
+    missingBefore > 0 && missingVotes(ctx, poll.id) === 0
+      ? notifyUsers(ctx, poll.id, { kind: "all_voted", ...base(poll), actorName }, allVotedRecipients(ctx.db, poll, actorId))
+      : new Set<number>();
+  notifyUsers(ctx, poll.id, { kind: "vote", ...base(poll), actorName }, voteRecipients(ctx.db, poll, actorId), gotAllVoted);
 }
 
 /** The date was fixed or changed to `proposalId` by `actorName`. */

@@ -27,7 +27,8 @@ self.addEventListener("push", (event) => {
       body: text.body,
       tag: text.tag,
       icon,
-      badge: icon,
+      // Android shows only the alpha channel of the badge: a separate white-on-transparent symbol.
+      badge: new URL("badge.png", self.registration.scope).href,
       data: { shareToken: text.shareToken },
       lang: "de",
     }),
