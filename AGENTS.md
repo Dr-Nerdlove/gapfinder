@@ -174,8 +174,9 @@ missing, with a recommendation, and let the people choose.
   "Gapfinder"; the product's name is **"Lückenfüller"**. All decisions and the phases: `docs/PLAN.md`.
 - **Product languages:** German only. All text shown to users is German (with ä, ö, ü, ß); there is no
   English interface. The texts live directly in the Svelte pages and components (`web/src/pages`,
-  `web/src/components`); error messages for the server's error codes are in `web/src/lib/messages.ts`. The
-  server never sends text meant for users, only codes (`ErrorCode` in `shared/src/index.ts`).
+  `web/src/components`); error messages for the server's error codes are in `web/src/lib/messages.ts`, notification
+  texts in `web/src/lib/notification-text.ts`. The server never sends text meant for users, only codes
+  (`ErrorCode` in `shared/src/index.ts`).
 - **Architecture:** Static frontend on GitHub Pages; API server + SQLite in Docker inside a Linux VM (Hyper-V)
   on the owner's Windows PC, reachable only through Tailscale Funnel (nothing opened on the router). Details
   and reasons: `docs/PLAN.md`.
@@ -247,7 +248,12 @@ missing, with a recommendation, and let the people choose.
     `server/src/notifications/endpoint.ts`), because the subscription address comes from the client. The server
     sends structured data only (`NotificationData` in `shared`); the texts are made by the app. Logs name the kind
     and the status, never an address or key. The VAPID keys live in `meta` (made on first start): losing them
-    invalidates all subscriptions.
+    invalidates all subscriptions. The service worker (`web/src/sw.ts`) is built separately as one classic IIFE
+    script (`web/vite.sw.config.ts`; Firefox and older Safari cannot run module service workers), so it and
+    everything it imports (`notification-text.ts` and its imports) must not touch `window`, `document` or
+    `localStorage` at import time. `npm run build -w web` builds both. It is registered only in production builds
+    (`import.meta.env.PROD`), so `npm run dev` has no push. A new notification kind needs a text in
+    `notification-text.ts`; unknown kinds get a general text.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Versions and releases:** First release `v1.0.0` (2026-11-03). The version lives in the four `package.json`
