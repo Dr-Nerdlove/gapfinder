@@ -77,8 +77,39 @@ browser version, and it adds what a web page cannot do on Android: notifications
   initialised, the app runs as before and `instant` is false), so keep every Firebase call guarded. In
   Google Cloud the API key is restricted to the app id `de.drnerdlove.lueckenfueller` and the signing certificate: the
   build script prints `Signature (SHA-1, for Firebase)` next to the SHA-256 for that.
-- `SHELL_VERSION` is 2 since this change (new APK needed for the doorbell). The Firebase BoM version is
+- `SHELL_VERSION` was raised to 2 for the doorbell (3 since the self-update). The Firebase BoM version is
   `firebaseBomVersion` in `android/variables.gradle`.
+
+## Self-update (phase 7c)
+
+- **How it decides:** every release has `app-update.json` next to the APK (made by `scripts/app-update-json.sh` in
+  `release.yml`): `{"version":"1.7.0","shell":3,"apk":"lueckenfueller-1.7.0.apk","sha256":"<hex>"}`. The app reads it from
+  `https://github.com/Dr-Nerdlove/gapfinder/releases/latest/download/app-update.json` (the plugin method `appUpdate()`,
+  on every start of the app) and offers an update only when `shell` is higher than the installed `SHELL_VERSION`. The
+  app version alone never triggers it, because the content comes from GitHub Pages anyway. A file that cannot be read
+  (no connection, a release before 1.7.0 without the file) is the state "unknown": nothing is shown.
+- **Installing** (`installAppUpdate()`, the card on the start page): the app reads the JSON again, builds the APK address
+  itself (`.../releases/download/v<version>/lueckenfueller-<version>.apk`, never taken from the JSON), downloads it into
+  the cache folder and checks, in this order: SHA-256 equals the JSON, the package name is our own, the signing
+  certificates equal the installed app's, the version code is higher. Only then a `PackageInstaller` session is
+  committed, and Android asks the user to confirm. The file is deleted afterwards. A failure answers `failed` with a
+  reason (`download`, `checksum`, `package`, `signature`, `version`, `install`) and no exception text.
+- **Permission:** from Android 8 the user must allow installing from this app ("Apps aus dieser Quelle installieren").
+  Without it the app opens that settings page and answers `needs-permission`; the user allows it and taps
+  "Aktualisieren" again.
+- **Downloads** follow redirects by hand: https only, hosts `github.com`, `release-assets.githubusercontent.com` and
+  `objects.githubusercontent.com`, at most 5 hops; 64 KiB for the JSON, 64 MiB for the APK.
+- **1.6.0 users install once by hand.** The 1.6.0 app (shell 2) has no `appUpdate` method. The web app sees the call
+  rejected as "UNIMPLEMENTED" and shows a card that asks to install the new version from the release page, but only
+  when the web build's own version is newer than 1.6.0 (`LAST_RELEASE_WITHOUT_SELF_UPDATE` in `app-update.ts`): the web
+  app is deployed on every merge, before the release with the self-updating APK exists, and until then the release
+  page still shows 1.6.0. From the first APK with shell 3 on, the app updates itself.
+- **Raise `SHELL_VERSION`** whenever the shell changes in a way users need a new APK for. Only then are users asked to
+  update; forgetting it means nobody is offered the new shell. The release's `app-update.json` takes the number from
+  `android/app/build.gradle`.
+- Tests: `AppUpdateTest.kt` (parsing, shell decision, redirect hosts, checksum, the order of the checks) and
+  `web/src/lib/app-update.test.ts`. The download, the package manager and the installer itself need a real phone: check an
+  update there after changing this code.
 
 ## Colours (Material You)
 
@@ -136,7 +167,7 @@ it has to be, and keep your own copy.
   14 days). Unzip it on the phone or PC and open the `.apk`. Only exists once the secrets are set.
 - **Release APK:** on the release page under "Assets": `lueckenfueller-<version>.apk`. Every release has one
   (`release.yml` builds it and fails without it). Download on the phone, open it, allow installing from this source
-  once. An installed version is replaced and the login stays, because the signature is the same.
+  once. From the first release with shell version 3 on, the app offers later updates itself (see "Self-update"). An installed version is replaced and the login stays, because the signature is the same.
 
 ## Building and testing locally
 
@@ -161,6 +192,6 @@ more (the script does).
 - The files Capacitor copies into `android/` and `android-www` are committed; CI checks they are current. After
   changing `capacitor.config.json` or `android-www`, run `npx cap sync android` and commit the result.
 - Raise `SHELL_VERSION` in `android/app/build.gradle` by one whenever the shell changes in a way users need a new APK
-  for (the app will offer an update only then, phase 7c).
+  for (the app offers an update only then, see "Self-update" above).
 - `NotificationText.kt` is a port of `web/src/lib/notification-text.ts`. The shared cases file `web/src/lib/notification-text.cases.json` is tested by both and
   keeps them equal; a new notification kind needs a text in both.

@@ -269,7 +269,11 @@ missing, with a recommendation, and let the people choose.
     the script runs with `set -euo pipefail` (otherwise a failed `apksigner` in a pipe goes unnoticed). The signing
     key is never printed or committed; the decoded keystore is deleted at the end. Capacitor's `PluginCall.getLong`
     returns null for small JS numbers (they arrive as Integer; found on the owner's phone, 2026-11-05): read numbers
-    with `wholeNumberArg` (`PluginArgs.kt`).
+    with `wholeNumberArg` (`PluginArgs.kt`). Self-update (phase 7c): only a higher shell version (`SHELL_VERSION`) makes the app
+    offer an update, decided from `app-update.json`, which `release.yml` attaches to every release
+    (`scripts/app-update-json.sh`); the app builds the APK address itself, never from the JSON, and checks SHA-256, package
+    name, signing certificates and version code before it calls `PackageInstaller`. The 1.6.0 app (shell 2) has no
+    `appUpdate` method: the web app treats Capacitor's "UNIMPLEMENTED" as "install by hand once".
   - Firebase doorbell (phase 7d): the ring (FCM data message `kind: check`) carries no content, never add any (Google
     must learn nothing). Every Firebase call in the Android app is guarded, so the app also works without
     `android/app/google-services.json` (committed since 2026-11-05, project `lueckenfueller-285a1`, not secret; guide

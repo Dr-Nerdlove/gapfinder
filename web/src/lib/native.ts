@@ -58,6 +58,18 @@ export interface LueckenfuellerPlugin {
    * notifications (permission, the app's switch or the channel is off). An older app shell rejects.
    */
   testNotification(): Promise<{ shown: true } | { shown: false; reason: "blocked" }>;
+  /**
+   * Whether the latest release has a newer app shell than the installed one (phase 7c). "unknown": the release
+   * information cannot be read (no connection, a release before 1.7.0). `installedShell` is the installed shell
+   * number, `version` the release's. An older app shell without this method rejects (Capacitor: "UNIMPLEMENTED").
+   */
+  appUpdate(): Promise<{ state: "available" | "current" | "unknown"; installedShell: number; version?: string }>;
+  /**
+   * Downloads the update, checks it and hands it to Android's installer, which asks the user. It re-reads the
+   * release information itself. "needs-permission": the settings for installing from this app were opened, the
+   * user comes back and tries again. `reason` of "failed": which step failed.
+   */
+  installAppUpdate(): Promise<{ result: "started" | "needs-permission" | "failed"; reason?: "download" | "checksum" | "package" | "signature" | "version" | "install" }>;
   /** Opens an address in the browser or the matching app; also `webcal:`, `mailto:` and `tel:`. */
   openExternal(o: { url: string }): Promise<void>;
 }

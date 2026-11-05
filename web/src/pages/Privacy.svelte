@@ -51,6 +51,10 @@
         Server. Das Token wird gelöscht, wenn du die Benachrichtigungen auf dem Handy ausschaltest, dich dort abmeldest, dein Passwort
         änderst, dein Konto gelöscht wird, das Handy 90 Tage nicht benutzt wurde oder Google das Token als ungültig meldet.
       </li>
+      <li>
+        Die Android-App fragt bei jedem Start bei GitHub, wo die App veröffentlicht ist, ob es eine neue Version gibt, und lädt sie von dort.
+        Dabei werden keine persönlichen Daten gesendet, nur das, was jede Internetanfrage mitbringt (die Adresse deines Handys).
+      </li>
       <li>Deine Einstellungen für Benachrichtigungen, also welche du bekommen willst.</li>
       <li>
         Jede Benachrichtigung wird 7 Tage für dich aufbewahrt (für die spätere Android-App) und dann gelöscht.

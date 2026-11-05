@@ -5,6 +5,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- The Android app can update itself: when a new release brings a new app shell, the start page shows a card
+  "Neue App-Version" with a button "Aktualisieren"; the app downloads the update, checks that it is the real
+  Lückenfüller (checksum, signature, version) and Android asks you to confirm. The profile shows whether the app is up to
+  date. Every release now carries `app-update.json` for this. The app from 1.6.0 cannot do this yet: install the new
+  version once by hand from the release page, then updates come by themselves.
+- The privacy page says that the app asks GitHub once per start whether a new version exists.
+
 ## [1.6.0] - 2026-11-05
 
 Lückenfüller is now also an Android app. Download the APK from this release page and install it; a newer APK later

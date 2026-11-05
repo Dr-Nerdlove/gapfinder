@@ -65,6 +65,36 @@ class LueckenfuellerPlugin : Plugin() {
         }
     }
 
+    /**
+     * Whether the latest release has a newer app shell than this one (phase 7c). "unknown": the release's
+     * app-update.json cannot be read (no connection, a release before 1.7.0).
+     */
+    @PluginMethod
+    fun appUpdate(call: PluginCall) {
+        try {
+            val updater = AppUpdater(context)
+            val info = updater.latest()
+            val answer = JSObject().put("state", AppUpdate.state(info, updater.installedShell())).put("installedShell", updater.installedShell())
+            if (info != null) answer.put("version", info.version)
+            call.resolve(answer)
+        } catch (e: Exception) {
+            call.reject("Die App-Version ließ sich nicht prüfen.", e)
+        }
+    }
+
+    /** Downloads, checks and installs the update; it reads app-update.json itself and trusts nothing from the web app. */
+    @PluginMethod
+    fun installAppUpdate(call: PluginCall) {
+        try {
+            val outcome = AppUpdater(context).install()
+            val answer = JSObject().put("result", outcome.result)
+            outcome.reason?.let { answer.put("reason", it) }
+            call.resolve(answer)
+        } catch (e: Exception) {
+            call.reject("Das Update ließ sich nicht starten.", e)
+        }
+    }
+
     /** Shows one notification right now, to tell "Android blocks it" from "nothing new". */
     @PluginMethod
     fun testNotification(call: PluginCall) {
