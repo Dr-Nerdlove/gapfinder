@@ -10,6 +10,7 @@ import {
   platformOf,
   pushSupport,
   settingsScreenOf,
+  showAndroidAppHint,
   subscriptionRequestOf,
   turnDeviceOff,
   turnDeviceOn,
@@ -65,9 +66,24 @@ describe("detectEnv and platformOf", () => {
     expect(platformOf(MAC, 5)).toBe("ios");
     expect(platformOf(ANDROID)).toBe("android");
     expect(platformOf(MAC)).toBe("other");
-    expect(blockedHelpText("ios")).toContain("Mitteilungen erlauben");
-    expect(blockedHelpText("android")).toContain("App-Info");
-    expect(blockedHelpText("other")).toContain("Seite danach neu");
+    expect(blockedHelpText("ios", false)).toContain("Mitteilungen erlauben");
+    expect(blockedHelpText("android", true)).toContain("App-Info");
+    expect(blockedHelpText("other", false)).toContain("Seite danach neu");
+  });
+
+  it("gives Android browser users the browser path, not the app path", () => {
+    const browser = blockedHelpText("android", false);
+    expect(browser).toContain("Website-Einstellungen");
+    expect(browser).not.toContain("App-Info");
+    expect(browser).not.toContain("Schloss");
+    expect(blockedHelpText("android", true)).not.toContain("Schloss");
+  });
+
+  it("points at the Android app only on Android outside the app", () => {
+    expect(showAndroidAppHint("android", false)).toBe(true);
+    expect(showAndroidAppHint("android", true)).toBe(false);
+    expect(showAndroidAppHint("ios", false)).toBe(false);
+    expect(showAndroidAppHint("other", false)).toBe(false);
   });
 });
 

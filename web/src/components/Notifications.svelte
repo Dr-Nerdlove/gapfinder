@@ -5,6 +5,7 @@
   import { appCheckLine, instantLine } from "../lib/app-check-status";
   import { NEEDS_NEWER_APP_TEXT, claimOpenCheck, testNotificationNote } from "../lib/app-check-now";
   import { APP_BLOCKED_TEXT, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "../lib/app-device";
+  import { RELEASE_PAGE_URL } from "../lib/app-update";
   import { API_URL } from "../lib/config";
   import { errorMessage } from "../lib/messages";
   import { Lueckenfueller, isAndroidApp, type AppCheck } from "../lib/native";
@@ -16,6 +17,8 @@
     blockedHelpText,
     browserSubscription,
     detectEnv,
+    showAndroidAppHint,
+    ANDROID_APP_HINT_TEXT,
     platformOf,
     pushSupport,
     settingsScreenOf,
@@ -38,7 +41,11 @@
   const inApp = isAndroidApp();
   const locked = $derived(sessionState.offline);
   const swNavigator = navigator as unknown as ServiceWorkerNavigator;
-  const blockedText = blockedHelpText(platformOf(navigator.userAgent, navigator.maxTouchPoints));
+  const blockedText = blockedHelpText(
+    platformOf(navigator.userAgent, navigator.maxTouchPoints),
+    detectEnv(navigator, window).isStandalone,
+  );
+  const androidHint = showAndroidAppHint(platformOf(navigator.userAgent, navigator.maxTouchPoints), inApp);
 
   let screen = $state<SettingsScreen>({ phase: "loading" });
   let saving = $state(false);
@@ -263,6 +270,10 @@
         <p>Benachrichtigungen konnten auf diesem Handy nicht geprüft werden. Starte die App neu und versuche es noch einmal.</p>
       {:else}
         <p>Dieser Browser kann keine Benachrichtigungen empfangen.</p>
+      {/if}
+      {#if androidHint}
+        <p class="note">{ANDROID_APP_HINT_TEXT}</p>
+        <div><Button variant="tonal" external href={RELEASE_PAGE_URL}>Android-App herunterladen</Button></div>
       {/if}
       <Message text={deviceProblem} />
     </section>

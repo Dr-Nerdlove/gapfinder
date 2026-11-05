@@ -70,15 +70,26 @@ export function platformOf(userAgent: string, maxTouchPoints = 0): Platform {
 }
 
 /** How to allow notifications again after they were blocked. */
-export function blockedHelpText(platform: Platform): string {
+export function blockedHelpText(platform: Platform, standalone: boolean): string {
   switch (platform) {
     case "ios":
       return "Öffne die Einstellungen deines iPhones, dann „Mitteilungen“, dann „Lückenfüller“ und schalte „Mitteilungen erlauben“ ein.";
     case "android":
-      return "Tippe lange auf das Lückenfüller-Symbol, dann auf „App-Info“ und „Benachrichtigungen“ und erlaube sie. Im Browser: Schloss-Symbol links neben der Adresse, dann „Berechtigungen“ und „Benachrichtigungen“.";
+      return standalone
+        ? "Tippe lange auf das Lückenfüller-Symbol, dann auf „App-Info“ und „Benachrichtigungen“ und erlaube sie."
+        : "Tippe im Browser oben rechts auf ⋮, dann auf „Einstellungen“, „Website-Einstellungen“ und „Benachrichtigungen“ und erlaube sie dort für dr-nerdlove.github.io. Lade die Seite danach neu.";
     default:
       return "Klicke im Browser auf das Symbol links neben der Adresse, erlaube dort Benachrichtigungen und lade die Seite danach neu.";
   }
+}
+
+/** Note for Android users in the browser: the Android app exists too. */
+export const ANDROID_APP_HINT_TEXT =
+  "Lückenfüller gibt es für Android auch als App. Lade auf der Release-Seite die Datei „lueckenfueller-….apk“ herunter und öffne sie; Android fragt dann, ob du sie installieren willst.";
+
+/** Whether to point at the Android app: on Android, but not inside the app itself. */
+export function showAndroidAppHint(platform: Platform, inApp: boolean): boolean {
+  return platform === "android" && !inApp;
 }
 
 /** The key of the server (base64url) in the form `pushManager.subscribe` wants. */
