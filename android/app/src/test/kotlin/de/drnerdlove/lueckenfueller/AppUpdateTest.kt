@@ -102,6 +102,7 @@ class AppUpdateTest {
         assertTrue(AppUpdate.sameSigners(listOf(cert, other), listOf(other, cert)))
         assertFalse(AppUpdate.sameSigners(listOf(cert), listOf(other)))
         assertFalse(AppUpdate.sameSigners(listOf(cert), listOf(cert, other)))
+        assertFalse(AppUpdate.sameSigners(listOf(cert, other), listOf(cert)))
         assertFalse(AppUpdate.sameSigners(emptyList(), emptyList()))
     }
 
