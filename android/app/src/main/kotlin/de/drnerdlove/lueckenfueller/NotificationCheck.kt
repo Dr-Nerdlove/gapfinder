@@ -23,7 +23,8 @@ fun interface NotificationFetcher {
 }
 
 fun interface NotificationSink {
-    fun show(text: NotificationText, target: String)
+    /** Shows the notification. False when Android did not let it through (permission, app switch or channel off). */
+    fun show(text: NotificationText, target: String): Boolean
 }
 
 interface CheckStore {
@@ -34,8 +35,8 @@ interface CheckStore {
     /** Forgets the address, the key, the last id and the last check. */
     fun clear()
 
-    /** Remembers when the last run looked for news and how it went. Writes nothing when no key is stored. */
-    fun recordCheck(at: Long, outcome: CheckOutcome)
+    /** Remembers when the last run looked for news, how it went and how many notifications it showed. Writes nothing when no key is stored. */
+    fun recordCheck(at: Long, outcome: CheckOutcome, count: Int)
 }
 
 /** How a run went, as the notifications card shows it. `wire` is what the web app reads. */
@@ -53,8 +54,8 @@ enum class CheckOutcome(val wire: String) {
     STOPPED("stopped"),
 }
 
-/** The decision for WorkManager and what is shown to the user. */
-data class CheckRun(val result: CheckResult, val outcome: CheckOutcome)
+/** The decision for WorkManager and what is shown to the user. `count` is the number of notifications really shown. */
+data class CheckRun(val result: CheckResult, val outcome: CheckOutcome, val count: Int = 0)
 
 enum class CheckResult {
     /** Done for now; the next period runs again. */
@@ -84,21 +85,25 @@ class NotificationCheck(
             is FetchResult.Body -> result.text
         }
         val items = parseItems(body, after) ?: return finish(CheckOutcome.BROKEN)
+        var shown = 0
         for ((id, data) in items) {
-            try {
+            val posted = try {
                 val text = NotificationTexts.of(data)
                 sink.show(text, NotificationTexts.target(text.shareToken, NotificationTexts.APP_URL))
             } catch (e: RuntimeException) {
-                return finish(CheckOutcome.BROKEN) // not shown: keep this id, so the next period tries again
+                false
             }
+            // Not shown (a failure, or Android blocks notifications): keep this id, so a later run tries again.
+            if (!posted) return finish(CheckOutcome.BROKEN, shown)
             store.lastNotificationId = id
+            shown++
         }
-        return finish(CheckOutcome.OK)
+        return finish(CheckOutcome.OK, shown)
     }
 
-    private fun finish(outcome: CheckOutcome): CheckRun {
-        store.recordCheck(clock(), outcome)
-        return CheckRun(CheckResult.CONTINUE, outcome)
+    private fun finish(outcome: CheckOutcome, count: Int = 0): CheckRun {
+        store.recordCheck(clock(), outcome, count)
+        return CheckRun(CheckResult.CONTINUE, outcome, count)
     }
 
     /** The items newer than `after`, oldest first. Null when the answer is not readable. */

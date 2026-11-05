@@ -44,6 +44,13 @@ function dayWord(at: Local, now: Local): string {
   return `${at.weekday} ${at.day}.${at.month}.`;
 }
 
+/** "nichts Neues." / "1 neue Benachrichtigung." / "3 neue Benachrichtigungen."; an older shell has no count. */
+function okEnding(count: number | undefined): string {
+  if (count === undefined) return "alles in Ordnung.";
+  if (count <= 0) return "nichts Neues.";
+  return count === 1 ? "1 neue Benachrichtigung." : `${count} neue Benachrichtigungen.`;
+}
+
 /**
  * The status line, or null when the app shell does not report it (`undefined`, an older shell).
  * `null` means no check has run yet since switching on.
@@ -53,7 +60,7 @@ export function appCheckLine(lastCheck: AppCheck | null | undefined, now: number
   if (lastCheck === null) return "Noch nicht nach Neuem gesehen. Das passiert etwa alle 15 Minuten.";
   const at = localOf(lastCheck.at);
   const when = `${dayWord(at, localOf(now))}, ${at.time}`;
-  if (lastCheck.result === "ok") return `Zuletzt nach Neuem gesehen: ${when} – alles in Ordnung.`;
+  if (lastCheck.result === "ok") return `Zuletzt nach Neuem gesehen: ${when} – ${okEnding(lastCheck.count)}`;
   const why = lastCheck.result === "unavailable" ? "der Server war nicht erreichbar" : "das hat nicht geklappt";
   return `Zuletzt versucht: ${when} – ${why}. Nächster Versuch in etwa 15 Minuten.`;
 }

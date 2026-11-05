@@ -22,13 +22,22 @@ class NotificationPoster(context: Context) : NotificationSink {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    override fun show(text: NotificationText, target: String) {
+    /** Whether Android lets notifications through: permission granted, app switch on and the channel not blocked. */
+    fun allowed(): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
-            return
+            return false
         }
+        if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return false
         ensureChannel()
+        val channel = NotificationManagerCompat.from(context).getNotificationChannel(CHANNEL_ID)
+        return channel == null || channel.importance != NotificationManagerCompat.IMPORTANCE_NONE
+    }
+
+    /** True when the notification was handed to Android; false when Android blocks notifications (nothing was posted). */
+    override fun show(text: NotificationText, target: String): Boolean {
+        if (!allowed()) return false
         val open = Intent(context, MainActivity::class.java)
             .putExtra(MainActivity.EXTRA_OPEN_URL, target)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
@@ -43,6 +52,7 @@ class NotificationPoster(context: Context) : NotificationSink {
             .setContentIntent(pending)
             .build()
         NotificationManagerCompat.from(context).notify(text.tag, 0, notification)
+        return true
     }
 
     companion object {

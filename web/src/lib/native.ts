@@ -12,6 +12,8 @@ export interface AppCheck {
   at: number;
   /** "ok": the answer was read; "unavailable": no connection or server error; "error": unreadable answer or no notification could be shown. */
   result: "ok" | "unavailable" | "error";
+  /** How many notifications that run showed. Missing in an older app shell. */
+  count?: number;
 }
 
 export interface LueckenfuellerPlugin {
@@ -43,6 +45,17 @@ export interface LueckenfuellerPlugin {
     available: boolean;
     palettes?: Record<"accent1" | "accent2" | "accent3" | "neutral1" | "neutral2", Record<string, string>>;
   }>;
+  /**
+   * Looks for news right now (the same check as the background one, never at the same time as it) and records it
+   * as the last check. "off": no key is stored (any more), the background check is stopped. An older app shell
+   * without this method rejects.
+   */
+  checkNow(): Promise<{ result: "ok" | "unavailable" | "error" | "off"; count: number }>;
+  /**
+   * Shows one notification right now. `shown: false` with `reason: "blocked"`: Android does not allow
+   * notifications (permission, the app's switch or the channel is off). An older app shell rejects.
+   */
+  testNotification(): Promise<{ shown: true } | { shown: false; reason: "blocked" }>;
   /** Opens an address in the browser or the matching app; also `webcal:`, `mailto:` and `tel:`. */
   openExternal(o: { url: string }): Promise<void>;
 }

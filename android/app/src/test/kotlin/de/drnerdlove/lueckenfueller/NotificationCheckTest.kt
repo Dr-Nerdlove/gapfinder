@@ -14,7 +14,8 @@ class NotificationCheckTest {
             set(value) { last = value }
         override fun clear() { url = null; key = null; last = 0; checks.clear() }
         val checks = mutableListOf<Pair<Long, CheckOutcome>>()
-        override fun recordCheck(at: Long, outcome: CheckOutcome) { if (key != null) checks.add(at to outcome) }
+        val counts = mutableListOf<Int>()
+        override fun recordCheck(at: Long, outcome: CheckOutcome, count: Int) { if (key != null) { checks.add(at to outcome); counts.add(count) } }
     }
 
     private val shown = mutableListOf<Pair<NotificationText, String>>()
@@ -88,7 +89,7 @@ class NotificationCheckTest {
     fun anItemThatCannotBeShownIsTriedAgainNextTime() {
         answer = FetchResult.Body("""{"items":[${item(6)},${item(7)}]}""")
         var calls = 0
-        val check = NotificationCheck(store, { _, _, _ -> answer }, { _, _ -> if (++calls == 2) throw IllegalStateException("no") }, { 1000L })
+        val check = NotificationCheck(store, { _, _, _ -> answer }, { _, _ -> if (++calls == 2) throw IllegalStateException("no") else true }, { 1000L })
         assertEquals(CheckResult.CONTINUE, check.run().result)
         assertEquals(6L, store.last)
     }
@@ -104,7 +105,7 @@ class NotificationCheckTest {
     @Test
     fun okWithItemsIsRecordedWithTheClockTime() {
         answer = FetchResult.Body("""{"items":[${item(7)}]}""")
-        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.OK), runFull())
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.OK, 1), runFull())
         assertEquals(listOf(1000L to CheckOutcome.OK), store.checks)
     }
 
@@ -157,8 +158,47 @@ class NotificationCheckTest {
     @Test
     fun aCheckIsNotWrittenBackWhenTheKeyIsGoneMeanwhile() {
         answer = FetchResult.Body("""{"items":[]}""")
-        val check = NotificationCheck(store, { _, _, _ -> store.key = null; answer }, { _, _ -> }, { 1000L })
+        val check = NotificationCheck(store, { _, _, _ -> store.key = null; answer }, { _, _ -> true }, { 1000L })
         check.run()
         assertEquals(0, store.checks.size)
+    }
+
+    @Test
+    fun theCountIsTheNumberOfNotificationsReallyShown() {
+        answer = FetchResult.Body("""{"items":[${item(6)},${item(7, "all_voted")},${item(8, "reminder")}]}""")
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.OK, 3), runFull())
+        assertEquals(listOf(3), store.counts)
+    }
+
+    @Test
+    fun nothingNewIsCountedAsZero() {
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.OK, 0), runFull())
+        assertEquals(listOf(0), store.counts)
+    }
+
+    @Test
+    fun itemsAlreadySeenAreNotCounted() {
+        answer = FetchResult.Body("""{"items":[${item(4)},${item(5)},${item(6)}]}""")
+        assertEquals(1, runFull().count)
+    }
+
+    @Test
+    fun aNotificationThatAndroidBlocksIsKeptAndGivesAnError() {
+        answer = FetchResult.Body("""{"items":[${item(6)},${item(7)},${item(8)}]}""")
+        var calls = 0
+        val check = NotificationCheck(store, { _, _, _ -> answer }, { _, _ -> ++calls < 2 }, { 1000L }) // the 2nd is blocked
+        val run = check.run()
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.BROKEN, 1), run) // only the first was really shown
+        assertEquals(6L, store.last) // the blocked one (7) and the one after it wait for a later run
+        assertEquals(2, calls) // it stops at the first blocked one
+        assertEquals(listOf(1), store.counts)
+    }
+
+    @Test
+    fun allBlockedShowsNothingAndKeepsTheLastId() {
+        answer = FetchResult.Body("""{"items":[${item(6)}]}""")
+        val check = NotificationCheck(store, { _, _, _ -> answer }, { _, _ -> false }, { 1000L })
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.BROKEN, 0), check.run())
+        assertEquals(5L, store.last)
     }
 }
