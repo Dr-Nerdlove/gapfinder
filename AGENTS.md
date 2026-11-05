@@ -273,7 +273,10 @@ missing, with a recommendation, and let the people choose.
     offer an update, decided from `app-update.json`, which `release.yml` attaches to every release
     (`scripts/app-update-json.sh`); the app builds the APK address itself, never from the JSON, and checks SHA-256, package
     name, signing certificates and version code before it calls `PackageInstaller`. The 1.6.0 app (shell 2) has no
-    `appUpdate` method: the web app treats Capacitor's "UNIMPLEMENTED" as "install by hand once".
+    `appUpdate` method: the web app treats Capacitor's "UNIMPLEMENTED" as "install by hand once". Verified on the owner's
+    phone on 2026-11-05 (1.6.0 card, then a test APK 1.6.99 with shell 2 updated itself to 1.7.0, login kept). To test
+    again: a test APK with a lower shell and version code, installed over the older app, never over a newer one
+    (Android refuses downgrades); steps in `docs/android-app.md`, "Self-update".
   - Firebase doorbell (phase 7d): the ring (FCM data message `kind: check`) carries no content, never add any (Google
     must learn nothing). Every Firebase call in the Android app is guarded, so the app also works without
     `android/app/google-services.json` (committed since 2026-11-05, project `lueckenfueller-285a1`, not secret; guide

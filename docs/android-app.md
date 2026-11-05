@@ -110,6 +110,13 @@ browser version, and it adds what a web page cannot do on Android: notifications
 - Tests: `AppUpdateTest.kt` (parsing, shell decision, redirect hosts, checksum, the order of the checks) and
   `web/src/lib/app-update.test.ts`. The download, the package manager and the installer itself need a real phone: check an
   update there after changing this code.
+- **Verified on the owner's phone on 2026-11-05** (release 1.7.0): the 1.6.0 card, the hand install, the permission
+  prompt, Android's "Update installieren?", the login kept and "App ist aktuell" afterwards all worked.
+- **How to test it on a phone:** after the release with the new shell, push a test branch (never merged, no pull
+  request) from that release with `SHELL_VERSION` one lower and the version set to `x.y.99` of the previous release
+  (e.g. 1.6.99, version code 10699 < 10700); CI builds a signed test APK from it (artifact `lueckenfueller-apk`, a ZIP).
+  Install it **over the older app**, not over the new release: Android refuses to install a lower version code over a
+  higher one, and uninstalling would lose the login. Then tap "Aktualisieren" and delete the test branch afterwards.
 
 ## Colours (Material You)
 

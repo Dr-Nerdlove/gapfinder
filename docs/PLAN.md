@@ -504,6 +504,11 @@ app) below.
         "UNIMPLEMENTED"; the web app then shows a card asking the user to install the new version by hand once
         from the release page. From shell 3 on, updates are offered by the app itself.
       - The privacy page says that the app asks GitHub once per start whether a new version exists.
+    - **Verified on the owner's phone on 2026-11-05** with release 1.7.0: the 1.6.0 app showed the "install by
+      hand" card; a test APK 1.6.99 with shell 2 (branch `test/self-update-older-shell`, never merged) installed
+      over it by hand kept the login; it then offered "Neue App-Version – Version 1.7.0", asked once for the
+      permission to install from this source and Android asked to confirm; afterwards 1.7.0 was installed, the
+      login was still there and the profile showed "App ist aktuell".
 
 ### Look
 
