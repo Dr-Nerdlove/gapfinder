@@ -44,6 +44,13 @@
         selbst. Er gilt nur zum Abholen deiner Benachrichtigungen und wird gelöscht, wenn du sie auf diesem Handy ausschaltest, dich dort
         abmeldest, dein Passwort änderst oder das Handy 90 Tage nicht benutzt wurde.
       </li>
+      <li>
+        Hast du in der Android-App Benachrichtigungen eingeschaltet, meldet sich dein Handy bei Googles Dienst Firebase Cloud Messaging an. Der
+        Server speichert die Firebase-Adresse (das Token) dieses Handys und schickt Google nur ein Signal ohne Inhalt: „Schau nach Neuem.“
+        Google erfährt also, dass dein Handy ein Signal bekommen hat, aber nicht, worum es geht. Den Text holt sich die App danach selbst vom
+        Server. Das Token wird gelöscht, wenn du die Benachrichtigungen auf dem Handy ausschaltest, dich dort abmeldest, dein Passwort
+        änderst, dein Konto gelöscht wird, das Handy 90 Tage nicht benutzt wurde oder Google das Token als ungültig meldet.
+      </li>
       <li>Deine Einstellungen für Benachrichtigungen, also welche du bekommen willst.</li>
       <li>
         Jede Benachrichtigung wird 7 Tage für dich aufbewahrt (für die spätere Android-App) und dann gelöscht.

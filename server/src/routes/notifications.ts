@@ -2,6 +2,8 @@ import {
   DEFAULT_NOTIFICATION_SETTINGS,
   type AppDeviceRegistered,
   type AppDeviceRemoveRequest,
+  type AppPushTokenRequest,
+  type AppPushTokenSaved,
   type NotificationItem,
   type NotificationList,
   type NotificationSettings,
@@ -12,7 +14,7 @@ import {
   type UpdateNotificationSettingsRequest,
 } from "@lueckenfueller/shared";
 import type { FastifyInstance } from "fastify";
-import { findAppDeviceUser, registerAppDevice, removeAppDevice } from "../notifications/app-devices.js";
+import { findAppDeviceUser, registerAppDevice, removeAppDevice, saveAppDeviceToken } from "../notifications/app-devices.js";
 import { authOf, createGuards } from "../auth/guards.js";
 import type { AppContext } from "../context.js";
 import { ApiError, forbidden, notFound, unauthorized, validation } from "../errors.js";
@@ -58,6 +60,12 @@ const removeDeviceBody = {
   type: "object",
   required: ["deviceKey"],
   properties: { deviceKey: { type: "string", maxLength: 200 } },
+} as const;
+
+const pushTokenBody = {
+  type: "object",
+  required: ["token"],
+  properties: { token: { type: "string", minLength: 1, maxLength: 4096, pattern: "^[\\x21-\\x7e]+$" } },
 } as const;
 
 export function registerNotificationRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -154,6 +162,19 @@ export function registerNotificationRoutes(app: FastifyInstance, ctx: AppContext
     const body: AppDeviceRegistered = { deviceKey, lastNotificationId: last.id ?? 0 };
     return reply.status(201).send(body);
   });
+
+  // The app's native code sends the phone's Firebase token with the device key (no session, nothing in the URL).
+  app.put<{ Body: AppPushTokenRequest }>(
+    "/api/app-devices/push-token",
+    { schema: { body: pushTokenBody } },
+    async (request): Promise<AppPushTokenSaved> => {
+      const key = request.headers["x-device-key"];
+      const userId = typeof key === "string" && key !== "" ? findAppDeviceUser(ctx.db, key, ctx.now()) : null;
+      if (userId === null || typeof key !== "string") throw unauthorized();
+      saveAppDeviceToken(ctx.db, key, request.body.token);
+      return { instant: ctx.ringDevice !== null };
+    },
+  );
 
   app.delete<{ Body: AppDeviceRemoveRequest }>(
     "/api/app-devices",

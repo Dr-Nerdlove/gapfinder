@@ -2,7 +2,7 @@
   import type { NotificationSettings } from "@lueckenfueller/shared";
   import { onMount } from "svelte";
   import * as api from "../lib/api";
-  import { appCheckLine } from "../lib/app-check-status";
+  import { appCheckLine, instantLine } from "../lib/app-check-status";
   import { NEEDS_NEWER_APP_TEXT, claimOpenCheck, testNotificationNote } from "../lib/app-check-now";
   import { APP_BLOCKED_TEXT, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "../lib/app-device";
   import { API_URL } from "../lib/config";
@@ -48,9 +48,11 @@
   let deviceBusy = $state(false);
   let deviceProblem = $state("");
   let lastCheck = $state<AppCheck | null | undefined>(undefined);
+  let instant = $state(false);
   let checking = $state(false);
   let testing = $state(false);
   let checkNote = $state("");
+  const instantNote = $derived(inApp && device === "on" ? instantLine(instant) : null);
   const checkLine = $derived(inApp && device === "on" ? appCheckLine(lastCheck, Date.now()) : null);
 
   async function loadSettings(): Promise<void> {
@@ -64,6 +66,7 @@
       try {
         const status = await Lueckenfueller.notificationStatus();
         lastCheck = status.lastCheck;
+        instant = status.instant === true;
         device = appDeviceState(status);
       } catch {
         device = "app-failed";
@@ -230,6 +233,7 @@
         <p aria-live="polite">Einen Moment …</p>
       {:else if device === "on"}
         <p>Benachrichtigungen sind auf diesem Gerät an.</p>
+        {#if instantNote}<p class="note">{instantNote}</p>{/if}
         {#if checkLine}<p class="note">{checkLine}</p>{/if}
         {#if inApp}
           <div class="row">

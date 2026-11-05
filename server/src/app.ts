@@ -14,6 +14,7 @@ import { openDatabase } from "./db.js";
 import { errorHandler, notFoundHandler } from "./errors.js";
 import { maskTokens } from "./log-masking.js";
 import { purgeOldNotifications } from "./notifications/dispatch.js";
+import { createFcmRinger, type RingDevice } from "./notifications/ring.js";
 import { createWebPushSender, type SendPush } from "./notifications/send.js";
 import { loadVapidKeys, vapidSubject } from "./notifications/vapid.js";
 import { registerAdminRoutes } from "./routes/admin.js";
@@ -40,6 +41,8 @@ export interface BuildAppOptions {
   fetchCalendarText?: (url: URL) => Promise<FetchResult>;
   /** Sends Web Push messages instead of the real sender (tests never touch the network). */
   sendPush?: SendPush;
+  /** Rings Android phones instead of the real Firebase ringer; null switches the ring off (tests never touch the network). */
+  ringDevice?: RingDevice | null;
 }
 
 /** Builds the server without listening, so tests can use `app.inject`. */
@@ -78,6 +81,11 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   } else {
     app.log.error("CALENDAR_KEY does not match the key the stored calendar links were encrypted with");
   }
+  if (config.fcm) {
+    app.log.info("Instant Android notifications are on");
+  } else {
+    app.log.warn(`Instant Android notifications are off: ${config.fcmProblem ?? "FCM_SERVICE_ACCOUNT is not set"}`);
+  }
   const vapid = loadVapidKeys(db);
   const ctx: AppContext = {
     config,
@@ -89,6 +97,8 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
     fetchCalendarText: options.fetchCalendarText ?? ((url) => fetchCalendarText(url)),
     sendPush: options.sendPush ?? createWebPushSender(vapid, vapidSubject(config.corsOrigins)),
     vapidPublicKey: vapid.publicKey,
+    ringDevice: options.ringDevice !== undefined ? options.ringDevice : config.fcm ? createFcmRinger(config.fcm) : null,
+    doorbell: { lastRing: null },
     log: app.log,
   };
   purgeExpired(db, now());

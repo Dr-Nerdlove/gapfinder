@@ -131,6 +131,48 @@ if ! grep -q '^CALENDAR_KEY=' "$APP_DIR/.env"; then
   chmod 0600 "$APP_DIR/.env"
   echo "Created the key for the calendar links (in $APP_DIR/.env; the nightly backups carry it, encrypted)."
 fi
+step "Instant notifications for the Android app (Firebase)"
+# The server rings the phones through Firebase ("doorbell", no content). It needs the service-account key file
+# from the Firebase console. Optional: without it the app only checks every 15 minutes. This step never fails
+# the setup. The key goes only into .env (not into the backups), and the file is deleted afterwards.
+firebase_file="${LUECKENFUELLER_FIREBASE_KEY_FILE:-}"
+if [[ -z "$firebase_file" ]] && ! grep -q '^FCM_SERVICE_ACCOUNT=' "$APP_DIR/.env"; then
+  read -r -p "Path of the Firebase key file (JSON), or Enter to skip: " firebase_file || firebase_file=""
+fi
+# "~/key.json" typed (or passed through sudo) means the home of the person who ran sudo.
+# shellcheck disable=SC2088 # the literal text "~/" is meant, not the home directory
+if [[ "$firebase_file" == "~/"* ]]; then
+  firebase_home="$(getent passwd "${SUDO_USER:-root}" | cut -d: -f6 || true)"
+  firebase_file="${firebase_home:-$HOME}/${firebase_file#\~/}"
+fi
+if [[ -z "$firebase_file" ]]; then
+  if grep -q '^FCM_SERVICE_ACCOUNT=' "$APP_DIR/.env"; then
+    echo "Keeping the existing Firebase key."
+  else
+    echo "Skipped: no instant notifications yet (run setup.sh again with the key file to add them)."
+  fi
+elif [[ ! -f "$firebase_file" ]]; then
+  echo "WARNING: \"$firebase_file\" is not a file. Instant notifications are not set up."
+elif ! { grep -Eq '"type"[[:space:]]*:[[:space:]]*"service_account"' "$firebase_file" &&
+  grep -Eq '"private_key"[[:space:]]*:' "$firebase_file" &&
+  grep -Eq '"client_email"[[:space:]]*:' "$firebase_file" &&
+  grep -Eq '"project_id"[[:space:]]*:' "$firebase_file"; }; then
+  echo "WARNING: \"$firebase_file\" does not look like a Firebase service-account key. Instant notifications are not set up."
+else
+  firebase_key="$(base64 -w0 "$firebase_file")"
+  # Replace an old line (a new key), then start on a new line even if the file does not end with one.
+  sed -i '/^# Firebase service-account key for instant notifications/d;/^FCM_SERVICE_ACCOUNT=/d' "$APP_DIR/.env"
+  [[ -z "$(tail -c 1 "$APP_DIR/.env")" ]] || echo >>"$APP_DIR/.env"
+  {
+    echo "# Firebase service-account key for instant notifications in the Android app (not in the backups)."
+    echo "FCM_SERVICE_ACCOUNT=$firebase_key"
+  } >>"$APP_DIR/.env"
+  chmod 0600 "$APP_DIR/.env"
+  unset firebase_key
+  shred -u "$firebase_file" 2>/dev/null || rm -f "$firebase_file"
+  echo "Saved the Firebase key in $APP_DIR/.env and deleted the key file."
+  echo "The key is not in the nightly backups. After a rebuild of the VM, make a new key in the Firebase console."
+fi
 # The container runs as user "node" (uid 1000) and must be able to write the database.
 install -d -m 0750 -o 1000 -g 1000 "$APP_DIR/data"
 

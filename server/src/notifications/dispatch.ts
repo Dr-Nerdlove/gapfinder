@@ -1,8 +1,10 @@
 import type { NotificationData, NotificationItem } from "@lueckenfueller/shared";
 import type { DatabaseSync } from "node:sqlite";
 import type { AppContext } from "../context.js";
+import type { RingDevice, RingResult } from "./ring.js";
 import type { PushTarget } from "./send.js";
 import type { Recipient } from "./recipients.js";
+import { clearAppDeviceToken, ringTokensOf } from "./app-devices.js";
 import { loadSettingsOf } from "./settings.js";
 import { removeSubscriptionByEndpoint, subscriptionsOf } from "./subscriptions.js";
 
@@ -64,8 +66,34 @@ async function push(ctx: AppContext, stored: Stored[]): Promise<void> {
   await Promise.all(jobs);
 }
 
+async function ringOne(ctx: AppContext, kind: string, ring: RingDevice, token: string): Promise<void> {
+  const result = await ring(token).catch((): RingResult => ({ ok: false, gone: false, reason: "error" }));
+  ctx.doorbell.lastRing = { at: ctx.now().toISOString(), ok: result.ok };
+  if (result.ok) return;
+  if (result.gone) {
+    try {
+      clearAppDeviceToken(ctx.db, token);
+    } catch {
+      // The database may be closed already (shutdown); nothing more to do.
+    }
+  }
+  // Never the token: it is the address of a person's phone.
+  ctx.log.warn({ kind, status: result.status, reason: result.reason }, "Ring was not delivered");
+}
+
+/** Rings every app device of the stored users once. The ring carries no content: the app asks the server itself. */
+async function ring(ctx: AppContext, stored: Stored[]): Promise<void> {
+  const ringer = ctx.ringDevice;
+  if (!ringer) return;
+  const jobs: Promise<void>[] = [];
+  for (const { userId, item } of stored) {
+    for (const token of ringTokensOf(ctx.db, userId, ctx.now())) jobs.push(ringOne(ctx, item.data.kind, ringer, token));
+  }
+  await Promise.all(jobs);
+}
+
 /**
- * Stores the notification for every recipient who wants it (and is not in `skip`), and sends Web Push to their
+ * Stores the notification for every recipient who wants it (and is not in `skip`), and sends Web Push and the Android ring to their
  * devices without making the caller wait. Never throws: a failed notification must not fail the vote or the poll.
  * Returns the ids of the accounts that got it.
  */
@@ -81,6 +109,9 @@ export function notifyUsers(
     if (stored.length > 0) {
       void push(ctx, stored).catch(() => {
         // Already handled per message; this only keeps an unexpected error from becoming a crash.
+      });
+      void ring(ctx, stored).catch(() => {
+        // Same: handled per ring.
       });
     }
     return new Set(stored.map((entry) => entry.userId));

@@ -7,6 +7,7 @@ import type {
   AccountVoteRequest,
   ApiErrorBody,
   BackupStatus,
+  DoorbellStatus,
   Calendar,
   CalendarList,
   CalendarFeed,
@@ -228,6 +229,9 @@ export const createPasswordReset = (id: number, o: CallOptions = {}) =>
 
 /** Not on servers older than the backup status: they answer 404, which callers treat as "nothing to show". */
 export const getBackupStatus = (o: CallOptions = {}) => request<BackupStatus>("/api/admin/backup-status", o);
+
+/** Not on servers older than the instant ring: they answer 404. */
+export const getDoorbellStatus = (o: CallOptions = {}) => request<DoorbellStatus>("/api/admin/doorbell-status", o);
 
 export const listInvites = (o: CallOptions = {}) => request<AdminInvite[]>("/api/admin/invites", o);
 

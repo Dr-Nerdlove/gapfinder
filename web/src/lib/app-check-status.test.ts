@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appCheckLine } from "./app-check-status";
+import { appCheckLine, instantLine } from "./app-check-status";
 
 // 2026-11-05 12:00 in Berlin (UTC+1)
 const now = Date.parse("2026-11-05T11:00:00Z");
@@ -56,5 +56,15 @@ describe("appCheckLine", () => {
   it("names older days with weekday and date", () => {
     // 3 Nov 2026 is a Tuesday
     expect(appCheckLine({ at: Date.parse("2026-11-03T10:00:00Z"), result: "ok" }, now)).toContain("Di 3.11., 11:00");
+  });
+});
+
+describe("instantLine", () => {
+  it("explains instant delivery and the 15-minute safety net only when the app reports it", () => {
+    const line = instantLine(true);
+    expect(line).toContain("sofort");
+    expect(line).toContain("etwa alle 15 Minuten");
+    expect(instantLine(false)).toBeNull();
+    expect(instantLine(undefined)).toBeNull();
   });
 });
