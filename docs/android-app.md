@@ -100,8 +100,10 @@ browser version, and it adds what a web page cannot do on Android: notifications
 - **Downloads** follow redirects by hand: https only, hosts `github.com`, `release-assets.githubusercontent.com` and
   `objects.githubusercontent.com`, at most 5 hops; 64 KiB for the JSON, 64 MiB for the APK.
 - **1.6.0 users install once by hand.** The 1.6.0 app (shell 2) has no `appUpdate` method. The web app sees the call
-  rejected as "UNIMPLEMENTED" and shows a card that asks to install the new version from the release page. From the
-  first APK with shell 3 on, the app updates itself.
+  rejected as "UNIMPLEMENTED" and shows a card that asks to install the new version from the release page, but only
+  when the web build's own version is newer than 1.6.0 (`LAST_RELEASE_WITHOUT_SELF_UPDATE` in `app-update.ts`): the web
+  app is deployed on every merge, before the release with the self-updating APK exists, and until then the release
+  page still shows 1.6.0. From the first APK with shell 3 on, the app updates itself.
 - **Raise `SHELL_VERSION`** whenever the shell changes in a way users need a new APK for. Only then are users asked to
   update; forgetting it means nobody is offered the new shell. The release's `app-update.json` takes the number from
   `android/app/build.gradle`.
