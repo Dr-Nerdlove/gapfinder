@@ -25,6 +25,8 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- Profile colour: the two red presets (red and pink) are gone, as they were too close to orange. A colour that is
+  already saved stays as it is, and "Eigene Farbe" still allows any colour.
 - Creating a poll: start and end of a proposal are offered in half-hour steps, plus the start and the end of the free
   time itself (so a free time from 14:15 can still be used completely). The deadline time of a poll is offered in
   half hours as well. The server still accepts quarter hours, so existing polls are not affected.
