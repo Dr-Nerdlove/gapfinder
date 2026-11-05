@@ -3,7 +3,11 @@
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow `vMAJOR.MINOR.PATCH`.
 
-## [Unreleased]
+## [1.7.0] - 2026-11-05
+
+The Android app can now update itself. If you have version 1.6.0, install the APK of this release once by hand from
+the release page; after that the app updates itself: the start page shows "Neue App-Version" with a button
+"Aktualisieren", and Android asks you to confirm. The profile shows whether the app is up to date.
 
 ### Added
 
