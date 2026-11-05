@@ -469,6 +469,15 @@ app) below.
       - A ring is handled directly in the FCM service (same check as "Jetzt nachsehen"); WorkManager is the fallback.
       - The profile card says "sofort" only when the server answered `instant=true`.
       - Guide for the owner: `docs/firebase-setup.md`.
+    - **Test on the owner's phone (2026-11-05):** the doorbell works.
+      - The service-account key was put on the VM with `setup.sh`; the admin card "Sofort-Benachrichtigungen (Android)"
+        shows "Bereit".
+      - With the test APK from the CI run after PR #66 installed, a guest vote through the share link produced a
+        notification that arrived at once on the locked phone.
+      - Step 4 of the Firebase guide was done: the API key is restricted to the package name
+        `de.drnerdlove.lueckenfueller` and the SHA-1 fingerprint
+        `08:AF:87:5D:DE:65:17:6C:7E:EE:98:41:3A:EC:63:B2:38:0C:A2:A9`. The notification kept arriving at once afterwards.
+      - The English menu names in `docs/firebase-setup.md` were all correct.
 
 ### Look
 

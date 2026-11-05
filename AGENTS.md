@@ -277,7 +277,9 @@ missing, with a recommendation, and let the people choose.
     lives only in the VM's `.env` (`FCM_SERVICE_ACCOUNT`, put there by `setup.sh`), never in the repository or backups;
     the server starts without it or with a bad one. The app sends its token with `PUT /api/app-devices/push-token`
     from native code with the device key. The FCM docs site was not reachable from the cloud session: the error
-    handling follows firebase-admin's source (`lib/messaging/messaging-errors-internal.js`).
+    handling follows firebase-admin's source (`lib/messaging/messaging-errors-internal.js`). The doorbell was verified on the owner's phone on
+    2026-11-05 (instant notification on the locked phone, also after the API key was restricted to the app id and
+    fingerprint).
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Android release:** `release.yml` builds the signed APK (`lueckenfueller-<version>.apk`) for the release commit and
