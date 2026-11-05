@@ -5,6 +5,20 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.6.0] - 2026-11-05
+
+Lückenfüller is now also an Android app. Download the APK from this release page and install it; a newer APK later
+replaces it and the login stays. The app shows the same pages as the browser, wears your phone's colours on Android 12
+and newer (switch "Farben vom Handy übernehmen" in the profile), and shares, downloads the .ics file and opens calendar
+links with the phone's own functions. Notifications in the app arrive at once: the server only rings the phone
+through Google's Firebase, without any content, and the app then fetches the news from your own server. As a backup
+the app also looks for news about every 15 minutes and whenever it is opened. The notifications card shows when it
+last looked, with the buttons "Jetzt nachsehen" and "Test-Benachrichtigung". The admin page shows whether instant
+notifications are ready, and the privacy page explains what Firebase receives. Also new: proposals and deadlines are
+offered in half-hour steps, and the red and pink profile colours are gone (a saved colour stays). The web app
+updates about 2 minutes after the release. On the VM, rerun `setup.sh` once to add the Firebase key (guide:
+`docs/server-setup.md`, step 11); without it the app checks every 15 minutes.
+
 ### Added
 
 - Instant notifications for the Android app: once the owner has set up Firebase (guide: `docs/firebase-setup.md`),
