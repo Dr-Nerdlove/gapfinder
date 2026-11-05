@@ -18,7 +18,7 @@ android {
         versionName rootVersion
         // Raise this by one whenever the Android shell (anything under android/ or capacitor.config.json)
         // changes in a way users need a new APK for. The app offers an update only when it changed (phase 7c).
-        buildConfigField "int", "SHELL_VERSION", "1"
+        buildConfigField "int", "SHELL_VERSION", "2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -64,6 +64,9 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation "androidx.work:work-runtime-ktx:$androidxWorkVersion"
+    // Firebase only as a doorbell (phase 7d): FCM data messages without content. No version on the artifact: the BoM sets it.
+    implementation platform("com.google.firebase:firebase-bom:$firebaseBomVersion")
+    implementation "com.google.firebase:firebase-messaging"
     testImplementation "junit:junit:$junitVersion"
     // Android's org.json is only a stub in plain JVM tests; the real library makes the text and check tests run.
     testImplementation "org.json:json:20250517"

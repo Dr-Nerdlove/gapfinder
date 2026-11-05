@@ -101,6 +101,10 @@ RAW="$("$APKSIGNER" verify --print-certs "$OUT/$NAME" | grep -m1 'SHA-256 digest
 [ -n "$RAW" ] || die "Could not read the certificate fingerprint of the APK."
 FINGERPRINT="$(printf '%s' "$RAW" | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')"
 echo "Signature (SHA-256): $FINGERPRINT"
+# The SHA-1 is needed for the Firebase / Google Cloud API key restriction (same colon format).
+RAW1="$("$APKSIGNER" verify --print-certs "$OUT/$NAME" | grep -m1 'SHA-1 digest' | sed 's/.*digest: *//')"
+[ -n "$RAW1" ] || die "Could not read the SHA-1 digest of the APK certificate."
+echo "Signature (SHA-1, for Firebase): $(printf '%s' "$RAW1" | tr 'a-f' 'A-F' | sed 's/../&:/g; s/:$//')"
 
 EXPECTED=""
 [ -f "$FINGERPRINT_FILE" ] && EXPECTED="$(tr -d ' \t\r\n' < "$FINGERPRINT_FILE" | tr 'a-f' 'A-F')"

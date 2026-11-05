@@ -27,11 +27,16 @@ class CheckWorker(context: Context, params: WorkerParameters) : Worker(context, 
         const val NOW_WORK_NAME = "notification-check-now"
 
         /**
-         * One check, with the same parts for the worker and the plugin's checkNow. Only one runs at a time (a notification
+         * One check (then, unless `syncToken` is false, the push token sync), with the same parts for the worker and the plugin's checkNow. Only one runs at a time (a notification
          * must not be shown twice, nor the last id raced). Stops the periodic work when the key is gone.
          */
-        fun runCheck(context: Context): CheckRun = CheckLock.withLock {
-            val run = NotificationCheck(CheckStorage(context), HttpFetcher(), NotificationPoster(context)).run()
+        fun runCheck(context: Context, syncToken: Boolean = true): CheckRun = CheckLock.withLock {
+            val storage = CheckStorage(context)
+            val run = runCheckThenSync(
+                { NotificationCheck(storage, HttpFetcher(), NotificationPoster(context)).run() },
+                syncToken,
+                PushTokenSync(storage, PushTokenSender()),
+            )
             if (run.result == CheckResult.STOP) cancel(context)
             run
         }

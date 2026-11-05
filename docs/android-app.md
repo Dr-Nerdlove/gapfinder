@@ -46,6 +46,37 @@ browser version, and it adds what a web page cannot do on Android: notifications
 - All notifications use one channel, **"Abstimmungen"**. Texts are made in the app, in German time (Europe/Berlin).
 - If the server answers 401 (key gone: logout, password change, switched off elsewhere), the check switches itself off.
 
+## Instant notifications (the Firebase doorbell, phase 7d)
+
+- **What it is:** the server rings the phone through Firebase Cloud Messaging (FCM) with a data message that carries
+  only `{"kind":"check"}`, no title, text, poll or name. The app then does what "Jetzt nachsehen" does (one `GET
+  /api/app-notifications` with the device key) and makes the texts itself. **Google only learns that this phone was
+  rung**, and the token it gave the phone. The 15-minute check stays as the fallback (no Google services, a lost ring,
+  server off at night).
+- **Firebase is silent until the user switches notifications on.** The manifest sets
+  `firebase_messaging_auto_init_enabled=false` and `firebase_analytics_collection_enabled=false`. Switching on
+  (`Push.enable`) turns auto-init on and fetches the token; switching off (`Push.disable`) turns it off and deletes the
+  token. Every Firebase call is guarded by "Firebase is available" (`FirebaseApp.getApps(context)` not empty) and
+  wrapped, so a failure never breaks switching on or off.
+- **Token sync** (`PushTokenSync`, `PushTokenSender`): `PUT {apiUrl}/api/app-devices/push-token`, header `X-Device-Key`,
+  body `{"token":"..."}`. The answer `{"instant": true|false}` says whether the server can ring. The token is sent when
+  the server has not got this value yet, and again after 24 hours (this repairs a server that lost it after a
+  rollback or restore). It runs at the end of every check (not the ring path). 401 or any other failure records
+  nothing and is retried at the next run. Stored in `CheckStorage`: `push_token`, `push_token_sent`,
+  `push_token_sent_at`, `push_instant`; a new device key forgets the sent ones, switching off forgets everything.
+- **The ring** (`RingService`): `onMessageReceived` runs `CheckWorker.runCheck(context, syncToken = false)` directly
+  (one quick GET under `CheckLock`; a high-priority message gives only a short window, so no WorkManager). If the
+  server was unavailable, one `checkOnce` follows. `onNewToken` stores the token and enqueues `checkOnce`, which sends it.
+- **Status:** the plugin's `notificationStatus` has `instant`: switched on, Firebase available, the server said it can
+  ring, and the stored token is the one the server has. The app can show "sofort" only then.
+- **Works without `google-services.json`:** the file does not exist yet. Without it Firebase is never initialised, the
+  app builds and runs as before and `instant` is false. Once the owner has made the Firebase project, the file goes to
+  `android/app/google-services.json` (committed; it is not secret) and the existing Gradle line applies the plugin. In
+  Google Cloud the API key is restricted to the app id `de.drnerdlove.lueckenfueller` and the signing certificate: the
+  build script prints `Signature (SHA-1, for Firebase)` next to the SHA-256 for that.
+- `SHELL_VERSION` is 2 since this change (new APK needed for the doorbell). The Firebase BoM version is
+  `firebaseBomVersion` in `android/variables.gradle`.
+
 ## Colours (Material You)
 
 - On Android 12 and newer (API 31+) the app wears the phone's system colours instead of the profile's seed colour.
