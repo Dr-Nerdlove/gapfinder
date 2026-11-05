@@ -4,9 +4,8 @@ This guide is for the owner. It sets up Google's Firebase as a "doorbell": when 
 phone and the app then asks your server what is new. Google learns only that a phone should look, never what
 about. Without it, the app checks every 15 minutes, which keeps working.
 
-> The menu names below were written without access to the Firebase site (the session that wrote this could not
-> open it) and may differ slightly. If something looks different, tell the assistant where, so the guide can be
-> fixed.
+> The English menu names below were checked on the Firebase site on 2026-11-05 and were all correct. If Google
+> renames something later and a step looks different, tell the assistant where, so the guide can be fixed.
 
 ## 1. Create the Firebase project
 
