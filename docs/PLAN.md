@@ -478,6 +478,32 @@ app) below.
         `de.drnerdlove.lueckenfueller` and the SHA-1 fingerprint
         `08:AF:87:5D:DE:65:17:6C:7E:EE:98:41:3A:EC:63:B2:38:0C:A2:A9`. The notification kept arriving at once afterwards.
       - The English menu names in `docs/firebase-setup.md` were all correct.
+  - **7c decisions (owner, 2026-11-05):** the app updates itself.
+    - An update is offered only when the latest GitHub release has a **higher shell version** than the installed app
+      (`BuildConfig.SHELL_VERSION`), not for every app version. `SHELL_VERSION` is 3 with this change.
+    - The app installs inside the app: it downloads the APK itself and hands it to Android's installer
+      (`PackageInstaller` session); Android asks the user to confirm.
+    - Shown as a card at the top of the start page when an update is available, plus the state in the profile.
+    - **Technical choices:**
+      - Every release carries `app-update.json` (`scripts/app-update-json.sh`, uploaded by `release.yml` in the same
+        `gh release create` call as the APK): `{"version","shell","apk","sha256"}`. The app reads
+        `https://github.com/Dr-Nerdlove/gapfinder/releases/latest/download/app-update.json`; releases before 1.7.0
+        have none (404), which is the state "unknown" and shows nothing.
+      - Redirects are followed by hand (https only, hosts `github.com`, `release-assets.githubusercontent.com`,
+        `objects.githubusercontent.com`, at most 5 hops); limits 64 KiB for the JSON, 64 MiB for the APK.
+      - The JSON is parsed strictly (version `x.y.z`, shell a positive integer, `apk` exactly
+        `lueckenfueller-<version>.apk`, 64 hex SHA-256). The APK address is built by the app, never taken from the JSON.
+      - Before the installer is called, in this order: SHA-256 of the download equals the JSON; the package name is
+        our own; the signing certificates equal the installed app's; the version code is higher. Any failure is
+        a reason code (`download`, `checksum`, `package`, `signature`, `version`, `install`), never an exception text.
+      - Without the permission to install from this app (API 26+), the app opens the system settings page and
+        answers `needs-permission`; the user comes back and taps again.
+      - Plugin methods `appUpdate()` (`available`, `current`, `unknown`) and `installAppUpdate()` (`started`,
+        `needs-permission`, `failed`); the second one reads the JSON again and trusts nothing from the web app.
+      - **The installed 1.6.0 app (shell 2) has no `appUpdate` method.** Capacitor rejects the call as
+        "UNIMPLEMENTED"; the web app then shows a card asking the user to install the new version by hand once
+        from the release page. From shell 3 on, updates are offered by the app itself.
+      - The privacy page says that the app asks GitHub once per start whether a new version exists.
 
 ### Look
 
