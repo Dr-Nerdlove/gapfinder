@@ -271,8 +271,9 @@ missing, with a recommendation, and let the people choose.
     returns null for small JS numbers (they arrive as Integer; found on the owner's phone, 2026-11-05): read numbers
     with `wholeNumberArg` (`PluginArgs.kt`).
   - Firebase doorbell (phase 7d): the ring (FCM data message `kind: check`) carries no content, never add any (Google
-    must learn nothing). Every Firebase call in the Android app is guarded, because the build has no
-    `android/app/google-services.json` until the owner adds it (see `docs/firebase-setup.md`). The service-account key
+    must learn nothing). Every Firebase call in the Android app is guarded, so the app also works without
+    `android/app/google-services.json` (committed since 2026-11-05, project `lueckenfueller-285a1`, not secret; guide
+    `docs/firebase-setup.md`). The service-account key
     lives only in the VM's `.env` (`FCM_SERVICE_ACCOUNT`, put there by `setup.sh`), never in the repository or backups;
     the server starts without it or with a bad one. The app sends its token with `PUT /api/app-devices/push-token`
     from native code with the device key. The FCM docs site was not reachable from the cloud session: the error
