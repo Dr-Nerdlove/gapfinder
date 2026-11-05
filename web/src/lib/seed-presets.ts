@@ -6,6 +6,4 @@ export const SEED_PRESETS: readonly { name: string; hex: string }[] = [
   { name: "Grün", hex: "#2e7d32" },
   { name: "Gelb", hex: "#f9a825" },
   { name: "Orange", hex: "#e65100" },
-  { name: "Rot", hex: "#c62828" },
-  { name: "Pink", hex: "#c2185b" },
 ];
