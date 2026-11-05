@@ -427,6 +427,31 @@ app) below.
     - Inside the app, "Teilen", ".ics herunterladen" and links to other sites (Google/Outlook, `webcal://`)
       go through the Android app (`web/src/lib/native.ts`), because the Android web view cannot share, download
       or open other apps on its own. In the browser nothing changes.
+    - **Test on the owner's phone (2026-11-05):** the chain works (server, background check, display): a test
+      notification appears, and "Jetzt nachsehen" shows new notifications at once. Waiting for the 15-minute check
+      was too slow for the owner, so instant delivery follows (phase 7d below).
+  - **Instant delivery through Firebase as a "doorbell" (phase 7d, decided by the owner on 2026-11-05):** the
+    earlier "no Firebase" (2026-11-04) is revised, because the doorbell sends Google no content.
+    - When the server stores a notification for an account, it sends a Firebase Cloud Messaging (FCM) data message
+      **without any content** (no title, text, poll or name; at most a fixed kind like `check`) and with high
+      priority to that account's app devices. The app then runs the same check as "Jetzt nachsehen" (device key,
+      `GET /api/app-notifications`) and shows the texts it makes itself. Google only learns that a device was rung.
+    - The 15-minute background check **stays** as a fallback (phones without Google services, a lost ring, the
+      server off at night).
+    - Server: Google's `google-auth-library` for the service-account login (OAuth2 access token for the FCM HTTP
+      v1 API), the ring itself is one `fetch` to `fcm.googleapis.com`. Not `firebase-admin` (large, mostly unused),
+      not a hand-made login. The service-account key lives only in the VM (like `CALENDAR_KEY`; `setup.sh` asks for
+      it), never in the repository or a backup copy in plain text; the server must start without it or with a bad
+      one (no ring then, the fallback carries on), so a missing key never makes the VM roll back. The firewall
+      already allows TCP 443. Logs name the status, never a token.
+    - The app registers its FCM token with the server together with its device key (additive migration on
+      `app_devices`; the token is personal data: privacy page). The server forgets it with the device key, and
+      when FCM reports it unregistered. A token refresh is sent again.
+    - `google-services.json` (Firebase's app configuration) is committed: it is not secret (it is inside every
+      APK); in Firebase the key is restricted to the app id and the signing fingerprint. The owner creates the
+      Firebase project from a written guide (a session cannot create accounts).
+    - Order: 7d is built **before** the first release with the Android app (1.6.0), so friends get instant
+      notifications from their first install (the self-update, 7c, comes later).
 
 ### Look
 
@@ -469,7 +494,8 @@ phase in brackets.
    Web Push, reminder), 6b screens (profile card, reminder button, service worker, privacy page).
 7. **Android app** (Opus to plan, Sonnet for the steps): 7a server and web app (device key, notification switch
    and share, `.ics` and links through the app), 7b Capacitor shell, background check, signing, APK in the release,
-   7c self-update (loads from the latest GitHub release).
+   7c self-update (loads from the latest GitHub release), 7d instant notifications through a Firebase doorbell
+   (before release 1.6.0).
 8. **Optional later:** direct Google/Outlook connection, offline vote queue.
 
 ## Server updates
