@@ -9,7 +9,7 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 
 ## Status
 
-**Phases 1 to 5 are done.** The app is deployed automatically and the server runs on the home PC with automatic
+**Phases 1 to 7 are done (releases up to v1.7.0).** The app is deployed automatically and the server runs on the home PC with automatic
 updates.
 
 - **Accounts:** friends join through a personal invite link from the admin, log in with username and password, and
@@ -25,8 +25,13 @@ updates.
 - **Fixing the date:** the creator or the admin fixes one proposal after a fresh calendar check (a warning, never
   a block). Everybody with the link sees the date and can download it as `.ics` or add it to Google Calendar or
   Outlook; in the profile, a personal calendar feed puts the fixed dates into any calendar app.
+- **Notifications:** switch them on per device (Web Push in the browser) to hear about new polls, votes and fixed
+  dates, and choose which kinds you want; poll creators can send a reminder to people who have not voted yet. A
+  privacy page explains what is sent and to whom.
+- **Android app:** install the APK from the release page ([details below](#android-app)). Instant notifications come
+  through a content-free Firebase "doorbell", a check every 15 minutes is the backup, and the app updates itself.
 
-Not built yet: connecting Google or Outlook directly, and an offline vote queue (phase 6, optional).
+Not built yet: connecting Google or Outlook directly, and an offline vote queue (phase 8, optional).
 The first admin account is created in the VM ([`docs/server-setup.md`](docs/server-setup.md), step 8). The database
 is backed up every night, encrypted, to a OneDrive folder on the home PC (step 9 and "Restoring a backup"); the
 admin sees a warning on the start page when a backup is missing or the monthly trial restore is due.
