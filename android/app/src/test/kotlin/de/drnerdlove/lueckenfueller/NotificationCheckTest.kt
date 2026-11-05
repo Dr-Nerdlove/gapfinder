@@ -12,7 +12,9 @@ class NotificationCheckTest {
         override var lastNotificationId: Long
             get() = last
             set(value) { last = value }
-        override fun clear() { url = null; key = null; last = 0 }
+        override fun clear() { url = null; key = null; last = 0; checks.clear() }
+        val checks = mutableListOf<Pair<Long, CheckOutcome>>()
+        override fun recordCheck(at: Long, outcome: CheckOutcome) { if (key != null) checks.add(at to outcome) }
     }
 
     private val shown = mutableListOf<Pair<NotificationText, String>>()
@@ -22,8 +24,10 @@ class NotificationCheckTest {
 
     @Before fun reset() { shown.clear(); asked.clear() }
 
-    private fun run(): CheckResult =
-        NotificationCheck(store, { u, k, a -> asked.add(Triple(u, k, a)); answer }, { t, target -> shown.add(t to target) }).run()
+    private fun run(): CheckResult = runFull().result
+
+    private fun runFull(): CheckRun =
+        NotificationCheck(store, { u, k, a -> asked.add(Triple(u, k, a)); answer }, { t, target -> shown.add(t to target) }, { 1000L }).run()
 
     private fun item(id: Long, kind: String = "vote", token: String = "tok") =
         """{"id":$id,"createdAt":"2026-11-04T10:00:00.000Z","data":{"kind":"$kind","pollTitle":"Grillen","actorName":"Anna","shareToken":"$token"}}"""
@@ -84,8 +88,8 @@ class NotificationCheckTest {
     fun anItemThatCannotBeShownIsTriedAgainNextTime() {
         answer = FetchResult.Body("""{"items":[${item(6)},${item(7)}]}""")
         var calls = 0
-        val check = NotificationCheck(store, { _, _, _ -> answer }, { _, _ -> if (++calls == 2) throw IllegalStateException("no") })
-        assertEquals(CheckResult.CONTINUE, check.run())
+        val check = NotificationCheck(store, { _, _, _ -> answer }, { _, _ -> if (++calls == 2) throw IllegalStateException("no") }, { 1000L })
+        assertEquals(CheckResult.CONTINUE, check.run().result)
         assertEquals(6L, store.last)
     }
 
@@ -95,5 +99,66 @@ class NotificationCheckTest {
         run()
         assertEquals("Es gibt Neuigkeiten.", shown.single().first.body)
         assertEquals(6L, store.last)
+    }
+
+    @Test
+    fun okWithItemsIsRecordedWithTheClockTime() {
+        answer = FetchResult.Body("""{"items":[${item(7)}]}""")
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.OK), runFull())
+        assertEquals(listOf(1000L to CheckOutcome.OK), store.checks)
+    }
+
+    @Test
+    fun okWithoutItemsIsRecorded() {
+        assertEquals(CheckOutcome.OK, runFull().outcome)
+        assertEquals(listOf(1000L to CheckOutcome.OK), store.checks)
+    }
+
+    @Test
+    fun unavailableIsRecorded() {
+        answer = FetchResult.Unavailable
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.UNAVAILABLE), runFull())
+        assertEquals(listOf(1000L to CheckOutcome.UNAVAILABLE), store.checks)
+    }
+
+    @Test
+    fun anUnreadableAnswerIsBroken() {
+        for (bad in listOf("", "not json", "[]", "{}", """{"items":5}""")) {
+            store.checks.clear()
+            answer = FetchResult.Body(bad)
+            assertEquals(bad, CheckRun(CheckResult.CONTINUE, CheckOutcome.BROKEN), runFull())
+            assertEquals(bad, listOf(1000L to CheckOutcome.BROKEN), store.checks)
+        }
+    }
+
+    @Test
+    fun aFailedNotificationIsBroken() {
+        answer = FetchResult.Body("""{"items":[${item(6)}]}""")
+        val check = NotificationCheck(store, { _, _, _ -> answer }, { _, _ -> throw IllegalStateException("no") }, { 1000L })
+        assertEquals(CheckRun(CheckResult.CONTINUE, CheckOutcome.BROKEN), check.run())
+        assertEquals(listOf(1000L to CheckOutcome.BROKEN), store.checks)
+    }
+
+    @Test
+    fun unauthorizedStopsAndWritesNoCheck() {
+        store.checks.add(1L to CheckOutcome.OK)
+        answer = FetchResult.Unauthorized
+        assertEquals(CheckRun(CheckResult.STOP, CheckOutcome.STOPPED), runFull())
+        assertEquals(0, store.checks.size) // cleared with everything else, nothing new
+    }
+
+    @Test
+    fun missingKeyStopsAndWritesNoCheck() {
+        store.key = null
+        assertEquals(CheckRun(CheckResult.STOP, CheckOutcome.STOPPED), runFull())
+        assertEquals(0, store.checks.size)
+    }
+
+    @Test
+    fun aCheckIsNotWrittenBackWhenTheKeyIsGoneMeanwhile() {
+        answer = FetchResult.Body("""{"items":[]}""")
+        val check = NotificationCheck(store, { _, _, _ -> store.key = null; answer }, { _, _ -> }, { 1000L })
+        check.run()
+        assertEquals(0, store.checks.size)
     }
 }

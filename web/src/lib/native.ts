@@ -7,12 +7,21 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 /**
  * The contract that the Kotlin plugin "Lueckenfueller" implements. Every method rejects when it fails.
  */
+export interface AppCheck {
+  /** When the background check last ran, in milliseconds since 1970. */
+  at: number;
+  /** "ok": the answer was read; "unavailable": no connection or server error; "error": unreadable answer or no notification could be shown. */
+  result: "ok" | "unavailable" | "error";
+}
+
 export interface LueckenfuellerPlugin {
   /**
    * `enabled`: a device key is stored and the background check is scheduled. The app clears the key itself when
    * the server answers 401. `permission`: Android's notification permission ("prompt" = not asked yet).
+   * `lastCheck`: the background check's last run, null when it has not run yet (or is not enabled). Missing
+   * in an older app shell.
    */
-  notificationStatus(): Promise<{ enabled: boolean; permission: "granted" | "denied" | "prompt" }>;
+  notificationStatus(): Promise<{ enabled: boolean; permission: "granted" | "denied" | "prompt"; lastCheck?: AppCheck | null }>;
   /**
    * Asks for Android's notification permission. Only when it is granted, the key is stored and the background
    * check is scheduled (it reads the notifications after `lastNotificationId` from `apiUrl` with the key).

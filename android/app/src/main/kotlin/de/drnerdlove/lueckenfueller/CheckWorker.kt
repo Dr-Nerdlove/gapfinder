@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
 /** The background check: every 15 minutes (Android's minimum) with a network connection. */
 class CheckWorker(context: Context, params: WorkerParameters) : Worker(context, params) {
     override fun doWork(): Result {
-        val result = NotificationCheck(CheckStorage(applicationContext), HttpFetcher(), NotificationPoster(applicationContext)).run()
+        val result = NotificationCheck(CheckStorage(applicationContext), HttpFetcher(), NotificationPoster(applicationContext)).run().result
         if (result == CheckResult.STOP) cancel(applicationContext)
         // Nothing here retries: the home server sleeps from 01:00 to 07:00, the next period simply tries again.
         return Result.success()

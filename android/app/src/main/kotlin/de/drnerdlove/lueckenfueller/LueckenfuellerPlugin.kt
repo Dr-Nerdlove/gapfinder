@@ -16,6 +16,7 @@ import com.getcapacitor.PluginMethod
 import com.getcapacitor.annotation.CapacitorPlugin
 import com.getcapacitor.annotation.Permission
 import com.getcapacitor.annotation.PermissionCallback
+import org.json.JSONObject
 import java.io.File
 
 /** The bridge the web app calls; the contract is web/src/lib/native.ts. Every method rejects when it fails. */
@@ -41,7 +42,9 @@ class LueckenfuellerPlugin : Plugin() {
     fun notificationStatus(call: PluginCall) {
         try {
             val enabled = storage.deviceKey != null && CheckWorker.isScheduled(context)
-            call.resolve(JSObject().put("enabled", enabled).put("permission", permission()))
+            val last = if (enabled) storage.lastCheck else null
+            val lastCheck: Any = if (last == null) JSONObject.NULL else JSObject().put("at", last.first).put("result", last.second)
+            call.resolve(JSObject().put("enabled", enabled).put("permission", permission()).put("lastCheck", lastCheck))
         } catch (e: Exception) {
             call.reject("Der Benachrichtigungsstatus ließ sich nicht lesen.", e)
         }

@@ -12,7 +12,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
   while the server sleeps). An installed version is replaced by a newer APK and the login stays. On Android 12 and
   newer it wears the colours of your phone (Material You) so it matches your other apps; a switch in the profile
   ("Farben vom Handy übernehmen") turns that off and brings back your own profile colour. In the browser nothing
-  changes.
+  changes. The notifications card in the app shows when the background check last looked for news and how it went.
 
 - Groundwork on the server for the Android app's notifications: each phone gets its own key, which can only read that
   person's notifications. It is removed when the app switches notifications off, at a password change, and after 90

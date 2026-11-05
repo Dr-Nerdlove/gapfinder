@@ -19,6 +19,9 @@ browser version, and it adds what a web page cannot do on Android: notifications
 - Android's WorkManager runs the check about every **15 minutes**; when the phone has been idle for long, Android
   delays it. A notification can therefore arrive up to ~15 minutes late, or later.
 - The home server is off from 01:00 to 07:00: the check just fails quietly and tries again later.
+- The notifications card in the app shows one line with the time of the last check and how it went (`ok`, `unavailable`,
+  `error`; `CheckStorage.lastCheck`, plugin field `lastCheck`, text in `web/src/lib/app-check-status.ts`). It is read again
+  when the app comes back to the front and right after switching on. A 401 or a missing key writes no check.
 - All notifications use one channel, **"Abstimmungen"**. Texts are made in the app, in German time (Europe/Berlin).
 - If the server answers 401 (key gone: logout, password change, switched off elsewhere), the check switches itself off.
 

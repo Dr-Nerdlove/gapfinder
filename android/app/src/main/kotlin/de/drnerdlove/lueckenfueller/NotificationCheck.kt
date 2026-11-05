@@ -31,9 +31,30 @@ interface CheckStore {
     val deviceKey: String?
     var lastNotificationId: Long
 
-    /** Forgets the address, the key and the last id. */
+    /** Forgets the address, the key, the last id and the last check. */
     fun clear()
+
+    /** Remembers when the last run looked for news and how it went. Writes nothing when no key is stored. */
+    fun recordCheck(at: Long, outcome: CheckOutcome)
 }
+
+/** How a run went, as the notifications card shows it. `wire` is what the web app reads. */
+enum class CheckOutcome(val wire: String) {
+    /** The answer was read (it may have shown none, one or more notifications). */
+    OK("ok"),
+
+    /** No connection, timeout or server error. */
+    UNAVAILABLE("unavailable"),
+
+    /** The answer could not be read, or a notification could not be shown. */
+    BROKEN("error"),
+
+    /** 401 or nothing stored: the work stops and nothing is remembered. */
+    STOPPED("stopped"),
+}
+
+/** The decision for WorkManager and what is shown to the user. */
+data class CheckRun(val result: CheckResult, val outcome: CheckOutcome)
 
 enum class CheckResult {
     /** Done for now; the next period runs again. */
@@ -47,39 +68,46 @@ class NotificationCheck(
     private val store: CheckStore,
     private val fetcher: NotificationFetcher,
     private val sink: NotificationSink,
+    private val clock: () -> Long = System::currentTimeMillis,
 ) {
-    fun run(): CheckResult {
+    fun run(): CheckRun {
         val apiUrl = store.apiUrl
         val key = store.deviceKey
-        if (apiUrl.isNullOrEmpty() || key.isNullOrEmpty()) return CheckResult.STOP
+        if (apiUrl.isNullOrEmpty() || key.isNullOrEmpty()) return CheckRun(CheckResult.STOP, CheckOutcome.STOPPED)
         val after = store.lastNotificationId
         val body = when (val result = fetcher.fetch(apiUrl, key, after)) {
             is FetchResult.Unauthorized -> {
                 store.clear()
-                return CheckResult.STOP
+                return CheckRun(CheckResult.STOP, CheckOutcome.STOPPED)
             }
-            is FetchResult.Unavailable -> return CheckResult.CONTINUE
+            is FetchResult.Unavailable -> return finish(CheckOutcome.UNAVAILABLE)
             is FetchResult.Body -> result.text
         }
-        for ((id, data) in parseItems(body, after)) {
+        val items = parseItems(body, after) ?: return finish(CheckOutcome.BROKEN)
+        for ((id, data) in items) {
             try {
                 val text = NotificationTexts.of(data)
                 sink.show(text, NotificationTexts.target(text.shareToken, NotificationTexts.APP_URL))
             } catch (e: RuntimeException) {
-                return CheckResult.CONTINUE // not shown: keep this id, so the next period tries again
+                return finish(CheckOutcome.BROKEN) // not shown: keep this id, so the next period tries again
             }
             store.lastNotificationId = id
         }
-        return CheckResult.CONTINUE
+        return finish(CheckOutcome.OK)
     }
 
-    /** The items newer than `after`, oldest first. A broken answer gives none. */
-    private fun parseItems(body: String, after: Long): List<Pair<Long, JSONObject?>> {
+    private fun finish(outcome: CheckOutcome): CheckRun {
+        store.recordCheck(clock(), outcome)
+        return CheckRun(CheckResult.CONTINUE, outcome)
+    }
+
+    /** The items newer than `after`, oldest first. Null when the answer is not readable. */
+    private fun parseItems(body: String, after: Long): List<Pair<Long, JSONObject?>>? {
         val items = try {
             JSONObject(body).optJSONArray("items")
         } catch (e: JSONException) {
             null
-        } ?: return emptyList()
+        } ?: return null
         val out = ArrayList<Pair<Long, JSONObject?>>()
         for (i in 0 until items.length()) {
             val item = items.optJSONObject(i) ?: continue
