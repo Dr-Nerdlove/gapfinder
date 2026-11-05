@@ -43,10 +43,37 @@ class LueckenfuellerPlugin : Plugin() {
         try {
             val enabled = storage.deviceKey != null && CheckWorker.isScheduled(context)
             val last = if (enabled) storage.lastCheck else null
-            val lastCheck: Any = if (last == null) JSONObject.NULL else JSObject().put("at", last.first).put("result", last.second)
+            val lastCheck: Any = if (last == null) JSONObject.NULL else JSObject().put("at", last.at).put("result", last.result).put("count", last.count)
             call.resolve(JSObject().put("enabled", enabled).put("permission", permission()).put("lastCheck", lastCheck))
         } catch (e: Exception) {
             call.reject("Der Benachrichtigungsstatus ließ sich nicht lesen.", e)
+        }
+    }
+
+    /**
+     * One check right now, on the plugin's own background thread, with the same parts and the same lock as the
+     * background worker. "off": no key stored (or the server said 401): the periodic work is stopped as well.
+     */
+    @PluginMethod
+    fun checkNow(call: PluginCall) {
+        try {
+            val run = CheckWorker.runCheck(context)
+            call.resolve(JSObject().put("result", resultWire(run.outcome)).put("count", run.count))
+        } catch (e: Exception) {
+            call.reject("Das Nachsehen hat nicht geklappt.", e)
+        }
+    }
+
+    /** Shows one notification right now, to tell "Android blocks it" from "nothing new". */
+    @PluginMethod
+    fun testNotification(call: PluginCall) {
+        try {
+            val poster = NotificationPoster(context)
+            val text = NotificationText(TEST_TITLE, TEST_BODY, null, TEST_TAG)
+            val shown = poster.show(text, NotificationTexts.APP_URL)
+            call.resolve(if (shown) JSObject().put("shown", true) else JSObject().put("shown", false).put("reason", "blocked"))
+        } catch (e: Exception) {
+            call.reject("Die Test-Benachrichtigung ließ sich nicht zeigen.", e)
         }
     }
 
@@ -194,6 +221,12 @@ class LueckenfuellerPlugin : Plugin() {
 
     internal companion object {
         const val SHARED_FOLDER = "shared"
+        const val TEST_TITLE = "Test von Lückenfüller"
+        const val TEST_BODY = "So sehen Benachrichtigungen aus. Wenn du das liest, kann die App dir Benachrichtigungen zeigen."
+        const val TEST_TAG = "test"
+
+        /** checkNow's wire word for a run: "off" when there is no key (any more). */
+        fun resultWire(outcome: CheckOutcome): String = if (outcome == CheckOutcome.STOPPED) "off" else outcome.wire
         val SYSTEM_PALETTES = listOf("accent1", "accent2", "accent3", "neutral1", "neutral2")
         val SYSTEM_SHADES = listOf(0, 10, 50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 1000)
         val ALLOWED_SCHEMES = setOf("https", "http", "webcal", "mailto", "tel")

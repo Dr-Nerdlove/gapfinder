@@ -20,26 +20,31 @@ class CheckStorage(context: Context) : CheckStore {
             if (deviceKey != null) prefs.edit().putLong("last_id", value).commit()
         }
 
-    /** The last check as (epoch millis, wire outcome), or null when there was none yet. */
-    val lastCheck: Pair<Long, String>?
+    /** The last check (epoch millis, wire outcome, number of notifications shown), or null when there was none yet. */
+    val lastCheck: LastCheck?
         get() {
             val at = prefs.getLong("last_check_at", 0)
             val result = prefs.getString("last_check_result", null)
-            return if (at > 0 && result != null) at to result else null
+            return if (at > 0 && result != null) LastCheck(at, result, prefs.getInt("last_check_count", 0)) else null
         }
 
-    override fun recordCheck(at: Long, outcome: CheckOutcome) {
+    override fun recordCheck(at: Long, outcome: CheckOutcome, count: Int) {
         // Same rule as the last id: a run that was going while the key was removed writes nothing back.
-        if (deviceKey != null) prefs.edit().putLong("last_check_at", at).putString("last_check_result", outcome.wire).commit()
+        if (deviceKey != null) {
+            prefs.edit().putLong("last_check_at", at).putString("last_check_result", outcome.wire).putInt("last_check_count", count).commit()
+        }
     }
 
     /** Switching on: a new key starts with no check seen yet. */
     fun save(apiUrl: String, deviceKey: String, lastNotificationId: Long) {
         prefs.edit().putString("api_url", apiUrl).putString("device_key", deviceKey).putLong("last_id", lastNotificationId)
-            .remove("last_check_at").remove("last_check_result").commit()
+            .remove("last_check_at").remove("last_check_result").remove("last_check_count").commit()
     }
 
     override fun clear() {
         prefs.edit().clear().commit()
     }
 }
+
+/** What the notifications card shows about the last check. */
+data class LastCheck(val at: Long, val result: String, val count: Int)

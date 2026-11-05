@@ -12,7 +12,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
   while the server sleeps). An installed version is replaced by a newer APK and the login stays. On Android 12 and
   newer it wears the colours of your phone (Material You) so it matches your other apps; a switch in the profile
   ("Farben vom Handy übernehmen") turns that off and brings back your own profile colour. In the browser nothing
-  changes. The notifications card in the app shows when the background check last looked for news and how it went.
+  changes. The notifications card in the app shows when the background check last looked for news, how it went and
+  how many notifications it showed. Two buttons next to it, "Jetzt nachsehen" and "Test-Benachrichtigung", let you check at once whether news is waiting and whether Android shows notifications; the app
+  also looks for news whenever you open it. A notification that Android blocks is no longer counted as shown: it is kept
+  and delivered once Android allows it.
 
 - Groundwork on the server for the Android app's notifications: each phone gets its own key, which can only read that
   person's notifications. It is removed when the app switches notifications off, at a password change, and after 90

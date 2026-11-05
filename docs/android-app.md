@@ -22,6 +22,27 @@ browser version, and it adds what a web page cannot do on Android: notifications
 - The notifications card in the app shows one line with the time of the last check and how it went (`ok`, `unavailable`,
   `error`; `CheckStorage.lastCheck`, plugin field `lastCheck`, text in `web/src/lib/app-check-status.ts`). It is read again
   when the app comes back to the front and right after switching on. A 401 or a missing key writes no check.
+- The line also says how many notifications that check **really showed** (`count`): "nichts Neues", "1 neue
+  Benachrichtigung", "3 neue Benachrichtigungen". An older shell without a count keeps "alles in Ordnung".
+- A notification that Android does not let through (permission, the app's switch or the channel "Abstimmungen" turned off)
+  counts as not shown: the check ends as `error` ("das hat nicht geklappt") and keeps the last id, so the notification comes
+  once Android allows it again. `NotificationPoster.show` returns whether it really posted.
+- Two buttons under the line (plugin `checkNow()` and `testNotification()`):
+  - **Jetzt nachsehen** runs one check at once with the same code as the background one and records it. One shared lock
+    (`CheckLock`) keeps the background work and this button from running at the same time (no notification twice, no raced
+    last id).
+  - **Test-Benachrichtigung** shows a local notification (tag `test`) without asking the server. Not seen although the app
+    says "gesendet" means Android hides it (Einstellungen → Apps → Lückenfüller → Benachrichtigungen); if Android reports
+    it as blocked, the app says so.
+- **Check on open:** while the profile page is open, the app checks on loading and when it comes back to the front, at most
+  once per 60 seconds (`web/src/lib/app-check-now.ts`). In addition `MainActivity.onResume` enqueues a one-time check
+  (`CheckWorker.checkOnce`, unique name `notification-check-now`, `ExistingWorkPolicy.KEEP`, network required, at most once per
+  60 s, time in memory) when a key is stored, so opening the app on any page looks for news. WorkManager keys unique work by
+  name only, so this runs next to the periodic work (`notification-check`); both use `CheckWorker`'s logic and the lock.
+- **Telling "nothing new" from "Android hides it":** press "Test-Benachrichtigung". Seen: Android shows notifications, so a
+  line saying "nichts Neues" means the server had nothing for this account after the last id. Not seen: fix the settings
+  above. A line with "1 neue Benachrichtigung" or more while none was seen also points at Android (or the notification was
+  swiped away).
 - All notifications use one channel, **"Abstimmungen"**. Texts are made in the app, in German time (Europe/Berlin).
 - If the server answers 401 (key gone: logout, password change, switched off elsewhere), the check switches itself off.
 

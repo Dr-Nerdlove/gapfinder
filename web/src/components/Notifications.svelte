@@ -3,6 +3,7 @@
   import { onMount } from "svelte";
   import * as api from "../lib/api";
   import { appCheckLine } from "../lib/app-check-status";
+  import { NEEDS_NEWER_APP_TEXT, claimOpenCheck, testNotificationNote } from "../lib/app-check-now";
   import { APP_BLOCKED_TEXT, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "../lib/app-device";
   import { API_URL } from "../lib/config";
   import { errorMessage } from "../lib/messages";
@@ -47,6 +48,9 @@
   let deviceBusy = $state(false);
   let deviceProblem = $state("");
   let lastCheck = $state<AppCheck | null | undefined>(undefined);
+  let checking = $state(false);
+  let testing = $state(false);
+  let checkNote = $state("");
   const checkLine = $derived(inApp && device === "on" ? appCheckLine(lastCheck, Date.now()) : null);
 
   async function loadSettings(): Promise<void> {
@@ -82,12 +86,46 @@
     }
   }
 
+  /** Looks for news right now and shows the new status line. `auto`: the quiet check when the app is opened. */
+  async function checkNow(auto: boolean): Promise<void> {
+    if (checking) return;
+    if (auto && !claimOpenCheck(Date.now())) {
+      await loadDevice();
+      return;
+    }
+    if (!auto) claimOpenCheck(Date.now(), true);
+    checking = true;
+    checkNote = "";
+    try {
+      await Lueckenfueller.checkNow();
+    } catch {
+      if (!auto) checkNote = NEEDS_NEWER_APP_TEXT; // the quiet check just stays quiet
+    }
+    await loadDevice(); // reads the new status line; after "off" it also shows that the device is switched off
+    checking = false;
+  }
+
+  async function sendTest(): Promise<void> {
+    if (testing) return;
+    testing = true;
+    checkNote = "";
+    try {
+      checkNote = testNotificationNote(await Lueckenfueller.testNotification());
+    } catch {
+      checkNote = NEEDS_NEWER_APP_TEXT;
+    }
+    testing = false;
+  }
+
   onMount(() => {
     void loadSettings();
-    void loadDevice();
-    // The background check may have run while the app was in the background: look again when it is back.
+    void loadDevice().then(() => {
+      if (inApp && device === "on") void checkNow(true);
+    });
+    // The background check may have run while the app was in the background: look for news again when it is back.
     const refresh = (): void => {
-      if (inApp && document.visibilityState === "visible" && device === "on") void loadDevice();
+      if (!inApp || document.visibilityState !== "visible" || device !== "on") return;
+      void checkNow(true);
     };
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
@@ -193,6 +231,13 @@
       {:else if device === "on"}
         <p>Benachrichtigungen sind auf diesem Gerät an.</p>
         {#if checkLine}<p class="note">{checkLine}</p>{/if}
+        {#if inApp}
+          <div class="row">
+            <Button variant="tonal" disabled={checking || testing} onclick={() => checkNow(false)}>{checking ? "Einen Moment …" : "Jetzt nachsehen"}</Button>
+            <Button variant="tonal" disabled={checking || testing} onclick={sendTest}>Test-Benachrichtigung</Button>
+          </div>
+          {#if checkNote}<p class="note" aria-live="polite">{checkNote}</p>{/if}
+        {/if}
         <div><Button variant="tonal" disabled={deviceBusy || locked} onclick={turnOff}>Auf diesem Gerät ausschalten</Button></div>
       {:else if device === "off"}
         <div><Button disabled={deviceBusy || locked} onclick={turnOn}>Auf diesem Gerät einschalten</Button></div>
@@ -239,6 +284,12 @@
   h3 {
     font-size: 1rem;
     font-weight: 600;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
   }
 
   .note {

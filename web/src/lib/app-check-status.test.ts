@@ -13,10 +13,24 @@ describe("appCheckLine", () => {
     expect(appCheckLine(null, now)).toBe("Noch nicht nach Neuem gesehen. Das passiert etwa alle 15 Minuten.");
   });
 
-  it("shows ok with today's German time", () => {
+  it("keeps 'alles in Ordnung' for an older shell without a count", () => {
     // 00:32 UTC is 01:32 in Berlin
     expect(appCheckLine({ at: Date.parse("2026-11-05T00:32:00Z"), result: "ok" }, now)).toBe(
       "Zuletzt nach Neuem gesehen: heute, 01:32 – alles in Ordnung.",
+    );
+  });
+
+  it("says how many notifications the check showed", () => {
+    const at = Date.parse("2026-11-05T00:32:00Z");
+    expect(appCheckLine({ at, result: "ok", count: 0 }, now)).toBe("Zuletzt nach Neuem gesehen: heute, 01:32 – nichts Neues.");
+    expect(appCheckLine({ at, result: "ok", count: 1 }, now)).toBe("Zuletzt nach Neuem gesehen: heute, 01:32 – 1 neue Benachrichtigung.");
+    expect(appCheckLine({ at, result: "ok", count: 3 }, now)).toBe("Zuletzt nach Neuem gesehen: heute, 01:32 – 3 neue Benachrichtigungen.");
+  });
+
+  it("leaves the other results as they are, whatever the count", () => {
+    const at = Date.parse("2026-11-05T00:32:00Z");
+    expect(appCheckLine({ at, result: "error", count: 2 }, now)).toBe(
+      "Zuletzt versucht: heute, 01:32 – das hat nicht geklappt. Nächster Versuch in etwa 15 Minuten.",
     );
   });
 
