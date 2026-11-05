@@ -18,7 +18,7 @@ android {
         versionName rootVersion
         // Raise this by one whenever the Android shell (anything under android/ or capacitor.config.json)
         // changes in a way users need a new APK for. The app offers an update only when it changed (phase 7c).
-        buildConfigField "int", "SHELL_VERSION", "2"
+        buildConfigField "int", "SHELL_VERSION", "3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
