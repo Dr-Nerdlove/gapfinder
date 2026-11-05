@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1086952338076",
+    "project_id": "lueckenfueller-285a1",
+    "storage_bucket": "lueckenfueller-285a1.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1086952338076:android:750d983c9ed3774d7b3359",
+        "android_client_info": {
+          "package_name": "de.drnerdlove.lueckenfueller"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCanDE2Rqpx66N-gGFcBDYZUyYSf5MUu64"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -71,9 +71,10 @@ browser version, and it adds what a web page cannot do on Android: notifications
   server was unavailable, one `checkOnce` follows. `onNewToken` stores the token and enqueues `checkOnce`, which sends it.
 - **Status:** the plugin's `notificationStatus` has `instant`: switched on, Firebase available, the server said it can
   ring, and the stored token is the one the server has. The app can show "sofort" only then.
-- **Works without `google-services.json`:** the file does not exist yet. Without it Firebase is never initialised, the
-  app builds and runs as before and `instant` is false. Once the owner has made the Firebase project, the file goes to
-  `android/app/google-services.json` (committed; it is not secret) and the existing Gradle line applies the plugin. In
+- **`google-services.json`:** committed at `android/app/google-services.json` since 2026-11-05 (Firebase project
+  `lueckenfueller-285a1`, made by the owner; not secret, it is inside every APK). The existing Gradle line applies the
+  google-services plugin only when the file exists. The code still works without it (Firebase is then never
+  initialised, the app runs as before and `instant` is false), so keep every Firebase call guarded. In
   Google Cloud the API key is restricted to the app id `de.drnerdlove.lueckenfueller` and the signing certificate: the
   build script prints `Signature (SHA-1, for Firebase)` next to the SHA-256 for that.
 - `SHELL_VERSION` is 2 since this change (new APK needed for the doorbell). The Firebase BoM version is
