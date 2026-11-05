@@ -183,7 +183,14 @@ missing, with a recommendation, and let the people choose.
 - **Build and test:** npm workspaces (`shared`, `server`, `web`), Node 24 in CI and Docker (22.13+ works
   locally). Before pushing: `npm run check`, `npm test`, `npm run build` (see README). CI (`ci.yml`) runs these
   plus a Docker build of the server on every push and pull request. Cloud sessions have no Docker daemon, so
-  the image build is only verified by CI.
+  the image build is only verified by CI. Android: CI's `android` job (`.github/actions/android-apk`, script
+  `scripts/android-apk.sh`) checks the synced Capacitor files, runs the Kotlin unit tests and the debug build, and
+  on pushes builds a signed test APK (artifact `lueckenfueller-apk`) when the secrets exist. A cloud session builds
+  Android with JDK 21 and the SDK installed into the scratchpad as in `docs/android-app.md`, then runs the script;
+  Maven Central sometimes answers 429: `--max-workers=2` and one retry (the script does both). The script refuses
+  to run while files under `android/` are uncommitted (its stale-sync check). CI's `vm-scripts` job runs
+  `shellcheck deploy/vm/*.sh deploy/vm/test/*.sh scripts/*.sh`; a cloud session has no shellcheck, but
+  `pip install --target <scratchpad>/sc shellcheck-py` gives one in `<scratchpad>/sc/bin`.
 - **Release:** On every push to `main`, `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
   image to GHCR (`ghcr.io/dr-nerdlove/lueckenfueller-api`, tags `latest` and `sha-<short>`). The VM updates
   itself hourly from GHCR and rolls back an image that is not healthy (`deploy/vm/update.sh`, guide
@@ -254,8 +261,21 @@ missing, with a recommendation, and let the people choose.
     `localStorage` at import time. `npm run build -w web` builds both. It is registered only in production builds
     (`import.meta.env.PROD`), so `npm run dev` has no push. A new notification kind needs a text in
     `notification-text.ts`; unknown kinds get a general text.
+  - Android: the files `npx cap sync android` writes (`android/`, `capacitor.config.json`, `android-www`) are committed
+    and CI fails when they are stale: run `npx cap sync android` after changing `capacitor.config.json` or
+    `android-www`. Raise `SHELL_VERSION` (`android/app/build.gradle`) when the shell changes. `NotificationText.kt`
+    ports `notification-text.ts`; `web/src/lib/notification-text.cases.json` is tested on both sides, and a new kind
+    needs both texts. The signature is read with `apksigner`, not `keytool` (it only knows the old v1 signature), and
+    the script runs with `set -euo pipefail` (otherwise a failed `apksigner` in a pipe goes unnoticed). The signing
+    key is never printed or committed; the decoded keystore is deleted at the end. Capacitor's `PluginCall.getLong`
+    returns null for small JS numbers (they arrive as Integer; found on the owner's phone, 2026-11-05): read numbers
+    with `wholeNumberArg` (`PluginArgs.kt`).
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
+- **Android release:** `release.yml` builds the signed APK (`lueckenfueller-<version>.apk`) for the release commit and
+  attaches it, with its SHA-256 signature in the notes. It needs the secrets `ANDROID_KEYSTORE_BASE64` and
+  `ANDROID_KEYSTORE_PASSWORD` and the committed `android/signing-fingerprint.txt` (made by the owner, see
+  `docs/android-app.md`); without them, or on a fingerprint mismatch, the run fails and no release is made.
 - **Versions and releases:** First release `v1.0.0` (2026-11-03). The version lives in the four `package.json`
   files (kept equal, `npm version <x.y.z> --workspaces --include-workspace-root --no-git-tag-version`) and in
   `CHANGELOG.md`; the app shows it on the start page ("Version 1.0.0"), together with a note whether the server has

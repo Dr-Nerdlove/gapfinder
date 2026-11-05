@@ -3,7 +3,10 @@ name: Release
 # Creates the tag vX.Y.Z and the GitHub release when `main` carries a version (the "version" in package.json) that has
 # no release yet. A release is therefore made by merging the release pull request (version numbers + CHANGELOG);
 # a push without a new version does nothing. The notes come from the summary at the top of that version's
-# CHANGELOG section (scripts/release-notes.sh). The release has only text, no files.
+# CHANGELOG section (scripts/release-notes.sh), plus a short "Android app" paragraph with the APK's signature.
+# Every release carries the signed Android APK (lueckenfueller-<version>.apk), built here from the release commit
+# (.github/actions/android-apk). Without the secrets ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD, or with
+# a key that differs from android/signing-fingerprint.txt, the run fails and no release is made.
 #
 # It runs only after the Deploy workflow has finished green for a push to main (tests passed, app and server image
 # published), so a version that never went live gets no release. The release is set on the commit Deploy ran on.
@@ -36,7 +39,8 @@ jobs:
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.TARGET_SHA }}
-      - name: Create the release if this version has none yet
+      - name: Check whether this version has a release already
+        id: version
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
@@ -45,11 +49,46 @@ jobs:
             echo "package.json has version \"$version\", which is not MAJOR.MINOR.PATCH" >&2
             exit 1
           fi
-          tag="v$version"
-          if gh release view "$tag" >/dev/null 2>&1; then
-            echo "Release $tag exists already, nothing to do."
-            exit 0
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if gh release view "v$version" >/dev/null 2>&1; then
+            echo "Release v$version exists already, nothing to do."
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
           fi
-          bash scripts/release-notes.sh "$version" CHANGELOG.md "$GITHUB_REPOSITORY" > release-notes.md
-          gh release create "$tag" --target "$TARGET_SHA" --title "Lückenfüller $version" --notes-file release-notes.md --latest
+      - uses: actions/setup-node@v5
+        if: steps.version.outputs.needed == 'true'
+        with:
+          node-version: 24
+          cache: npm
+      - if: steps.version.outputs.needed == 'true'
+        run: npm ci
+      - name: Build the signed Android APK
+        if: steps.version.outputs.needed == 'true'
+        id: apk
+        uses: ./.github/actions/android-apk
+        with:
+          keystore-base64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          require-signing: 'true'
+      - name: Create the release
+        if: steps.version.outputs.needed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          APK: ${{ steps.apk.outputs.apk }}
+          FINGERPRINT: ${{ steps.apk.outputs.fingerprint }}
+        run: |
+          set -euo pipefail
+          test -f "$APK" && test -n "$FINGERPRINT"
+          tag="v$VERSION"
+          bash scripts/release-notes.sh "$VERSION" CHANGELOG.md "$GITHUB_REPOSITORY" > release-notes.md
+          {
+            echo
+            echo "**Android app:** download \`lueckenfueller-$VERSION.apk\` below on the phone and open it. Allow installing from this source once when Android asks. An installed version is replaced and the login stays."
+            echo
+            echo "Signature (SHA-256): \`$FINGERPRINT\`"
+          } >> release-notes.md
+          # With a file, gh creates a draft, uploads it and only then publishes, so a failed upload leaves no release.
+          gh release create "$tag" "$APK" --target "$TARGET_SHA" --title "Lückenfüller $VERSION" --notes-file release-notes.md --latest
           echo "Created release $tag on $TARGET_SHA."

@@ -409,6 +409,21 @@ app) below.
       release), 7c self-update.
     - The Android project (`android/`) is kept in the repository, not generated in every build as in Game Night,
       because it carries own native code (background check, update).
+    - **7b decisions (owner, 2026-11-04):**
+      - App id `de.drnerdlove.lueckenfueller`.
+      - The app loads the live web app from GitHub Pages through `server.url`, although Capacitor documents it as
+        "not intended for use in production": no new APK for content changes, no new CORS origin. `server.errorPath`
+        (`android-www/offline.html`) is shown when the page cannot be loaded.
+      - A signed test APK on every push (Actions artifact `lueckenfueller-apk`, 14 days) once the secrets exist, and an
+        APK in every release, built by `release.yml`; no release without the APK (missing secrets or a signature that
+        differs from `android/signing-fingerprint.txt` stop it).
+      - The owner keeps the copy of the signing key themselves (outside GitHub); lost key = everybody reinstalls.
+      - One notification channel, "Abstimmungen". Texts are made in the app in Europe/Berlin time, like the web app.
+      - The web app does not register its service worker inside the app (the app has its own notification path).
+    - **Material You colours (owner, 2026-11-04):** the plugin method `systemColors()` returns the five system
+      palettes (`system_accent1..3`, `system_neutral1..2`, 13 shades each, read by name like the owner's Game Night);
+      the web app turns them into the same colour variables as the seed path (shade N = tone 100 - N/10). Details in
+      `docs/android-app.md`. The last palettes are cached on the device so the colours show at start.
     - Inside the app, "Teilen", ".ics herunterladen" and links to other sites (Google/Outlook, `webcal://`)
       go through the Android app (`web/src/lib/native.ts`), because the Android web view cannot share, download
       or open other apps on its own. In the browser nothing changes.
@@ -419,6 +434,10 @@ app) below.
 - A web page cannot reliably read Android's Material You wallpaper colours (to be verified at the source in
   the design phase). Where the browser offers the system accent colour, use it; otherwise each user picks a
   seed colour in their profile and the full colour scheme is generated from it.
+- **Material You in the Android app (decided by the owner on 2026-11-04):** inside the Android app (Android 12+),
+  the app wears the phone's full system palette, so it matches the other apps. A per-device switch in the profile,
+  "Farben vom Handy übernehmen" (on by default; shown only inside the app and only when the phone has system
+  colours), turns it off; then the profile's seed colour applies as before. In the browser nothing changes.
 - Installable to the home screen.
 
 ## Security

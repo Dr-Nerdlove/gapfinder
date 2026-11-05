@@ -1,5 +1,6 @@
 import { argbFromHex, hexFromArgb, themeFromSourceColor } from "@material/material-color-utilities";
 import { normalizeSeedColor } from "@lueckenfueller/shared";
+import type { ThemeChoice } from "./theme-choice";
 
 export const SEED_COLOR = "#6750A4";
 
@@ -19,8 +20,13 @@ export function schemeToCssVariables(scheme: ColorScheme): Record<string, string
   return variables;
 }
 
+export interface ThemeVariables {
+  light: Record<string, string>;
+  dark: Record<string, string>;
+}
+
 /** Generates the light and dark variables from a seed colour like `#6750A4`. */
-export function generateThemeVariables(seed: string): { light: Record<string, string>; dark: Record<string, string> } {
+export function generateThemeVariables(seed: string): ThemeVariables {
   const theme = themeFromSourceColor(argbFromHex(seed));
   return {
     light: schemeToCssVariables(theme.schemes.light.toJSON() as ColorScheme),
@@ -34,34 +40,39 @@ export function resolveSeed(seed: string | null | undefined): string {
 }
 
 export interface ThemeHandle {
-  /** Switches to another seed colour (null = default) without a reload. */
-  setSeed(seed: string | null | undefined): void;
   stop(): void;
 }
 
-/** Applies the colours to `<html>` and follows the phone's light/dark setting. */
-export function startTheme(seed?: string | null): ThemeHandle {
-  let variables = generateThemeVariables(resolveSeed(seed));
+/**
+ * Applies the chosen colours to `<html>`, follows the phone's light/dark setting and re-reads the system colours
+ * whenever the app becomes visible again (the wallpaper, and so the palette, may have changed meanwhile).
+ */
+export function startTheme(choice: ThemeChoice): ThemeHandle {
   const media = window.matchMedia("(prefers-color-scheme: dark)");
   const root = document.documentElement;
 
   const apply = (): void => {
+    const variables = choice.variables();
     const chosen = media.matches ? variables.dark : variables.light;
     for (const [name, value] of Object.entries(chosen)) {
       root.style.setProperty(name, value);
     }
     root.style.colorScheme = media.matches ? "dark" : "light";
   };
+  const onVisible = (): void => {
+    if (document.visibilityState === "visible") void choice.refresh();
+  };
 
   media.addEventListener("change", apply);
+  document.addEventListener("visibilitychange", onVisible);
+  const unsubscribe = choice.subscribe(apply);
   apply();
+  void choice.refresh();
   return {
-    setSeed(next) {
-      variables = generateThemeVariables(resolveSeed(next));
-      apply();
-    },
     stop() {
       media.removeEventListener("change", apply);
+      document.removeEventListener("visibilitychange", onVisible);
+      unsubscribe();
     },
   };
 }

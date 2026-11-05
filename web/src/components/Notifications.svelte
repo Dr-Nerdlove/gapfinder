@@ -2,10 +2,11 @@
   import type { NotificationSettings } from "@lueckenfueller/shared";
   import { onMount } from "svelte";
   import * as api from "../lib/api";
+  import { appCheckLine } from "../lib/app-check-status";
   import { APP_BLOCKED_TEXT, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "../lib/app-device";
   import { API_URL } from "../lib/config";
   import { errorMessage } from "../lib/messages";
-  import { Lueckenfueller, isAndroidApp } from "../lib/native";
+  import { Lueckenfueller, isAndroidApp, type AppCheck } from "../lib/native";
   import {
     PUSH_UNAVAILABLE_TEXT,
     SETTING_LABELS,
@@ -45,6 +46,8 @@
   let device = $state<Device>("checking");
   let deviceBusy = $state(false);
   let deviceProblem = $state("");
+  let lastCheck = $state<AppCheck | null | undefined>(undefined);
+  const checkLine = $derived(inApp && device === "on" ? appCheckLine(lastCheck, Date.now()) : null);
 
   async function loadSettings(): Promise<void> {
     screen = { phase: "loading" };
@@ -55,7 +58,9 @@
   async function loadDevice(): Promise<void> {
     if (inApp) {
       try {
-        device = appDeviceState(await Lueckenfueller.notificationStatus());
+        const status = await Lueckenfueller.notificationStatus();
+        lastCheck = status.lastCheck;
+        device = appDeviceState(status);
       } catch {
         device = "app-failed";
       }
@@ -80,6 +85,12 @@
   onMount(() => {
     void loadSettings();
     void loadDevice();
+    // The background check may have run while the app was in the background: look again when it is back.
+    const refresh = (): void => {
+      if (inApp && document.visibilityState === "visible" && device === "on") void loadDevice();
+    };
+    document.addEventListener("visibilitychange", refresh);
+    return () => document.removeEventListener("visibilitychange", refresh);
   });
 
   async function registerWorker(): Promise<RegistrationLike> {
@@ -108,6 +119,7 @@
     deviceBusy = false;
     if (result.ok) {
       device = "on";
+      if (inApp) void loadDevice();
     } else if (result.reason === "blocked") {
       device = "blocked";
     } else if (result.reason === "dismissed") {
@@ -180,6 +192,7 @@
         <p aria-live="polite">Einen Moment …</p>
       {:else if device === "on"}
         <p>Benachrichtigungen sind auf diesem Gerät an.</p>
+        {#if checkLine}<p class="note">{checkLine}</p>{/if}
         <div><Button variant="tonal" disabled={deviceBusy || locked} onclick={turnOff}>Auf diesem Gerät ausschalten</Button></div>
       {:else if device === "off"}
         <div><Button disabled={deviceBusy || locked} onclick={turnOn}>Auf diesem Gerät einschalten</Button></div>

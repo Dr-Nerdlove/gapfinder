@@ -100,6 +100,16 @@ every push and pull request, plus a build of the server's Docker image and check
 systemd units, compose file). The VM firewall's test needs root and is run by CI only:
 `sudo bash deploy/vm/test/firewall.test.sh` (needs `nft` and `ip`).
 
+Android (JDK 21 and the Android SDK, see [`docs/android-app.md`](docs/android-app.md)): `bash scripts/android-apk.sh`
+checks that the committed Capacitor files are current, runs the Kotlin unit tests and the debug build; CI's `android`
+job does the same through `.github/actions/android-apk`.
+
+## Android app
+
+An Android app (a Capacitor shell around the live web app, with notifications from a background check) is built from
+`android/`. Install, signing key, local build and rules for changes: [`docs/android-app.md`](docs/android-app.md).
+CI builds it on every push; each release carries the signed APK.
+
 ## Run the server with Docker Compose
 
 This is for trying the server on any Docker machine. The real server runs in a VM on the owner's PC; its setup
