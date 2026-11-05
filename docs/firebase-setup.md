@@ -62,8 +62,8 @@ still works for them.
 
 ## 5. Check that it works
 
-1. Install the new APK. In the app, switch notifications **off and on again once** (this makes the phone send its
-   token to the server).
+1. Install the new APK and open the app once. A phone that already had notifications on then sends its token to
+   the server by itself (at the latest with the next check, within about 15 minutes); nothing to switch.
 2. In the web app open the admin page: the card **Sofort-Benachrichtigungen (Android)** must say **Bereit** and
    count the phones that can be rung.
 3. Make the server send you a real notification. ("Test-Benachrichtigung" on the profile page does not help here:

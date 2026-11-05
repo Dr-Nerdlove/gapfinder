@@ -57,7 +57,9 @@ browser version, and it adds what a web page cannot do on Android: notifications
   `firebase_messaging_auto_init_enabled=false` and `firebase_analytics_collection_enabled=false`. Switching on
   (`Push.enable`) turns auto-init on and fetches the token; switching off (`Push.disable`) turns it off and deletes the
   token. Every Firebase call is guarded by "Firebase is available" (`FirebaseApp.getApps(context)` not empty) and
-  wrapped, so a failure never breaks switching on or off.
+  wrapped, so a failure never breaks switching on or off. A check (worker or `checkNow`) that finds notifications
+  on but no token calls `Push.enable` again: that covers phones switched on before 7d, a `google-services.json` added
+  later, and a failed token fetch, without switching off and on.
 - **Token sync** (`PushTokenSync`, `PushTokenSender`): `PUT {apiUrl}/api/app-devices/push-token`, header `X-Device-Key`,
   body `{"token":"..."}`. The answer `{"instant": true|false}` says whether the server can ring. The token is sent when
   the server has not got this value yet, and again after 24 hours (this repairs a server that lost it after a

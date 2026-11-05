@@ -37,7 +37,13 @@ class CheckWorker(context: Context, params: WorkerParameters) : Worker(context, 
                 syncToken,
                 PushTokenSync(storage, PushTokenSender()),
             )
-            if (run.result == CheckResult.STOP) cancel(context)
+            if (run.result == CheckResult.STOP) {
+                cancel(context)
+            } else if (syncToken && storage.deviceKey != null && storage.pushToken == null) {
+                // Switched on, but no doorbell token yet: an app updated from before phase 7d, google-services.json
+                // added later, or a token fetch that failed. Fetch it now; the next check sends it.
+                Push.enable(context)
+            }
             run
         }
 
