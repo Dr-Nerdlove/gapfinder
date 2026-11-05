@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { BackupStatus, CalendarList } from "@lueckenfueller/shared";
   import * as api from "../lib/api";
+  import AppUpdateCard from "../components/AppUpdateCard.svelte";
   import Button from "../components/Button.svelte";
   import Card from "../components/Card.svelte";
   import MenuItem from "../components/MenuItem.svelte";
@@ -75,6 +76,7 @@
 </header>
 
 <div class="stack">
+  <AppUpdateCard />
   {#if sessionState.user}
     <Card title="Hallo {sessionState.user.username}">
       <div class="menu-card">
