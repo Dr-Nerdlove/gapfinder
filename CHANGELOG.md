@@ -7,6 +7,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- Instant notifications for the Android app: once the owner has set up Firebase (guide: `docs/firebase-setup.md`),
+  the server rings the phone the moment news arises and the app looks at once. Google learns only that a phone
+  should look, never what about. The check every 15 minutes stays as a backup (phones without Google services, a
+  lost ring, the server asleep at night). Phones that already have notifications on switch to the instant way by
+  themselves after the update.
+- The admin page shows whether instant notifications are ready and how many phones can be rung.
+- The privacy page explains what Firebase receives (a phone's token, no content).
+- Changes to `deploy/vm/` (`setup.sh` now asks for the Firebase key) reach the VM only when `setup.sh` is run again.
+
 - An Android app: install it from the APK on the GitHub release page. It shows the same app as the browser and
   tells you about new polls, votes and fixed dates with notifications (checked about every 15 minutes, not at night
   while the server sleeps). An installed version is replaced by a newer APK and the login stays. On Android 12 and

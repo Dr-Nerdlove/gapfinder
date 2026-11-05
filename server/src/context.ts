@@ -6,6 +6,7 @@ import type { FetchResult } from "./calendars/fetch.js";
 import type { FastifyBaseLogger } from "fastify";
 import type { SendPush } from "./notifications/send.js";
 import type { Config } from "./config.js";
+import type { RingDevice } from "./notifications/ring.js";
 
 /** Everything a route needs; built once per app so tests can swap the clock and the database. */
 export interface AppContext {
@@ -24,5 +25,9 @@ export interface AppContext {
   sendPush: SendPush;
   /** The server's VAPID public key, which browsers need to subscribe. */
   vapidPublicKey: string;
+  /** Rings one Android phone through Firebase; null when the server has no usable Firebase key (tests swap it). */
+  ringDevice: RingDevice | null;
+  /** What happened at the last ring, in memory only (for the admin page). */
+  doorbell: { lastRing: { at: string; ok: boolean } | null };
   log: FastifyBaseLogger;
 }

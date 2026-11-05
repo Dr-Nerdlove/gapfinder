@@ -52,3 +52,34 @@ export function removeAppDevice(db: DatabaseSync, userId: number, key: string): 
 export function removeAppDevicesOfUser(db: DatabaseSync, userId: number): void {
   db.prepare("DELETE FROM app_devices WHERE user_id = ?").run(userId);
 }
+
+/**
+ * Stores the phone's Firebase token on the row of this key. The same token is first cleared from any other row
+ * (a token belongs to one phone: after a reinstall or a logout it may sit on an old row). False for an unknown key.
+ */
+export function saveAppDeviceToken(db: DatabaseSync, key: string, token: string): boolean {
+  const keyHash = hashToken(key);
+  db.prepare("UPDATE app_devices SET fcm_token = NULL WHERE fcm_token = ? AND key_hash <> ?").run(token, keyHash);
+  return Number(db.prepare("UPDATE app_devices SET fcm_token = ? WHERE key_hash = ?").run(token, keyHash).changes) > 0;
+}
+
+/** The Firebase tokens of the user's phones that are still in use. */
+export function ringTokensOf(db: DatabaseSync, userId: number, now: Date): string[] {
+  const rows = db
+    .prepare("SELECT fcm_token FROM app_devices WHERE user_id = ? AND fcm_token IS NOT NULL AND last_used_at >= ?")
+    .all(userId, unusedBefore(now)) as { fcm_token: string }[];
+  return rows.map((row) => row.fcm_token);
+}
+
+/** Forgets a token that Firebase reports as invalid. */
+export function clearAppDeviceToken(db: DatabaseSync, token: string): void {
+  db.prepare("UPDATE app_devices SET fcm_token = NULL WHERE fcm_token = ?").run(token);
+}
+
+/** How many phones could be rung (have a token and are still in use). */
+export function countRingableDevices(db: DatabaseSync, now: Date): number {
+  const row = db
+    .prepare("SELECT COUNT(*) AS n FROM app_devices WHERE fcm_token IS NOT NULL AND last_used_at >= ?")
+    .get(unusedBefore(now)) as { n: number };
+  return Number(row.n);
+}

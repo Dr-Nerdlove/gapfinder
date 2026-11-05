@@ -24,6 +24,16 @@ export interface Config {
   calendarKey: Buffer | null;
   /** Why `calendarKey` is null (never contains the value); null when the key is usable. */
   calendarKeyProblem: string | null;
+  /** Firebase service account for the "doorbell" (instant Android notifications); null when missing or invalid. */
+  fcm: FcmAccount | null;
+  /** Why `fcm` is null (never contains the value); null when the key is usable. */
+  fcmProblem: string | null;
+}
+
+export interface FcmAccount {
+  projectId: string;
+  clientEmail: string;
+  privateKey: string;
 }
 
 export const LOG_LEVELS = ["fatal", "error", "warn", "info", "debug", "trace", "silent"] as const;
@@ -75,6 +85,37 @@ function parseCalendarKey(value: string | undefined): { key: Buffer | null; prob
     return { key: null, problem: "CALENDAR_KEY is not valid: it must be standard base64 of exactly 32 bytes" };
   }
   return { key, problem: null };
+}
+
+/**
+ * Reads `FCM_SERVICE_ACCOUNT`: standard base64 of Firebase's service-account JSON file. Like the calendar key, a
+ * missing or invalid value is a problem text, never an error, and the text never contains the value.
+ */
+export function parseFcmAccount(value: string | undefined): { account: FcmAccount | null; problem: string | null } {
+  const text = value?.trim() ?? "";
+  if (text === "") return { account: null, problem: "FCM_SERVICE_ACCOUNT is not set" };
+  const invalid = (why: string) => ({ account: null, problem: `FCM_SERVICE_ACCOUNT is not valid: ${why}` });
+  if (!/^[A-Za-z0-9+/]+={0,2}$/.test(text) || text.length % 4 !== 0) return invalid("it must be standard base64");
+  let json: unknown;
+  try {
+    json = JSON.parse(Buffer.from(text, "base64").toString("utf8"));
+  } catch {
+    return invalid("it does not contain a JSON file");
+  }
+  if (json === null || typeof json !== "object" || Array.isArray(json)) return invalid("the JSON is not an object");
+  const file = json as Record<string, unknown>;
+  if (file.type !== "service_account") return invalid('"type" is not "service_account"');
+  if (typeof file.project_id !== "string" || !/^[a-z0-9-]+$/.test(file.project_id)) {
+    return invalid('"project_id" is missing or malformed');
+  }
+  if (typeof file.client_email !== "string" || file.client_email === "") return invalid('"client_email" is missing');
+  if (typeof file.private_key !== "string" || !file.private_key.includes("-----BEGIN PRIVATE KEY-----")) {
+    return invalid('"private_key" is missing or malformed');
+  }
+  return {
+    account: { projectId: file.project_id, clientEmail: file.client_email, privateKey: file.private_key },
+    problem: null,
+  };
 }
 
 /** Reads and validates the configuration. Throws a `ConfigError` that lists every problem. */
@@ -138,6 +179,8 @@ export function loadConfig(env: Env = process.env): Config {
   // owner reruns setup.sh, which happens after the image is already out. So the server starts without a
   // key and says so (log, status); features that need the key stay off until it is set.
   const calendar = parseCalendarKey(env.CALENDAR_KEY);
+  // The same holds for the Firebase key: without it only the instant ring is off, the 15-minute check carries on.
+  const fcm = parseFcmAccount(env.FCM_SERVICE_ACCOUNT);
 
   return {
     port,
@@ -151,5 +194,7 @@ export function loadConfig(env: Env = process.env): Config {
     logLevel,
     calendarKey: calendar.key,
     calendarKeyProblem: calendar.problem,
+    fcm: fcm.account,
+    fcmProblem: fcm.problem,
   };
 }

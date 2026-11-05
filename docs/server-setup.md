@@ -369,6 +369,37 @@ sets up both by itself:
 
 To run the firewall check again later: `sudo lueckenfueller-firewall-check`.
 
+## 11. Instant notifications for the Android app (Firebase)
+
+Without this, the Android app looks for news only every 15 minutes. With it, the server rings the phone through
+Google's Firebase the moment a notification arises (a "doorbell": Google only learns that a phone should look
+for news, never what about; the app then asks your server and writes the text itself). The server needs a key
+file from your Firebase project for this; how to make it is in the Firebase guide. It is optional: without the
+key, the server runs as before and the 15-minute check carries on.
+
+1. Copy the key file from Windows into the VM's home folder. In PowerShell on the Windows PC (use your VM user
+   and the VM's address from step 4; the file name is the one Firebase gave the download):
+
+   ```powershell
+   scp "$env:USERPROFILE\Downloads\<key file>.json" <user>@<VM address>:firebase-key.json
+   ```
+
+2. In the VM, run the setup again (see "When the files in `deploy/vm/` change") and give it the file:
+
+   ```sh
+   sudo LUECKENFUELLER_FIREBASE_KEY_FILE=/home/<user>/firebase-key.json bash setup.sh
+   ```
+
+   Or just `sudo bash setup.sh` and type the path when it asks for it (Enter skips the question). The script
+   checks that the file looks like a key, stores it in `/opt/lueckenfueller/.env` (as `FCM_SERVICE_ACCOUNT`),
+   **deletes the key file** and restarts the server. Then delete the downloaded copy on Windows as well.
+3. Check it: in the app, the admin page has a card "Sofort-Benachrichtigungen (Android)" that must say
+   "Bereit". In the VM: `cd /opt/lueckenfueller && sudo docker compose logs api | grep -i instant` must show
+   `Instant Android notifications are on` (`are off: ...` names the problem, never the key).
+
+**The key is not in the backups.** It lives only in `.env`, so that a stolen backup cannot ring anyone. If the
+VM is rebuilt, make a new key in Firebase and run step 2 again; until then the app checks every 15 minutes.
+
 ## Forgot your own admin password
 
 Friends who forget their password ask you; you make a new link for them in the admin area of the app. If you
@@ -500,7 +531,7 @@ To look at the server, connect with `ssh` (step 4) and use:
 Where things are in the VM:
 
 - `/opt/lueckenfueller/compose.yaml` – how the server container runs (from [`deploy/vm/compose.yaml`](../deploy/vm/compose.yaml)).
-- `/opt/lueckenfueller/.env` – the server's settings, including the calendar key (`CALENDAR_KEY`, step 10).
+- `/opt/lueckenfueller/.env` – the server's settings, including the calendar key (`CALENDAR_KEY`, step 10) and the Firebase key (`FCM_SERVICE_ACCOUNT`, step 11).
   Secrets go here, never into the repository.
 - `/etc/lueckenfueller/firewall.nft` and the `lueckenfueller-firewall` service – the firewall for the server's
   container ([`deploy/vm/firewall.nft`](../deploy/vm/firewall.nft)); `/usr/local/sbin/lueckenfueller-firewall-check`

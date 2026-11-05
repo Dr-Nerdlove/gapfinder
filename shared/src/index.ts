@@ -32,6 +32,29 @@ export interface BackupStatus {
 }
 
 /**
+ * `GET /api/admin/doorbell-status` (admin only): whether the server can ring Android phones through Firebase.
+ * Missing from servers older than this.
+ */
+export interface DoorbellStatus {
+  /** `ready`: a usable Firebase key; `not_configured`: none set; `invalid`: set but unusable. */
+  state: "ready" | "not_configured" | "invalid";
+  /** Phones (in use) that told the server their Firebase address. */
+  devicesWithToken: number;
+  /** The last ring since the server started (in memory only); null when there was none. */
+  lastRing: { at: string; ok: boolean } | null;
+}
+
+/** `PUT /api/app-devices/push-token` (header `X-Device-Key`): the phone's Firebase token. */
+export interface AppPushTokenRequest {
+  token: string;
+}
+
+export interface AppPushTokenSaved {
+  /** True when the server can ring phones (has a usable Firebase key). */
+  instant: boolean;
+}
+
+/**
  * Machine-readable reason of a failed request. The frontend turns it into German text; the server never sends
  * text meant for users. Only ever add codes: an older frontend treats unknown codes as a generic error.
  */

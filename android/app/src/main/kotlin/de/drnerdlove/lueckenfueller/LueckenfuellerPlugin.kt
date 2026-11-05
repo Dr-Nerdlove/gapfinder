@@ -44,7 +44,8 @@ class LueckenfuellerPlugin : Plugin() {
             val enabled = storage.deviceKey != null && CheckWorker.isScheduled(context)
             val last = if (enabled) storage.lastCheck else null
             val lastCheck: Any = if (last == null) JSONObject.NULL else JSObject().put("at", last.at).put("result", last.result).put("count", last.count)
-            call.resolve(JSObject().put("enabled", enabled).put("permission", permission()).put("lastCheck", lastCheck))
+            val instant = PushTokenRules.isInstant(enabled, Push.available(context), storage)
+            call.resolve(JSObject().put("enabled", enabled).put("permission", permission()).put("lastCheck", lastCheck).put("instant", instant))
         } catch (e: Exception) {
             call.reject("Der Benachrichtigungsstatus ließ sich nicht lesen.", e)
         }
@@ -107,6 +108,7 @@ class LueckenfuellerPlugin : Plugin() {
             NotificationPoster(context).ensureChannel()
             storage.save(call.getString("apiUrl")!!, call.getString("deviceKey")!!, wholeNumberArg(call.data.opt("lastNotificationId"))!!)
             CheckWorker.schedule(context)
+            Push.enable(context) // the doorbell; a failure here leaves the 15-minute check as it is
             call.resolve(JSObject().put("permission", "granted"))
         } catch (e: Exception) {
             storage.clear()
@@ -121,6 +123,7 @@ class LueckenfuellerPlugin : Plugin() {
             val old = storage.deviceKey
             CheckWorker.cancel(context)
             storage.clear()
+            Push.disable(context)
             call.resolve(JSObject().put("deviceKey", old ?: JSObject.NULL))
         } catch (e: Exception) {
             call.reject("Die Benachrichtigungen ließen sich nicht ausschalten.", e)

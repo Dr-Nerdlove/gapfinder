@@ -452,6 +452,23 @@ app) below.
       Firebase project from a written guide (a session cannot create accounts).
     - Order: 7d is built **before** the first release with the Android app (1.6.0), so friends get instant
       notifications from their first install (the self-update, 7c, comes later).
+    - **Decisions taken while building (2026-11-05):**
+      - Route `PUT /api/app-devices/push-token` (device key header `X-Device-Key`) stores or, with no token, deletes
+        the phone's FCM token and answers `{instant}` (true when the server can ring at all).
+      - The ring is data only: `kind: check`, Android priority high, time to live 1 day, `collapse_key` `check` (a
+        phone that was off gets one ring, not many). No title, text or name.
+      - A token is cleared when FCM answers UNREGISTERED or SENDER_ID_MISMATCH (HTTP 404 without a code); other
+        errors keep it. Error handling follows firebase-admin's source, as the FCM docs were not reachable.
+      - Server setting `FCM_SERVICE_ACCOUNT` = base64 of the service-account JSON, written to `.env` by `setup.sh`,
+        which then deletes the key file. It is not in the backups (new key after a rebuild).
+      - Admin card "Sofort-Benachrichtigungen (Android)" reads `/api/admin/doorbell-status` (ready or not, phones
+        with a token, last ring; the last ring is kept in memory only).
+      - App: Firebase auto-init is off until the user switches notifications on; then the token is sent, and resent
+        daily and on a token change; switching off deletes it. Every Firebase call is guarded, so the app builds and
+        runs without `google-services.json` (no ring then).
+      - A ring is handled directly in the FCM service (same check as "Jetzt nachsehen"); WorkManager is the fallback.
+      - The profile card says "sofort" only when the server answered `instant=true`.
+      - Guide for the owner: `docs/firebase-setup.md`.
 
 ### Look
 

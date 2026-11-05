@@ -11,6 +11,7 @@ import {
   type CreateInviteRequest,
   type CreatedInvite,
   type CreatedPasswordReset,
+  type DoorbellStatus,
 } from "@lueckenfueller/shared";
 import type { FastifyInstance } from "fastify";
 import { createInvite, deleteUnusedInvite, isUsernameInvited, listOpenInvites, toAdminInvite } from "../accounts/invites.js";
@@ -18,6 +19,7 @@ import { createPasswordReset } from "../accounts/resets.js";
 import { deleteUser, findUserById, findUserByKey, listUsers, toAdminUser, updateUsername } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
 import { readBackupStatus } from "../backup-status.js";
+import { countRingableDevices } from "../notifications/app-devices.js";
 import { countBroken } from "../calendars/store.js";
 import { isUniqueViolation } from "../db.js";
 import type { AppContext } from "../context.js";
@@ -49,6 +51,12 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
     );
 
     admin.get("/api/admin/backup-status", async (): Promise<BackupStatus> => readBackupStatus(ctx.config.dataDir));
+
+    admin.get("/api/admin/doorbell-status", async (): Promise<DoorbellStatus> => ({
+      state: ctx.ringDevice ? "ready" : ctx.config.fcmProblem?.includes("not valid") ? "invalid" : "not_configured",
+      devicesWithToken: countRingableDevices(ctx.db, ctx.now()),
+      lastRing: ctx.doorbell.lastRing,
+    }));
 
     admin.patch<{ Body: AdminRenameUserRequest }>(
       "/api/admin/users/:id",

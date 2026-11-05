@@ -22,8 +22,10 @@ export interface LueckenfuellerPlugin {
    * the server answers 401. `permission`: Android's notification permission ("prompt" = not asked yet).
    * `lastCheck`: the background check's last run, null when it has not run yet (or is not enabled). Missing
    * in an older app shell.
+   * `instant`: true when the phone is registered for the instant ring (Firebase) and the server can ring it.
+   * Missing in an older app shell: treat as false.
    */
-  notificationStatus(): Promise<{ enabled: boolean; permission: "granted" | "denied" | "prompt"; lastCheck?: AppCheck | null }>;
+  notificationStatus(): Promise<{ enabled: boolean; permission: "granted" | "denied" | "prompt"; lastCheck?: AppCheck | null; instant?: boolean }>;
   /**
    * Asks for Android's notification permission. Only when it is granted, the key is stored and the background
    * check is scheduled (it reads the notifications after `lastNotificationId` from `apiUrl` with the key).

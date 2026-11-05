@@ -59,7 +59,7 @@ admin sees a warning on the start page when a backup is missing or the monthly t
 | `server/` | API server: Node.js, TypeScript, Fastify, SQLite (`node:sqlite`). Runs in Docker.            |
 | `web/`    | Frontend: Vite, Svelte 5, TypeScript, Material 3 look. Built as a static site.               |
 | `deploy/` | Files for the server VM: setup script, hourly update with rollback, nightly backup, firewall, systemd units. |
-| `docs/`   | Project plan and decisions, server setup guide.                                              |
+| `docs/`   | Project plan and decisions, setup guides.                                                    |
 
 It is an npm workspaces monorepo; `shared` is compiled first because the other two import it.
 
@@ -108,7 +108,8 @@ job does the same through `.github/actions/android-apk`.
 
 An Android app (a Capacitor shell around the live web app, with notifications from a background check) is built from
 `android/`. Install, signing key, local build and rules for changes: [`docs/android-app.md`](docs/android-app.md).
-CI builds it on every push; each release carries the signed APK.
+CI builds it on every push; each release carries the signed APK. Instant notifications (through a content-free
+Firebase "doorbell") need a one-time Firebase setup: [`docs/firebase-setup.md`](docs/firebase-setup.md).
 
 ## Run the server with Docker Compose
 

@@ -64,3 +64,12 @@ export function appCheckLine(lastCheck: AppCheck | null | undefined, now: number
   const why = lastCheck.result === "unavailable" ? "der Server war nicht erreichbar" : "das hat nicht geklappt";
   return `Zuletzt versucht: ${when} – ${why}. Nächster Versuch in etwa 15 Minuten.`;
 }
+
+/**
+ * The note above the check line when the instant ring works (`instant` true), else null. An older app shell does
+ * not report it (`undefined`): then nothing changes.
+ */
+export function instantLine(instant: boolean | undefined): string | null {
+  if (instant !== true) return null;
+  return "Neue Benachrichtigungen kommen sofort an. Zusätzlich sieht die App etwa alle 15 Minuten nach, falls einmal eine Meldung verloren geht.";
+}

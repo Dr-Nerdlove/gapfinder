@@ -220,6 +220,15 @@ export const migrations: readonly Migration[] = [
     ) STRICT;
     CREATE INDEX app_devices_user_id ON app_devices (user_id);`,
   },
+  {
+    id: 9,
+    name: "app_devices_fcm_token",
+    // Additive only: one nullable column and an index. An older server (after a rollback) never reads or writes
+    // the column, and its INSERTs leave it NULL. The token is the phone's Firebase address for the "doorbell"
+    // ring; it lives and dies with the row. Unique, because a token belongs to one phone at most (NULLs repeat).
+    sql: `ALTER TABLE app_devices ADD COLUMN fcm_token TEXT;
+    CREATE UNIQUE INDEX app_devices_fcm_token ON app_devices (fcm_token);`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */
