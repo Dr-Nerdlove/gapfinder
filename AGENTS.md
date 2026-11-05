@@ -267,7 +267,9 @@ missing, with a recommendation, and let the people choose.
     ports `notification-text.ts`; `web/src/lib/notification-text.cases.json` is tested on both sides, and a new kind
     needs both texts. The signature is read with `apksigner`, not `keytool` (it only knows the old v1 signature), and
     the script runs with `set -euo pipefail` (otherwise a failed `apksigner` in a pipe goes unnoticed). The signing
-    key is never printed or committed; the decoded keystore is deleted at the end.
+    key is never printed or committed; the decoded keystore is deleted at the end. Capacitor's `PluginCall.getLong`
+    returns null for small JS numbers (they arrive as Integer; found on the owner's phone, 2026-11-05): read numbers
+    with `wholeNumberArg` (`PluginArgs.kt`).
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
 - **Android release:** `release.yml` builds the signed APK (`lueckenfueller-<version>.apk`) for the release commit and

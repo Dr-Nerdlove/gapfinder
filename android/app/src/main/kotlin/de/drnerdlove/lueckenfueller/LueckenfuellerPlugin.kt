@@ -51,7 +51,7 @@ class LueckenfuellerPlugin : Plugin() {
     fun enableNotifications(call: PluginCall) {
         val apiUrl = call.getString("apiUrl")
         val key = call.getString("deviceKey")
-        val lastId = call.getLong("lastNotificationId")
+        val lastId = wholeNumberArg(call.data.opt("lastNotificationId"))
         if (apiUrl.isNullOrBlank() || !apiUrl.startsWith("https://") || key.isNullOrBlank() || lastId == null || lastId < 0) {
             call.reject("apiUrl (https), deviceKey and lastNotificationId are required")
             return
@@ -75,7 +75,7 @@ class LueckenfuellerPlugin : Plugin() {
                 return
             }
             NotificationPoster(context).ensureChannel()
-            storage.save(call.getString("apiUrl")!!, call.getString("deviceKey")!!, call.getLong("lastNotificationId")!!)
+            storage.save(call.getString("apiUrl")!!, call.getString("deviceKey")!!, wholeNumberArg(call.data.opt("lastNotificationId"))!!)
             CheckWorker.schedule(context)
             call.resolve(JSObject().put("permission", "granted"))
         } catch (e: Exception) {
