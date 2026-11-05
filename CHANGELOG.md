@@ -3,6 +3,20 @@
 All notable changes are listed here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 versions follow `vMAJOR.MINOR.PATCH`.
 
+## [Unreleased]
+
+### Changed
+
+- Notification settings on an Android phone in the browser: when notifications are blocked, the help now shows the
+  browser's way to allow them (⋮ → Einstellungen → Website-Einstellungen → Benachrichtigungen) instead of a lock symbol
+  Chrome no longer shows; the app-info steps appear only when Lückenfüller was opened from the home screen.
+- Android phones in the browser now see a note that Lückenfüller also exists as an Android app, with a link to the
+  release page.
+
+### Fixed
+
+- The privacy page no longer calls the Android app "later": notifications are kept 7 days so the app can fetch them.
+
 ## [1.7.0] - 2026-11-05
 
 The Android app can now update itself. If you have version 1.6.0, install the APK of this release once by hand from

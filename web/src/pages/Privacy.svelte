@@ -57,7 +57,7 @@
       </li>
       <li>Deine Einstellungen für Benachrichtigungen, also welche du bekommen willst.</li>
       <li>
-        Jede Benachrichtigung wird 7 Tage für dich aufbewahrt (für die spätere Android-App) und dann gelöscht.
+        Jede Benachrichtigung wird 7 Tage für dich aufbewahrt (damit die Android-App sie abholen kann) und dann gelöscht.
       </li>
       <li>
         Die Nachrichten laufen verschlüsselt über den Push-Dienst deines Browsers (Google, Apple, Mozilla oder Microsoft). Dieser reicht
