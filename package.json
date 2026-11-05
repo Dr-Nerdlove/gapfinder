@@ -17,7 +17,7 @@
     "check": "npm run build:shared && npm run check --workspaces --if-present",
     "test": "npm run build:shared && npm test --workspaces --if-present && npm run test:vm && npm run test:scripts",
     "test:vm": "bash deploy/vm/test/update.test.sh && bash deploy/vm/test/backup.test.sh",
-    "test:scripts": "bash scripts/release-notes.test.sh",
+    "test:scripts": "bash scripts/release-notes.test.sh && bash scripts/app-update-json.test.sh",
     "build": "npm run build --workspaces --if-present"
   },
   "devDependencies": {

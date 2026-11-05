@@ -7,6 +7,9 @@ name: Release
 # Every release carries the signed Android APK (lueckenfueller-<version>.apk), built here from the release commit
 # (.github/actions/android-apk). Without the secrets ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD, or with
 # a key that differs from android/signing-fingerprint.txt, the run fails and no release is made.
+# Next to the APK every release carries app-update.json (scripts/app-update-json.sh: version, shell version, APK name,
+# SHA-256). The Android app reads it from the latest release to offer a self-update (phase 7c). Both files are uploaded
+# in the one `gh release create` call below, so the draft-then-publish step covers both.
 #
 # It runs only after the Deploy workflow has finished green for a push to main (tests passed, app and server image
 # published), so a version that never went live gets no release. The release is set on the commit Deploy ran on.
@@ -82,6 +85,7 @@ jobs:
           set -euo pipefail
           test -f "$APK" && test -n "$FINGERPRINT"
           tag="v$VERSION"
+          bash scripts/app-update-json.sh "$VERSION" "$APK" android/app/build.gradle > app-update.json
           bash scripts/release-notes.sh "$VERSION" CHANGELOG.md "$GITHUB_REPOSITORY" > release-notes.md
           {
             echo
@@ -89,6 +93,6 @@ jobs:
             echo
             echo "Signature (SHA-256): \`$FINGERPRINT\`"
           } >> release-notes.md
-          # With a file, gh creates a draft, uploads it and only then publishes, so a failed upload leaves no release.
-          gh release create "$tag" "$APK" --target "$TARGET_SHA" --title "Lückenfüller $VERSION" --notes-file release-notes.md --latest
+          # With files, gh creates a draft, uploads them and only then publishes, so a failed upload leaves no release.
+          gh release create "$tag" "$APK" app-update.json --target "$TARGET_SHA" --title "Lückenfüller $VERSION" --notes-file release-notes.md --latest
           echo "Created release $tag on $TARGET_SHA."
