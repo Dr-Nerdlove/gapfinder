@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { MANUAL_TEXT, availableText, installNote, isNewerVersion, isUnimplemented, loadAppUpdate, profileLine, type AppUpdateApi } from "./app-update";
+import { APK_DOWNLOAD_URL, MANUAL_TEXT, availableText, installNote, isNewerVersion, isUnimplemented, loadAppUpdate, profileLine, type AppUpdateApi } from "./app-update";
 
 const answering = (state: "available" | "current" | "unknown", version?: string): AppUpdateApi => ({
   appUpdate: async () => ({ state, installedShell: 2, ...(version ? { version } : {}) }),
@@ -104,5 +106,16 @@ describe("isNewerVersion", () => {
     expect(isNewerVersion("1.6.1", "1.6.0")).toBe(true);
     expect(isNewerVersion("1.6.0", "1.6.0")).toBe(false);
     expect(isNewerVersion("2.0", "1.99.9")).toBe(true);
+  });
+});
+
+describe("APK_DOWNLOAD_URL", () => {
+  it("points at the file that every release uploads under a fixed name", () => {
+    const workflow = readFileSync(fileURLToPath(new URL("../../../.github/workflows/release.yml", import.meta.url)), "utf8");
+    const name = APK_DOWNLOAD_URL.split("/").pop() ?? "";
+    expect(APK_DOWNLOAD_URL).toBe(`https://github.com/Dr-Nerdlove/gapfinder/releases/latest/download/${name}`);
+    const copy = new RegExp(`^\\s*latest_apk="\\$RUNNER_TEMP/${name.replace(".", "\\.")}"$`, "m");
+    expect(workflow).toMatch(copy);
+    expect(workflow).toMatch(/gh release create "\$tag" "\$APK" "\$latest_apk" /);
   });
 });

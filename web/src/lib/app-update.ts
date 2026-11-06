@@ -4,6 +4,12 @@
 /** The release page, for an app that cannot update itself yet. */
 export const RELEASE_PAGE_URL = "https://github.com/Dr-Nerdlove/gapfinder/releases/latest";
 
+/**
+ * The APK of the latest release, downloaded directly. Every release from 1.8.0 on carries a copy of its APK under this
+ * fixed name (`release.yml`); older releases do not, so this link works only once such a release is the latest.
+ */
+export const APK_DOWNLOAD_URL = "https://github.com/Dr-Nerdlove/gapfinder/releases/latest/download/lueckenfueller.apk";
+
 export type AppUpdateView =
   /** Nothing to show: not in the app, up to date, or not known. */
   | { kind: "none"; current: boolean }

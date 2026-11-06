@@ -178,7 +178,11 @@ it has to be, and keep your own copy.
 - **Test APK (every push):** GitHub, Actions, the run of the push, section "Artifacts", `lueckenfueller-apk` (kept
   14 days). Unzip it on the phone or PC and open the `.apk`. Only exists once the secrets are set.
 - **Release APK:** on the release page under "Assets": `lueckenfueller-<version>.apk`. Every release has one
-  (`release.yml` builds it and fails without it). Download on the phone, open it, allow installing from this source
+  (`release.yml` builds it and fails without it). From 1.8.0 on every release also carries the same file as
+  `lueckenfueller.apk`, so `https://github.com/Dr-Nerdlove/gapfinder/releases/latest/download/lueckenfueller.apk`
+  always downloads the newest APK; the web app's "Android-App herunterladen" button links there (`APK_DOWNLOAD_URL`
+  in `web/src/lib/app-update.ts`). Releases before 1.8.0 lack it, so the button only works once 1.8.0 is out: merge
+  the change together with that release. The self-update keeps using the versioned name. Download on the phone, open it, allow installing from this source
   once. From the first release with shell version 3 on, the app offers later updates itself (see "Self-update"). An installed version is replaced and the login stays, because the signature is the same.
 
 ## Building and testing locally

@@ -86,11 +86,11 @@ export function blockedHelpText(platform: Platform, standalone: boolean): string
 
 /** Note for Android users in the browser: the Android app exists too. */
 export const ANDROID_APP_HINT_TEXT =
-  "Lückenfüller gibt es für Android auch als App. Lade auf der Release-Seite die Datei „lueckenfueller-….apk“ herunter und öffne sie; Android fragt dann, ob du sie installieren willst.";
+  "Lückenfüller gibt es für Android auch als App. Tippe auf „Android-App herunterladen“ und öffne die heruntergeladene Datei; Android fragt dann, ob du sie installieren willst.";
 
 /** The same note when the app is the way out of a block in the browser: only the steps. */
 export const ANDROID_APP_STEPS_TEXT =
-  "Lade dafür auf der Release-Seite die Datei „lueckenfueller-….apk“ herunter und öffne sie; Android fragt dann, ob du sie installieren willst.";
+  "Tippe dafür auf „Android-App herunterladen“ und öffne die heruntergeladene Datei; Android fragt dann, ob du sie installieren willst.";
 
 /** The note about the Android app: just the steps when the blocked text already pointed at the app. */
 export function androidAppHintText(blocked: boolean, standalone: boolean): string {
