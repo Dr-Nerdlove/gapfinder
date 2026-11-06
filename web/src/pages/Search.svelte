@@ -169,7 +169,7 @@
 <style>
   .bar {
     position: sticky;
-    bottom: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px)); /* above Android's gesture bar in the app */
     display: flex;
     align-items: center;
     justify-content: space-between;

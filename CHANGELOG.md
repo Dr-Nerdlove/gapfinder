@@ -15,6 +15,8 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Fixed
 
+- Android app: scrolled content no longer slides behind the clock and icons of the status bar at the top; the bar of
+  the gap search stays above Android's gesture bar at the bottom.
 - The privacy page no longer calls the Android app "later": notifications are kept 7 days so the app can fetch them.
 
 ## [1.7.0] - 2026-11-05
