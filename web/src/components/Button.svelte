@@ -2,24 +2,26 @@
   import type { Snippet } from "svelte";
 
   interface Props {
-    variant?: "filled" | "tonal" | "text" | "danger";
+    variant?: "filled" | "tonal" | "outlined" | "danger";
     type?: "button" | "submit";
     disabled?: boolean;
     href?: string;
     /** The link opens in a new tab (for other websites). */
     external?: boolean;
     full?: boolean;
+    /** Narrower padding, for rows of several buttons. */
+    compact?: boolean;
     onclick?: (event: MouseEvent) => void;
     children: Snippet;
   }
 
-  let { variant = "filled", type = "button", disabled = false, href, external = false, full = false, onclick, children }: Props = $props();
+  let { variant = "filled", type = "button", disabled = false, href, external = false, full = false, compact = false, onclick, children }: Props = $props();
 </script>
 
 {#if href && !disabled}
-  <a class="button {variant}" class:full {href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>{@render children()}</a>
+  <a class="button {variant}" class:full class:compact {href} target={external ? "_blank" : undefined} rel={external ? "noopener noreferrer" : undefined}>{@render children()}</a>
 {:else}
-  <button class="button {variant}" class:full {type} {disabled} {onclick}>{@render children()}</button>
+  <button class="button {variant}" class:full class:compact {type} {disabled} {onclick}>{@render children()}</button>
 {/if}
 
 <style>
@@ -53,10 +55,16 @@
     border: 1px solid var(--md-sys-color-outline);
   }
 
-  .text {
+  .outlined {
     background: transparent;
     color: var(--md-sys-color-primary);
-    padding: 0 16px;
+    border: 1px solid var(--md-sys-color-outline);
+  }
+
+  .compact {
+    padding: 0 10px;
+    font-size: 0.875rem;
+    white-space: nowrap;
   }
 
   .danger {
@@ -66,6 +74,11 @@
 
   .button:hover:not(:disabled) {
     filter: brightness(1.08);
+  }
+
+  .outlined:hover:not(:disabled) {
+    filter: none;
+    background: color-mix(in srgb, var(--md-sys-color-primary) 8%, transparent);
   }
 
   .button:disabled {

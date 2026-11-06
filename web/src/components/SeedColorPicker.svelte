@@ -45,7 +45,7 @@
         }}
       />
     </label>
-    <Button variant="text" disabled={disabled || value === null} onclick={() => onpick(null)}>Standardfarbe</Button>
+    <Button variant="outlined" disabled={disabled || value === null} onclick={() => onpick(null)}>Standardfarbe</Button>
   </div>
 </div>
 

@@ -90,12 +90,12 @@
   {/if}
 
   <div class="actions">
-    {#if step > 1}<Button variant="text" onclick={() => go(step - 1)}>Zurück</Button>{/if}
+    {#if step > 1}<Button variant="outlined" onclick={() => go(step - 1)}>Zurück</Button>{/if}
     {#if step < STEP_COUNT}
-      <Button variant="text" onclick={onclose}>Überspringen</Button>
+      <Button variant="outlined" onclick={onclose}>Überspringen</Button>
       <Button onclick={() => go(step + 1)}>Weiter</Button>
     {:else if hasCalendar === false}
-      <Button variant="text" onclick={onclose}>Später</Button>
+      <Button variant="outlined" onclick={onclose}>Später</Button>
       <Button onclick={addCalendar}>Kalender verknüpfen</Button>
     {:else}
       <Button onclick={onclose}>Los geht’s</Button>

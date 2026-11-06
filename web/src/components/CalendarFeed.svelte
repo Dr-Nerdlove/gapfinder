@@ -82,7 +82,7 @@
       />
       <div class="actions">
         <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "renew")}>Neuer Link</Button>
-        <Button variant="text" disabled={busy || locked} onclick={() => (confirming = "off")}>Abschalten</Button>
+        <Button variant="outlined" disabled={busy || locked} onclick={() => (confirming = "off")}>Abschalten</Button>
       </div>
       <div class="howto">
         <details>

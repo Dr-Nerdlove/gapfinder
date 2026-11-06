@@ -73,7 +73,7 @@
     <div class="actions">
       <Button type="submit" variant="tonal" disabled={busy || locked}>Frist speichern</Button>
       {#if poll.deadline}
-        <Button variant="text" disabled={busy || locked} onclick={() => onupdate({ deadline: null })}>Frist entfernen</Button>
+        <Button variant="outlined" disabled={busy || locked} onclick={() => onupdate({ deadline: null })}>Frist entfernen</Button>
       {/if}
     </div>
   </form>

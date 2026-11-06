@@ -26,7 +26,7 @@
   <h2 id="{id}-title">{title}</h2>
   <p>{text}</p>
   <div class="actions">
-    <Button variant="text" disabled={busy} onclick={oncancel}>Abbrechen</Button>
+    <Button variant="outlined" disabled={busy} onclick={oncancel}>Abbrechen</Button>
     <Button variant="danger" disabled={busy} onclick={onconfirm}>{confirmLabel}</Button>
   </div>
 </dialog>

@@ -89,15 +89,15 @@
             <TextField label="Neuer Benutzername" autocomplete="off" error={renameError} bind:value={renameValue} {disabled} />
             <div class="actions">
               <Button type="submit" {disabled}>Speichern</Button>
-              <Button variant="text" {disabled} onclick={() => (renamingId = null)}>Abbrechen</Button>
+              <Button variant="outlined" {disabled} onclick={() => (renamingId = null)}>Abbrechen</Button>
             </div>
           </form>
         {:else}
-          <div class="actions">
-            <Button variant="text" {disabled} onclick={() => startRename(user)}>Umbenennen</Button>
-            <Button variant="text" {disabled} onclick={() => createReset(user)}>Passwort-Link</Button>
+          <div class="row">
+            <Button variant="outlined" compact {disabled} onclick={() => startRename(user)}>Umbenennen</Button>
+            <Button variant="outlined" compact {disabled} onclick={() => createReset(user)}>Passwort-Link</Button>
             {#if user.id !== sessionState.user?.id}
-              <Button variant="text" {disabled} onclick={() => (deleting = user)}>Löschen</Button>
+              <Button variant="outlined" compact {disabled} onclick={() => (deleting = user)}>Löschen</Button>
             {/if}
           </div>
         {/if}
@@ -171,6 +171,16 @@
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: 8px;
+  }
+
+  .row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+
+  .row > :global(*) {
+    flex: 1 1 auto;
   }
 </style>
