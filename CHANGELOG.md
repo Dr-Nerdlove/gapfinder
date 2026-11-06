@@ -5,6 +5,17 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- The start page no longer shows server details to everyone. It shows only the version of the app at the bottom, and
+  the "Lückenfüller schläft gerade" card when the server is not reachable. The details (server reachable, up to date,
+  app and server build) moved to a new "Server" card in the administration.
+- The profile no longer has the "App-Version" box; the update card on the start page stays.
+- On the Android app, the notification lines about instant delivery and the last check are shown to the admin only,
+  and the button "Jetzt nachsehen" is gone (the app still looks for news by itself when it is opened).
+- The message that the server sleeps from 1 to 7 o'clock now appears only once per page: the profile and the poll
+  page no longer repeat it in their cards.
+
 ## [1.8.0] - 2026-11-06
 
 Getting the Android app is now one tap. The button "Android-App herunterladen" downloads the newest app directly

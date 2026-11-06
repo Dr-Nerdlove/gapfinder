@@ -12,6 +12,7 @@
   import { nextScreen, statusText, updatedText, type AnswerMap, type PollScreen } from "../lib/poll-view";
   import { startPolling } from "../lib/polling";
   import { navigate } from "../lib/router";
+  import { pollWaitingText } from "../lib/sleep-notice";
   import { session, sessionState } from "../lib/session.svelte";
   import Button from "../components/Button.svelte";
   import Card from "../components/Card.svelte";
@@ -165,11 +166,7 @@
     <Card><p aria-live="polite">Einen Moment …</p></Card>
   {:else if screen.phase === "waiting"}
     <Card title="Die Abstimmung kann gerade nicht geladen werden">
-      {#if isServerNight(new Date())}
-        <p>Lückenfüller schläft nachts von 1 bis 7 Uhr. Ab 7 Uhr kannst du abstimmen – dann ist alles wieder da. Lass diese Seite offen, sie versucht es von selbst noch einmal.</p>
-      {:else}
-        <p>Der Server antwortet gerade nicht (nachts von 1 bis 7 Uhr schläft er). Diese Seite versucht es alle 30 Sekunden von selbst noch einmal.</p>
-      {/if}
+      <p>{pollWaitingText(isServerNight(new Date()), sessionState.offline)}</p>
     </Card>
   {:else if screen.phase === "gone"}
     <Card title="Diese Abstimmung gibt es nicht mehr">
