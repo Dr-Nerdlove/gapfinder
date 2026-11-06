@@ -35,7 +35,7 @@
             <strong>{invite.suggestedUsername}</strong>
             <span>gültig bis {formatDate(invite.expiresAt)}</span>
           </div>
-          <Button variant="text" disabled={busyId !== null || sessionState.offline} onclick={() => withdraw(invite)}>
+          <Button variant="outlined" compact disabled={busyId !== null || sessionState.offline} onclick={() => withdraw(invite)}>
             Zurückziehen
           </Button>
         </li>

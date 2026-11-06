@@ -104,7 +104,7 @@
   <h2 id="{id}-title">{chosen ? `${proposalLabel(chosen)} ${fixedId === null ? "festlegen" : "übernehmen"}?` : "Termin festlegen?"}</h2>
   {#if review === "checking"}
     <p aria-live="polite">Die Kalender werden geprüft … Das kann einen Moment dauern.</p>
-    <div class="buttons"><Button variant="text" onclick={() => (review = null)}>Abbrechen</Button></div>
+    <div class="buttons"><Button variant="outlined" onclick={() => (review = null)}>Abbrechen</Button></div>
   {:else if review !== null}
     {#if review.kind === "checked" && review.clear}
       <p class="ok">Laut Kalender haben alle Zeit.</p>
@@ -122,7 +122,7 @@
     {/if}
     <p>Danach können alle nicht mehr abstimmen.</p>
     <div class="buttons">
-      <Button variant="text" onclick={() => (review = null)}>Abbrechen</Button>
+      <Button variant="outlined" onclick={() => (review = null)}>Abbrechen</Button>
       <Button disabled={busy || locked} onclick={confirmFix}>
         {review.kind === "checked" && review.clear ? "Festlegen" : "Trotzdem festlegen"}
       </Button>

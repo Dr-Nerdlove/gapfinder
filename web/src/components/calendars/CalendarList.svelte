@@ -186,19 +186,19 @@
             {#if busy}<p class="checking" aria-live="polite">Kalender wird geprüft …</p>{/if}
             <div class="actions">
               <Button type="submit" {disabled}>{editing.mode === "rename" ? "Speichern" : "Prüfen und speichern"}</Button>
-              <Button variant="text" {disabled} onclick={() => (editing = null)}>Abbrechen</Button>
+              <Button variant="outlined" {disabled} onclick={() => (editing = null)}>Abbrechen</Button>
             </div>
           </form>
         {:else}
           <div class="actions">
             {#if !calendar.isDefault}
-              <Button variant="text" {disabled} onclick={() => update(calendar, { isDefault: true })}>Als Standard</Button>
+              <Button variant="outlined" compact {disabled} onclick={() => update(calendar, { isDefault: true })}>Als Standard</Button>
             {/if}
-            <Button variant="text" {disabled} onclick={() => startEdit(calendar, "rename")}>Umbenennen</Button>
+            <Button variant="outlined" compact {disabled} onclick={() => startEdit(calendar, "rename")}>Umbenennen</Button>
             {#if calendar.status !== "broken"}
-              <Button variant="text" {disabled} onclick={() => startEdit(calendar, "relink")}>Link neu eintragen</Button>
+              <Button variant="outlined" compact {disabled} onclick={() => startEdit(calendar, "relink")}>Link neu eintragen</Button>
             {/if}
-            <Button variant="text" {disabled} onclick={() => (removing = calendar)}>Entfernen</Button>
+            <Button variant="outlined" compact {disabled} onclick={() => (removing = calendar)}>Entfernen</Button>
           </div>
         {/if}
         {#if rowError?.id === calendar.id}<Message text={rowError.text} />{/if}
@@ -387,11 +387,6 @@
   .actions {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
-    margin-left: -16px;
-  }
-
-  form .actions {
-    margin-left: 0;
+    gap: 8px;
   }
 </style>

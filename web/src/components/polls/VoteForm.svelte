@@ -69,7 +69,7 @@
     <div class="actions">
       <Button type="submit" disabled={busy || locked}>{voteId === null ? "Stimme abgeben" : "Stimme ändern"}</Button>
       {#if voteId !== null}
-        <Button variant="text" disabled={busy || locked} onclick={onwithdraw}>Stimme zurückziehen</Button>
+        <Button variant="outlined" disabled={busy || locked} onclick={onwithdraw}>Stimme zurückziehen</Button>
       {/if}
     </div>
   </form>

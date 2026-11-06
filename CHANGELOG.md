@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- Buttons that were plain coloured text now have an outline so they are recognisable as buttons; in the admin's account list the three buttons per account sit in one row (on very narrow screens the third moves to a second row).
+
 ## [1.8.1] - 2026-11-06
 
 The app is tidier: server details that only matter to the admin are no longer shown to everyone. The start page shows

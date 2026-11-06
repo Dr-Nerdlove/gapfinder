@@ -114,7 +114,7 @@
       <div class="inline">
         <span class="note" aria-live="polite">{settings.people.length} ausgewählt</span>
         <Button
-          variant="text"
+          variant="outlined"
           disabled={searching}
           onclick={() => (settings.people = everyoneChosen ? [] : others.map((p) => p.id))}
         >
