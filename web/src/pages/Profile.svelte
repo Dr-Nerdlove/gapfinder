@@ -10,9 +10,6 @@
   import SeedColorPicker from "../components/SeedColorPicker.svelte";
   import Switch from "../components/Switch.svelte";
   import TextField from "../components/TextField.svelte";
-  import { onMount } from "svelte";
-  import { profileLine } from "../lib/app-update";
-  import { appUpdateState, ensureAppUpdate } from "../lib/app-update-state.svelte";
   import { errorMessage } from "../lib/messages";
   import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
@@ -33,12 +30,6 @@
   let passwordDone = $state("");
 
   let loggingOut = $state(false);
-
-  onMount(() => {
-    void ensureAppUpdate();
-  });
-
-  const appUpdateLine = $derived(appUpdateState.view ? profileLine(appUpdateState.view) : null);
 
   async function pickColor(seed: string | null): Promise<void> {
     colorError = "";
@@ -99,13 +90,6 @@
     <CalendarFeed />
 
     <Notifications />
-
-    {#if appUpdateLine}
-      <Card title="App-Version">
-        <p>{appUpdateLine}</p>
-        {#if appUpdateState.view?.kind !== "none"}<p class="note">Zum Aktualisieren siehe die Startseite.</p>{/if}
-      </Card>
-    {/if}
 
     <Card title="Passwort ändern">
       <form onsubmit={savePassword}>

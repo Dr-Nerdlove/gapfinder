@@ -1,4 +1,4 @@
-// The app's self-update on the start page and in the profile (Android app only, phase 7c). Pure: the state and the
+// The app's self-update on the start page (Android app only, phase 7c). Pure: the state and the
 // texts. Do not import this from `sw.ts`.
 
 /** The release page, for an app that cannot update itself yet. */
@@ -12,7 +12,7 @@ export const APK_DOWNLOAD_URL = "https://github.com/Dr-Nerdlove/gapfinder/releas
 
 export type AppUpdateView =
   /** Nothing to show: not in the app, up to date, or not known. */
-  | { kind: "none"; current: boolean }
+  | { kind: "none" }
   /** A newer app shell exists and this one can install it itself. */
   | { kind: "available"; version: string | null }
   /** This app (shell 2, version 1.6.0) has no `appUpdate` method: install the new version by hand, once. */
@@ -54,14 +54,14 @@ export function isNewerVersion(a: string, b: string): boolean {
  * failure: nothing (a flaky connection must not nag).
  */
 export async function loadAppUpdate(inApp: boolean, api: AppUpdateApi, webVersion: string): Promise<AppUpdateView> {
-  if (!inApp) return { kind: "none", current: false };
+  if (!inApp) return { kind: "none" };
   try {
     const answer = await api.appUpdate();
     if (answer.state === "available") return { kind: "available", version: typeof answer.version === "string" ? answer.version : null };
-    return { kind: "none", current: answer.state === "current" };
+    return { kind: "none" };
   } catch (error) {
     if (isUnimplemented(error) && isNewerVersion(webVersion, LAST_RELEASE_WITHOUT_SELF_UPDATE)) return { kind: "manual" };
-    return { kind: "none", current: false };
+    return { kind: "none" };
   }
 }
 
@@ -84,10 +84,4 @@ export function installNote(answer: InstallAnswer): string {
     default:
       return "Das Update hat nicht geklappt. Bitte später noch einmal versuchen.";
   }
-}
-
-/** The profile line, or null when the state is not known (or not in the app). */
-export function profileLine(view: AppUpdateView): string | null {
-  if (view.kind === "available" || view.kind === "manual") return "Neue App-Version verfügbar";
-  return view.current ? "App ist aktuell" : null;
 }

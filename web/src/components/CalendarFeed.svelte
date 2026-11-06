@@ -53,6 +53,8 @@
   }
 </script>
 
+<!-- Asleep and OfflineNotice already says so: the card stays away instead of repeating it. -->
+{#if !(screen.phase === "waiting" && sessionState.offline)}
 <Card title="Mein Lückenfüller-Kalender">
   {#if screen.phase === "loading"}
     <p aria-live="polite">Einen Moment …</p>
@@ -111,6 +113,7 @@
     <Message text={problem} />
   {/if}
 </Card>
+{/if}
 
 <ConfirmDialog
   open={confirming === "renew"}

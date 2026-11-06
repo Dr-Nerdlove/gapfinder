@@ -63,11 +63,13 @@
   let instant = $state(false);
   let appBlocked = $state(false); // switched on, but Android lets nothing through
   const appHint = $derived(androidAppHintText(device === "blocked", standalone));
-  let checking = $state(false);
+  let checking = false; // the quiet check when the app is opened is running
   let testing = $state(false);
   let checkNote = $state("");
-  const instantNote = $derived(inApp && device === "on" && !appBlocked ? instantLine(instant) : null);
-  const checkLine = $derived(inApp && device === "on" ? appCheckLine(lastCheck, Date.now()) : null);
+  // Diagnostics for the admin only; everyone else just gets the automatic check.
+  const isAdmin = $derived(sessionState.user?.isAdmin === true);
+  const instantNote = $derived(isAdmin && inApp && device === "on" && !appBlocked ? instantLine(instant) : null);
+  const checkLine = $derived(isAdmin && inApp && device === "on" ? appCheckLine(lastCheck, Date.now()) : null);
 
   async function loadSettings(): Promise<void> {
     screen = { phase: "loading" };
@@ -105,20 +107,18 @@
     }
   }
 
-  /** Looks for news right now and shows the new status line. `auto`: the quiet check when the app is opened. */
-  async function checkNow(auto: boolean): Promise<void> {
+  /** The quiet check when the app is opened (at most once a minute): looks for news and reads the new status. */
+  async function checkOnOpen(): Promise<void> {
     if (checking) return;
-    if (auto && !claimOpenCheck(Date.now())) {
+    if (!claimOpenCheck(Date.now())) {
       await loadDevice();
       return;
     }
-    if (!auto) claimOpenCheck(Date.now(), true);
     checking = true;
-    checkNote = "";
     try {
       await Lueckenfueller.checkNow();
     } catch {
-      if (!auto) checkNote = NEEDS_NEWER_APP_TEXT; // the quiet check just stays quiet
+      // stays quiet; an older app has no such method
     }
     await loadDevice(); // reads the new status line; after "off" it also shows that the device is switched off
     checking = false;
@@ -139,13 +139,13 @@
   onMount(() => {
     void loadSettings();
     void loadDevice().then(() => {
-      if (inApp && device === "on") void checkNow(true);
+      if (inApp && device === "on") void checkOnOpen();
     });
     // The background check may have run while the app was in the background: look for news again when it is back.
     // Coming back from Android's settings, the permission may have changed: read it again.
     const refresh = (): void => {
       if (!inApp || document.visibilityState !== "visible") return;
-      if (device === "on") void checkNow(true);
+      if (device === "on") void checkOnOpen();
       else if (device === "blocked") void loadDevice();
     };
     document.addEventListener("visibilitychange", refresh);
@@ -234,6 +234,8 @@
   }
 </script>
 
+<!-- Asleep and OfflineNotice already says so: the card stays away instead of repeating it. -->
+{#if !(screen.phase === "waiting" && sessionState.offline)}
 <Card title="Benachrichtigungen">
   {#if screen.phase === "loading"}
     <p aria-live="polite">Einen Moment …</p>
@@ -259,8 +261,7 @@
         {#if checkLine}<p class="note">{checkLine}</p>{/if}
         {#if inApp}
           <div class="row">
-            <Button variant="tonal" disabled={checking || testing} onclick={() => checkNow(false)}>{checking ? "Einen Moment …" : "Jetzt nachsehen"}</Button>
-            <Button variant="tonal" disabled={checking || testing} onclick={sendTest}>Test-Benachrichtigung</Button>
+            <Button variant="tonal" disabled={testing} onclick={sendTest}>Test-Benachrichtigung</Button>
           </div>
           {#if checkNote}<p class="note" aria-live="polite">{checkNote}</p>{/if}
         {/if}
@@ -306,6 +307,7 @@
     </section>
   {/if}
 </Card>
+{/if}
 
 <style>
   .part {

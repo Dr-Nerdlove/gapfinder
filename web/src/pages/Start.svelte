@@ -8,6 +8,7 @@
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import ServerStatus from "../components/ServerStatus.svelte";
   import Tour from "../components/Tour.svelte";
+  import { APP_RELEASE } from "../lib/config";
   import { backupWarnings } from "../lib/backup-status";
   import { brokenCount } from "../lib/calendars";
   import { session, sessionState } from "../lib/session.svelte";
@@ -129,6 +130,8 @@
   <ServerStatus />
 </div>
 
+<p class="version">Version {APP_RELEASE}</p>
+
 {#if sessionState.user}
   <Tour open={tourOpen} hasCalendar={calendarList ? calendarList.calendars.length > 0 : null} onclose={() => (tourOpen = false)} />
 {/if}
@@ -182,6 +185,14 @@
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .version {
+    margin-top: 24px;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.75;
   }
 
   .actions {
