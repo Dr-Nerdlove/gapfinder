@@ -77,7 +77,8 @@ export function blockedHelpText(platform: Platform, standalone: boolean): string
     case "android":
       return standalone
         ? "Tippe lange auf das Lückenfüller-Symbol, dann auf „App-Info“ und „Benachrichtigungen“ und erlaube sie."
-        : "Tippe im Browser oben rechts auf ⋮, dann auf „Einstellungen“, „Website-Einstellungen“ und „Benachrichtigungen“ und erlaube sie dort für dr-nerdlove.github.io. Lade die Seite danach neu.";
+        : // In the browser on the phone the block is hard to lift (it may come from Android itself): point at the app.
+          "Am einfachsten bekommst du sie mit der Android-App.";
     default:
       return "Klicke im Browser auf das Symbol links neben der Adresse, erlaube dort Benachrichtigungen und lade die Seite danach neu.";
   }
@@ -86,6 +87,15 @@ export function blockedHelpText(platform: Platform, standalone: boolean): string
 /** Note for Android users in the browser: the Android app exists too. */
 export const ANDROID_APP_HINT_TEXT =
   "Lückenfüller gibt es für Android auch als App. Lade auf der Release-Seite die Datei „lueckenfueller-….apk“ herunter und öffne sie; Android fragt dann, ob du sie installieren willst.";
+
+/** The same note when the app is the way out of a block in the browser: only the steps. */
+export const ANDROID_APP_STEPS_TEXT =
+  "Lade dafür auf der Release-Seite die Datei „lueckenfueller-….apk“ herunter und öffne sie; Android fragt dann, ob du sie installieren willst.";
+
+/** The note about the Android app: just the steps when the blocked text already pointed at the app. */
+export function androidAppHintText(blocked: boolean, standalone: boolean): string {
+  return blocked && !standalone ? ANDROID_APP_STEPS_TEXT : ANDROID_APP_HINT_TEXT;
+}
 
 /** Whether to point at the Android app: on Android, but not inside the app itself. */
 export function showAndroidAppHint(platform: Platform, inApp: boolean): boolean {

@@ -18,6 +18,14 @@ export function appDeviceState(status: { enabled: boolean; permission: "granted"
   return status.permission === "denied" ? "blocked" : "off";
 }
 
+/** Switched on in the app, but Android lets no notification through (switched off in the system settings later). */
+export function appBlockedWhileOn(status: { enabled: boolean; permission: "granted" | "denied" | "prompt" }): boolean {
+  return status.enabled && status.permission === "denied";
+}
+
+export const APP_BLOCKED_WHILE_ON_TEXT =
+  "Eingeschaltet, aber Android blockiert Benachrichtigungen für Lückenfüller. Erlaube sie unter Einstellungen → Apps → Lückenfüller → Benachrichtigungen.";
+
 export interface AppTurnOnDeps {
   apiUrl: string;
   register(): Promise<ApiResult<AppDeviceRegistered>>;

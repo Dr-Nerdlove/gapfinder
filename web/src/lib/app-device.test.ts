@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { APP_BLOCKED_TEXT, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "./app-device";
+import { APP_BLOCKED_TEXT, APP_BLOCKED_WHILE_ON_TEXT, appBlockedWhileOn, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "./app-device";
 import type { ApiResult } from "./api";
 
 const ok = <T>(data: T): ApiResult<T> => ({ ok: true, data });
@@ -26,6 +26,15 @@ describe("appDeviceState", () => {
   });
   it("tells where to allow notifications", () => {
     expect(APP_BLOCKED_TEXT).toContain("Einstellungen → Apps → Lückenfüller → Benachrichtigungen");
+    expect(APP_BLOCKED_WHILE_ON_TEXT).toContain("Einstellungen → Apps → Lückenfüller → Benachrichtigungen");
+  });
+});
+
+describe("appBlockedWhileOn", () => {
+  it("notices notifications switched off in Android's settings after they were turned on", () => {
+    expect(appBlockedWhileOn({ enabled: true, permission: "denied" })).toBe(true);
+    expect(appBlockedWhileOn({ enabled: true, permission: "granted" })).toBe(false);
+    expect(appBlockedWhileOn({ enabled: false, permission: "denied" })).toBe(false);
   });
 });
 

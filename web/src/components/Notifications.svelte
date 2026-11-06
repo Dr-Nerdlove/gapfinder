@@ -4,7 +4,14 @@
   import * as api from "../lib/api";
   import { appCheckLine, instantLine } from "../lib/app-check-status";
   import { NEEDS_NEWER_APP_TEXT, claimOpenCheck, testNotificationNote } from "../lib/app-check-now";
-  import { APP_BLOCKED_TEXT, appDeviceState, turnAppDeviceOff, turnAppDeviceOn } from "../lib/app-device";
+  import {
+    APP_BLOCKED_TEXT,
+    APP_BLOCKED_WHILE_ON_TEXT,
+    appBlockedWhileOn,
+    appDeviceState,
+    turnAppDeviceOff,
+    turnAppDeviceOn,
+  } from "../lib/app-device";
   import { RELEASE_PAGE_URL } from "../lib/app-update";
   import { API_URL } from "../lib/config";
   import { errorMessage } from "../lib/messages";
@@ -18,7 +25,7 @@
     browserSubscription,
     detectEnv,
     showAndroidAppHint,
-    ANDROID_APP_HINT_TEXT,
+    androidAppHintText,
     platformOf,
     pushSupport,
     settingsScreenOf,
@@ -41,10 +48,8 @@
   const inApp = isAndroidApp();
   const locked = $derived(sessionState.offline);
   const swNavigator = navigator as unknown as ServiceWorkerNavigator;
-  const blockedText = blockedHelpText(
-    platformOf(navigator.userAgent, navigator.maxTouchPoints),
-    detectEnv(navigator, window).isStandalone,
-  );
+  const standalone = detectEnv(navigator, window).isStandalone;
+  const blockedText = blockedHelpText(platformOf(navigator.userAgent, navigator.maxTouchPoints), standalone);
   const androidHint = showAndroidAppHint(platformOf(navigator.userAgent, navigator.maxTouchPoints), inApp);
 
   let screen = $state<SettingsScreen>({ phase: "loading" });
@@ -56,10 +61,12 @@
   let deviceProblem = $state("");
   let lastCheck = $state<AppCheck | null | undefined>(undefined);
   let instant = $state(false);
+  let appBlocked = $state(false); // switched on, but Android lets nothing through
+  const appHint = $derived(androidAppHintText(device === "blocked", standalone));
   let checking = $state(false);
   let testing = $state(false);
   let checkNote = $state("");
-  const instantNote = $derived(inApp && device === "on" ? instantLine(instant) : null);
+  const instantNote = $derived(inApp && device === "on" && !appBlocked ? instantLine(instant) : null);
   const checkLine = $derived(inApp && device === "on" ? appCheckLine(lastCheck, Date.now()) : null);
 
   async function loadSettings(): Promise<void> {
@@ -74,8 +81,10 @@
         const status = await Lueckenfueller.notificationStatus();
         lastCheck = status.lastCheck;
         instant = status.instant === true;
+        appBlocked = appBlockedWhileOn(status);
         device = appDeviceState(status);
       } catch {
+        appBlocked = false;
         device = "app-failed";
       }
       return;
@@ -133,9 +142,11 @@
       if (inApp && device === "on") void checkNow(true);
     });
     // The background check may have run while the app was in the background: look for news again when it is back.
+    // Coming back from Android's settings, the permission may have changed: read it again.
     const refresh = (): void => {
-      if (!inApp || document.visibilityState !== "visible" || device !== "on") return;
-      void checkNow(true);
+      if (!inApp || document.visibilityState !== "visible") return;
+      if (device === "on") void checkNow(true);
+      else if (device === "blocked") void loadDevice();
     };
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
@@ -239,7 +250,11 @@
       {#if device === "checking"}
         <p aria-live="polite">Einen Moment …</p>
       {:else if device === "on"}
-        <p>Benachrichtigungen sind auf diesem Gerät an.</p>
+        {#if appBlocked}
+          <p class="warning">{APP_BLOCKED_WHILE_ON_TEXT}</p>
+        {:else}
+          <p>Benachrichtigungen sind auf diesem Gerät an.</p>
+        {/if}
         {#if instantNote}<p class="note">{instantNote}</p>{/if}
         {#if checkLine}<p class="note">{checkLine}</p>{/if}
         {#if inApp}
@@ -272,8 +287,11 @@
         <p>Dieser Browser kann keine Benachrichtigungen empfangen.</p>
       {/if}
       {#if androidHint}
-        <p class="note">{ANDROID_APP_HINT_TEXT}</p>
-        <div><Button variant="tonal" external href={RELEASE_PAGE_URL}>Android-App herunterladen</Button></div>
+        <!-- After a block in the browser the app is the way out: then it is the main step, not a side note. -->
+        <p class:note={device !== "blocked"}>{appHint}</p>
+        <div>
+          <Button variant={device === "blocked" ? "filled" : "tonal"} external href={RELEASE_PAGE_URL}>Android-App herunterladen</Button>
+        </div>
       {/if}
       <Message text={deviceProblem} />
     </section>
@@ -309,5 +327,10 @@
 
   .note {
     font-size: 0.875rem;
+  }
+
+  .warning {
+    color: var(--md-sys-color-error);
+    font-weight: 500;
   }
 </style>
