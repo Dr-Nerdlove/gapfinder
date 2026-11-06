@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.8.1] - 2026-11-06
+
+The app is tidier: server details that only matter to the admin are no longer shown to everyone. The start page shows
+just the version at the bottom, and the server's state is now in a "Server" card in the administration. The profile
+no longer has the "App-Version" box, the notification settings in the Android app are simpler, and the night message
+"Lückenfüller schläft gerade" appears only once per page. Nobody needs to do anything: the app updates itself.
+
 ### Changed
 
 - The start page no longer shows server details to everyone. It shows only the version of the app at the bottom, and
