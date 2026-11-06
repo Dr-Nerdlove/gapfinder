@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.8.0] - 2026-11-06
+
+Getting the Android app is now one tap. The button "Android-App herunterladen" downloads the newest app directly
+instead of opening the release page; open the downloaded file and Android asks whether to install it. Whoever has
+the app already needs to do nothing: the change is in the web app, which every app loads anew.
+
 ### Changed
 
 - The button "Android-App herunterladen" now downloads the newest Android app directly instead of opening the
