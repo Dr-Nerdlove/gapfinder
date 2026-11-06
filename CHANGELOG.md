@@ -7,9 +7,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
-- Notification settings on an Android phone in the browser: when notifications are blocked, the help now shows the
-  browser's way to allow them (⋮ → Einstellungen → Website-Einstellungen → Benachrichtigungen) instead of a lock symbol
-  Chrome no longer shows; the app-info steps appear only when Lückenfüller was opened from the home screen.
+- Notification settings on an Android phone in the browser: when the browser blocks notifications, the card now
+  points to the Android app as the easiest way to get them, with the download button as the main step, instead of
+  browser settings that often do not help on the phone; the app-info steps appear only when Lückenfüller was opened
+  from the home screen.
 - Android phones in the browser now see a note that Lückenfüller also exists as an Android app, with a link to the
   release page.
 
@@ -17,6 +18,9 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - Android app: scrolled content no longer slides behind the clock and icons of the status bar at the top; the bar of
   the gap search stays above Android's gesture bar at the bottom.
+- Android app: when notifications are switched off in Android's settings after they were turned on, the notification
+  card now says so and tells where to allow them again, instead of claiming they arrive instantly. Coming back from
+  the settings, the card reads the new state by itself.
 - The privacy page no longer calls the Android app "later": notifications are kept 7 days so the app can fetch them.
 
 ## [1.7.0] - 2026-11-05

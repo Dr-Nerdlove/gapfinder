@@ -3,6 +3,9 @@ import { describe, expect, it } from "vitest";
 import type { ApiResult } from "./api";
 import {
   SETTING_LABELS,
+  ANDROID_APP_HINT_TEXT,
+  ANDROID_APP_STEPS_TEXT,
+  androidAppHintText,
   blockedHelpText,
   browserSubscription,
   currentSubscription,
@@ -71,12 +74,19 @@ describe("detectEnv and platformOf", () => {
     expect(blockedHelpText("other", false)).toContain("Seite danach neu");
   });
 
-  it("gives Android browser users the browser path, not the app path", () => {
+  it("points Android browser users at the Android app, not at settings", () => {
     const browser = blockedHelpText("android", false);
-    expect(browser).toContain("Website-Einstellungen");
+    expect(browser).toContain("Android-App");
+    expect(browser).not.toContain("Website-Einstellungen");
     expect(browser).not.toContain("App-Info");
-    expect(browser).not.toContain("Schloss");
-    expect(blockedHelpText("android", true)).not.toContain("Schloss");
+    expect(blockedHelpText("android", true)).toContain("App-Info");
+  });
+
+  it("gives only the app's steps when the blocked text already pointed at the app", () => {
+    expect(androidAppHintText(true, false)).toBe(ANDROID_APP_STEPS_TEXT);
+    expect(androidAppHintText(false, false)).toBe(ANDROID_APP_HINT_TEXT);
+    expect(androidAppHintText(true, true)).toBe(ANDROID_APP_HINT_TEXT);
+    expect(androidAppHintText(false, true)).toBe(ANDROID_APP_HINT_TEXT);
   });
 
   it("points at the Android app only on Android outside the app", () => {
