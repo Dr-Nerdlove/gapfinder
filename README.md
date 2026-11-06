@@ -28,7 +28,8 @@ updates.
 - **Notifications:** switch them on per device (Web Push in the browser) to hear about new polls, votes and fixed
   dates, and choose which kinds you want; poll creators can send a reminder to people who have not voted yet. A
   privacy page explains what is sent and to whom.
-- **Android app:** install the APK from the release page ([details below](#android-app)). Instant notifications come
+- **Android app:** the button "Android-App herunterladen" in the app (Android phones in the browser) downloads the
+  newest APK directly; it is also on the release page ([details below](#android-app)). Instant notifications come
   through a content-free Firebase "doorbell", a check every 15 minutes is the backup, and the app updates itself.
 
 Not built yet: connecting Google or Outlook directly, and an offline vote queue (phase 8, optional).
@@ -113,7 +114,8 @@ job does the same through `.github/actions/android-apk`.
 
 An Android app (a Capacitor shell around the live web app, with notifications from a background check) is built from
 `android/`. Install, signing key, local build and rules for changes: [`docs/android-app.md`](docs/android-app.md).
-CI builds it on every push; each release carries the signed APK and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
+CI builds it on every push; each release carries the signed APK (also as `lueckenfueller.apk`, the newest one at
+`releases/latest/download/lueckenfueller.apk`) and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
 Firebase "doorbell") need a one-time Firebase setup: [`docs/firebase-setup.md`](docs/firebase-setup.md).
 
 ## Run the server with Docker Compose

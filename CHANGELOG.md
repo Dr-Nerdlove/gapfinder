@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- The button "Android-App herunterladen" now downloads the newest Android app directly instead of opening the
+  release page; the notes next to it say so. Every release now also carries the APK under the fixed name
+  `lueckenfueller.apk` for this link.
+
 ## [1.7.1] - 2026-11-06
 
 Fixes for the Android app. The Back gesture now goes to the previous page and leaves the app only from the start

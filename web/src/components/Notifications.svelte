@@ -12,7 +12,7 @@
     turnAppDeviceOff,
     turnAppDeviceOn,
   } from "../lib/app-device";
-  import { RELEASE_PAGE_URL } from "../lib/app-update";
+  import { APK_DOWNLOAD_URL } from "../lib/app-update";
   import { API_URL } from "../lib/config";
   import { errorMessage } from "../lib/messages";
   import { Lueckenfueller, isAndroidApp, type AppCheck } from "../lib/native";
@@ -290,7 +290,7 @@
         <!-- After a block in the browser the app is the way out: then it is the main step, not a side note. -->
         <p class:note={device !== "blocked"}>{appHint}</p>
         <div>
-          <Button variant={device === "blocked" ? "filled" : "tonal"} external href={RELEASE_PAGE_URL}>Android-App herunterladen</Button>
+          <Button variant={device === "blocked" ? "filled" : "tonal"} external href={APK_DOWNLOAD_URL}>Android-App herunterladen</Button>
         </div>
       {/if}
       <Message text={deviceProblem} />
