@@ -1,7 +1,7 @@
 {
   "name": "lueckenfueller",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.8.1",
   "description": "Lückenfüller: finds time slots where all friends are free.",
   "license": "AGPL-3.0-only",
   "engines": {
