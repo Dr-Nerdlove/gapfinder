@@ -93,12 +93,20 @@ export function goToStart(target: Window = window): void {
   navigate("#/", { replace: true }, target);
 }
 
-/** Calls `onChange` with the current route now and on every hash change. Returns a function that stops it. */
-export function watchRoute(onChange: (route: Route) => void, target: Window = window): () => void {
+/**
+ * Calls `onChange` with the current route now and on every hash change. Returns a function that stops it.
+ * `fresh` is true when the change opened a new history entry (a link, `navigate`), false on the first call and when
+ * Back/Forward returns to an entry seen before: a fresh page should start at its top.
+ */
+export function watchRoute(
+  onChange: (route: Route, change: { fresh: boolean }) => void,
+  target: Window = window,
+): () => void {
   let first = true;
   const update = (): void => {
     const route = parseRoute(target.location.hash);
     const known = readMark(target);
+    const fresh = !first && known === undefined;
     let value: number | null;
     if (known !== undefined) {
       value = known;
@@ -114,7 +122,7 @@ export function watchRoute(onChange: (route: Route) => void, target: Window = wi
     pendingReplace = false;
     current = value;
     first = false;
-    onChange(route);
+    onChange(route, { fresh });
   };
   target.addEventListener("hashchange", update);
   update();

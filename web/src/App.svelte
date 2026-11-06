@@ -18,7 +18,13 @@
 
   let route = $state<Route>({ name: "start" });
 
-  onMount(() => watchRoute((next) => (route = next)));
+  onMount(() =>
+    watchRoute((next, { fresh }) => {
+      route = next;
+      // Hash routing keeps the scroll position of the page before: a newly opened page starts at its top.
+      if (fresh) window.scrollTo(0, 0);
+    }),
+  );
 
   // Someone who is logged in has nothing to do on the login page.
   $effect(() => {
