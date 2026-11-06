@@ -26,6 +26,10 @@
   });
 </script>
 
+<!-- In the Android app (and a home-screen app) the page runs under the status bar: this strip keeps scrolled content out
+     from behind its icons. Its height is 0 wherever the browser draws the status bar itself. -->
+<div class="status-bar" aria-hidden="true"></div>
+
 <main>
   {#if route.name === "start"}
     <Start />
@@ -57,6 +61,14 @@
 </main>
 
 <style>
+  .status-bar {
+    position: fixed;
+    inset: 0 0 auto;
+    z-index: 10;
+    height: env(safe-area-inset-top, 0px);
+    background: var(--md-sys-color-surface);
+  }
+
   main {
     max-width: 40rem;
     margin: 0 auto;
