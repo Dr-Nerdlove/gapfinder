@@ -16,6 +16,8 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Fixed
 
+- Android app: the Back gesture now goes to the previous page, step by step back to the start page, and leaves
+  the app only from there; before, it closed the app on every page. The app offers this as an update.
 - Android app: scrolled content no longer slides behind the clock and icons of the status bar at the top; the bar of
   the gap search stays above Android's gesture bar at the bottom.
 - Android app: when notifications are switched off in Android's settings after they were turned on, the notification

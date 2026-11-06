@@ -3,6 +3,7 @@ package de.drnerdlove.lueckenfueller
 import android.content.Intent
 import android.os.Bundle
 import android.os.SystemClock
+import androidx.activity.OnBackPressedCallback
 import com.getcapacitor.BridgeActivity
 
 class MainActivity : BridgeActivity() {
@@ -15,6 +16,31 @@ class MainActivity : BridgeActivity() {
         restored = savedInstanceState != null
         super.onCreate(savedInstanceState)
         restored = false
+        onBackPressedDispatcher.addCallback(this, backToEarlierPage)
+    }
+
+    /**
+     * Capacitor has no Back handling of its own, so Android's Back gesture used to close the app on every page.
+     * Now it goes to the app's previous page, and only on the first page does it leave the app as usual.
+     */
+    private val backToEarlierPage = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            val steps = try {
+                val webView = bridge?.webView
+                val history = webView?.copyBackForwardList()
+                val found = history?.let { list ->
+                    BackNavigation.steps((0 until list.size).map { list.getItemAtIndex(it)?.url }, list.currentIndex)
+                }
+                if (webView != null && found != null) webView.goBackOrForward(-found)
+                found
+            } catch (e: RuntimeException) {
+                null // never trap the user in the app
+            }
+            if (steps != null) return
+            isEnabled = false
+            onBackPressedDispatcher.onBackPressed()
+            isEnabled = true
+        }
     }
 
     override fun onNewIntent(intent: Intent) {
