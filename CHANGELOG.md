@@ -5,6 +5,14 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.7.1] - 2026-11-06
+
+Fixes for the Android app. The Back gesture now goes to the previous page and leaves the app only from the start
+page. Scrolled content no longer slides behind the status bar, and the notification card notices when notifications
+are switched off in Android's settings. The app offers this version as an update: tap "Aktualisieren" on the start
+page. In the browser on an Android phone, Lückenfüller now points to the Android app, also when the browser blocks
+notifications.
+
 ### Changed
 
 - Notification settings on an Android phone in the browser: when the browser blocks notifications, the card now
