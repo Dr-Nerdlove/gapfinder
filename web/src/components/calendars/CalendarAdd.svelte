@@ -79,7 +79,7 @@
       <div><Button type="submit" {disabled}>Kalender hinzufügen</Button></div>
     </form>
     <p class="note">
-      Deine Freunde sehen nie deine Termine, nur „belegt“ oder „frei“. Der Link wird verschlüsselt gespeichert.
+      Deine Freunde sehen nie deine Termine, nur „belegt“ oder „frei“. Der Link wird verschlüsselt gespeichert.<br />
       <a href="#/privatsphaere">Was mit deinem Kalender passiert</a>
     </p>
   {/if}

@@ -219,3 +219,16 @@ describe("history and goToStart", () => {
     expect(f.entries.length).toBe(2);
   });
 });
+
+describe("watchRoute fresh flag", () => {
+  it("marks only newly opened pages as fresh, not the first call or Back/Forward", () => {
+    const f = fakeWindow("#/");
+    const fresh: boolean[] = [];
+    watchRoute((_r, change) => fresh.push(change.fresh), f.win);
+    navigate("#/kalender", {}, f.win);
+    navigate("#/privatsphaere", {}, f.win);
+    f.win.history.go(-1);
+    f.win.history.go(1);
+    expect(fresh).toEqual([false, true, true, false, false]);
+  });
+});
