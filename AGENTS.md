@@ -171,7 +171,8 @@ missing, with a recommendation, and let the people choose.
   plus guests who vote through a share link.
 - **Product:** A mobile-first web app that reads the friends' calendars (Google, Apple, Outlook, ...) and finds
   time slots where everyone is free, with sharing, voting and sending the chosen date. Repository name
-  "Gapfinder"; the product's name is **"Lückenfüller"**. All decisions and the phases: `docs/PLAN.md`.
+  "Gapfinder"; the product's name is **"Lückenfüller"**. All decisions and the phases: `docs/PLAN.md`. When the owner names
+  only a point ("9a"), it is that point in `docs/PLAN.md` (section "Phases" and the decisions it points to).
 - **Product languages:** German only. All text shown to users is German (with ä, ö, ü, ß); there is no
   English interface. The texts live directly in the Svelte pages and components (`web/src/pages`,
   `web/src/components`); error messages for the server's error codes are in `web/src/lib/messages.ts`, notification
