@@ -522,6 +522,58 @@ app) below.
   colours), turns it off; then the profile's seed colour applies as before. In the browser nothing changes.
 - Installable to the home screen.
 
+### Growing the circle (phase 9)
+
+Decided with the owner on 2026-11-07, after a review of the whole project with a view to the circle growing from
+10–15 users (today) to 50 or more. The owner names a point by its number ("9a") to start it in a session. Each
+point is its own branch and pull request; the details marked "to settle" are agreed with the owner (choices with a
+recommendation, a preview mock-up where something is visible) **before** building, and recorded here.
+
+Order of work:
+
+- **9a Own groups in the people choice** (Sonnet; the server part is small). With 50+ names the flat list of
+  check boxes on `#/suche` gets long. Decided: a **search field** above the list, and **groups that each user makes
+  for themselves** ("Spieleabend", "Uni-Leute"), chosen with one tap; nobody else sees them. Rejected for now:
+  groups shared by everybody. To settle: kept on the server (same groups on every device and in the Android app;
+  an additive migration) or only on the device (recommended: on the server); whether choosing a group adds to the
+  current choice or replaces it; limits (number of groups, name length); a person whose account is deleted drops
+  out of every group quietly.
+- **9b Deleting one's own account** (Opus to plan, Sonnet for the steps). Today only the admin can delete an account.
+  Decided: everyone can delete their own account, with its calendar links, devices and settings. To settle: the
+  confirmation (password again, recommended); what happens to their polls and votes (recommended: the same as when
+  the admin deletes an account, see "Sharing and voting"); the admin cannot delete their own account in the app
+  (there must always be an admin, and the app never creates one), as `DELETE /api/admin/users/:id` already refuses
+  with `cannot_delete_self`; the privacy page names the new way.
+- **9c Better results for large groups** (Opus for the search, Sonnet for the screens). With 15 or more people a
+  time when everybody is free is rare, and "Fast alle" shows only times when exactly one person is missing.
+  Decided: for larger searches the app shows the **best times with the most people** ("13 von 15 können", with the
+  names of who cannot). This revises the rejection of "up to two missing" in phase 3 (long lists): to settle are
+  from how many people it applies, how many may be missing, how long the list is and how it is sorted, and that it
+  reveals no more than "busy" about anybody (no "Max only from 20:00").
+- **9d Notice to the owner when the server is down** (Opus to plan). Today the owner only notices an outage when
+  opening the app. A server that is down cannot report itself, so something outside the home PC has to check it.
+  To settle: who checks (recommended to look at first: a scheduled GitHub Actions workflow that calls
+  `/api/health`; GitHub e-mails the owner when a run fails, so no new account or service is needed) and its limits
+  (GitHub's schedules can start late; the PC is off from 01:00 to 07:00, so the night must not count as an outage;
+  how long down before it reports, and not again every hour while it stays down).
+- **9e A short "So geht's" text to pass on** (Sonnet). A short German text the owner sends to new people together
+  with their invite link (e.g. over WhatsApp): what the app is, how to sign up, how to link a calendar. To settle:
+  where it lives (recommended: a "Teilen" button next to a new invite in the admin area that sends link and text
+  together), and the wording, with the owner.
+- **9f Load test of the home server** (Opus), **planned for the week from 2026-11-09**; not urgent at 10–15 users.
+  The VM has 1 GB of memory; a search reads every chosen person's calendars fresh (up to 400 days ahead, at most 8
+  at a time) and the reading of a calendar runs in one piece, so other requests wait meanwhile. Measure with
+  made-up but realistically large calendars (50 people, 100+ calendars): how long a first search takes, how much
+  memory it needs, and how long other requests wait during it. Only then decide whether anything has to change
+  (fewer days ahead, splitting the work, more memory for the VM, the limit of 50 people per search).
+
+Left as they are for now (owner, 2026-11-07), to be raised again when the circle grows:
+
+- **Who may invite** stays the admin alone (and password resets too). Options for later: trusted members may make
+  invite links without other admin rights (recommended then), or members suggest a person and the admin confirms.
+- **Who can be searched with** stays everybody with an account (phase 3). Options for later: a setting "only people
+  from my groups may choose me" (builds on 9a), or saying it more clearly on the privacy page.
+
 ## Security
 
 - Only the API is reachable from the internet; it runs as a non-root user in a container inside its own VM.
@@ -554,6 +606,9 @@ phase in brackets.
    7c self-update (loads from the latest GitHub release), 7d instant notifications through a Firebase doorbell
    (before release 1.6.0).
 8. **Optional later:** direct Google/Outlook connection, offline vote queue.
+9. **Growing the circle** (see "Growing the circle" above; model per point there), in this order: 9a own groups in
+   the people choice, 9b deleting one's own account, 9c better results for large groups, 9d notice to the owner when
+   the server is down, 9e a "So geht's" text to pass on, 9f load test of the home server (week from 2026-11-09).
 
 ## Server updates
 
