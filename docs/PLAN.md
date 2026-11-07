@@ -556,6 +556,11 @@ Order of work:
   `/api/health`; GitHub e-mails the owner when a run fails, so no new account or service is needed) and its limits
   (GitHub's schedules can start late; the PC is off from 01:00 to 07:00, so the night must not count as an outage;
   how long down before it reports, and not again every hour while it stays down).
+  The owner is also considering an **in-app notification** instead of the e-mail and decides when 9d starts. The
+  server cannot report its own outage, so then the owner's Android app would have to notice it (its background
+  check already asks the server about every 15 minutes) and show a notification itself. That changes the native
+  app: a new notification text in `NotificationText.kt` and a higher `SHELL_VERSION`, so everybody is offered an
+  app update (the only point of phase 9 that would need one).
 - **9e A short "So geht's" text to pass on** (Sonnet). A short German text the owner sends to new people together
   with their invite link (e.g. over WhatsApp): what the app is, how to sign up, how to link a calendar. To settle:
   where it lives (recommended: a "Teilen" button next to a new invite in the admin area that sends link and text
@@ -566,6 +571,10 @@ Order of work:
   made-up but realistically large calendars (50 people, 100+ calendars): how long a first search takes, how much
   memory it needs, and how long other requests wait during it. Only then decide whether anything has to change
   (fewer days ahead, splitting the work, more memory for the VM, the limit of 50 people per search).
+
+**Release:** once 9a–9e are merged, the owner wants to release **1.9.0** (decided 2026-11-07). 9f is a measurement;
+it goes into 1.9.0 only if it is done by then and changes something. The assistant suggests the release when 9e is
+merged; as always, nothing is released without the owner's word.
 
 Left as they are for now (owner, 2026-11-07), to be raised again when the circle grows:
 
@@ -608,7 +617,8 @@ phase in brackets.
 8. **Optional later:** direct Google/Outlook connection, offline vote queue.
 9. **Growing the circle** (see "Growing the circle" above; model per point there), in this order: 9a own groups in
    the people choice, 9b deleting one's own account, 9c better results for large groups, 9d notice to the owner when
-   the server is down, 9e a "So geht's" text to pass on, 9f load test of the home server (week from 2026-11-09).
+   the server is down, 9e a "So geht's" text to pass on, 9f load test of the home server (week from 2026-11-09);
+   then release 1.9.0.
 
 ## Server updates
 
