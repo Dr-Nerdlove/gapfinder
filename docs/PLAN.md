@@ -583,6 +583,11 @@ Order of work:
   with their invite link (e.g. over WhatsApp): what the app is, how to sign up, how to link a calendar. To settle:
   where it lives (recommended: a "Teilen" button next to a new invite in the admin area that sends link and text
   together), and the wording, with the owner.
+  Settled with the owner on 2026-11-08 and built (done earlier than planned): the text lives in
+  `web/src/lib/invite-text.ts` (`inviteMessage`, WhatsApp bold with `*...*`; the days come from `INVITE_VALID_DAYS`,
+  which is **14**, not 7) and the new invite in `InviteCreator.svelte` gets the button "Mit Anleitung teilen"
+  (`LinkBox` prop `message`; "Mit Anleitung kopieren" where the browser cannot share). Change the wording in that one
+  file. Frontend only; the share sheet is not tried in a real browser by the assistant: check it on the phone.
 - **9f Load test of the home server** (Opus), **planned for the week from 2026-11-09**; not urgent at 10–15 users.
   The VM has 1 GB of memory; a search reads every chosen person's calendars fresh (up to 400 days ahead, at most 8
   at a time) and the reading of a calendar runs in one piece, so other requests wait meanwhile. Measure with

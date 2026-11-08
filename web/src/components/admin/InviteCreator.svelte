@@ -2,6 +2,7 @@
   import type { CreatedInvite } from "@lueckenfueller/shared";
   import { INVITE_VALID_DAYS, normalizeName, USERNAME_MAX_LENGTH } from "@lueckenfueller/shared";
   import * as api from "../../lib/api";
+  import { inviteMessage } from "../../lib/invite-text";
   import { buildInviteLink } from "../../lib/links";
   import { errorMessage } from "../../lib/messages";
   import { checkUsername } from "../../lib/validation";
@@ -63,6 +64,7 @@
       {link}
       note="Der Link gilt {INVITE_VALID_DAYS} Tage und nur einmal. Er wird nur jetzt angezeigt."
       shareText="Du bist zu Lückenfüller eingeladen:"
+      message={inviteMessage(link, INVITE_VALID_DAYS)}
     />
   {/if}
 </Card>
