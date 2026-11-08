@@ -192,6 +192,10 @@ missing, with a recommendation, and let the people choose.
   to run while files under `android/` are uncommitted (its stale-sync check). CI's `vm-scripts` job runs
   `shellcheck deploy/vm/*.sh deploy/vm/test/*.sh scripts/*.sh`; a cloud session has no shellcheck, but
   `pip install --target <scratchpad>/sc shellcheck-py` gives one in `<scratchpad>/sc/bin`.
+- **Screenshots for the docs** (`docs/screenshots`, used by the README): `bash scripts/docs-screenshots/run.sh --install`
+  takes the pictures of the whole app on a throw-away server with made-up people and calendars (details, the traps
+  found and what it does not cover: `scripts/docs-screenshots/README.md`). Retake the pictures of every screen that a
+  change alters visibly, and look at them before committing; the start picture is cropped above the version line.
 - **Release:** On every push to `main`, `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
   image to GHCR (`ghcr.io/dr-nerdlove/lueckenfueller-api`, tags `latest` and `sha-<short>`). The VM updates
   itself hourly from GHCR and rolls back an image that is not healthy (`deploy/vm/update.sh`, guide
