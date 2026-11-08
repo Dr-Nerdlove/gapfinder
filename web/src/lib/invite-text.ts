@@ -5,15 +5,14 @@
  */
 export function inviteMessage(link: string, validDays: number): string {
   return [
-    "Hello there! 👋 Hier deine persönliche Einladung zum Lückenfüller. Das ist eine kleine App, die herausfindet, wann wir alle im Freundeskreis gleichzeitig Zeit haben. So müssen wir das nicht mehr umständlich durchs Hin-und-her-Chatten herausfinden.",
+    "Hello there! 👋 Hier deine persönliche Einladung zum *Lückenfüller*. Das ist eine kleine App, die herausfindet, wann wir alle im Freundeskreis gleichzeitig Zeit haben. So müssen wir nicht mehr ewig im Chat hin und her schreiben.",
     "",
     "*So geht's:*",
     `1. Öffne deinen Einladungslink und leg ein Passwort fest: ${link}`,
-    `Der Link gilt ${validDays} Tage und funktioniert nur einmal.`,
-    "2. Verknüpfe einmal deinen Kalender (Google, Apple oder Outlook). Die App zeigt dir Schritt für Schritt, wie du in deinem Kalender einen Link kopierst. Du kannst bei Bedarf auch mehrere Kalender verknüpfen.",
+    `(Der Link funktioniert ${validDays} Tage lang)`,
+    "2. Verknüpfe einmal deinen Kalender (Google, Apple oder Outlook). Die App zeigt dir Schritt für Schritt wie das geht. Du kannst bei Bedarf auch mehrere Kalender verknüpfen.",
+    "*Deine Termine bleiben dabei immer privat:* Alle anderen sehen nur „frei“ oder „belegt“, nie, was genau du vorhast.",
     "3. Das war's dann auch schon. Ab jetzt findet die App die gemeinsamen Lücken. Abstimmen können Gäste übrigens auch ohne ein eigenes Konto.",
-    "",
-    "*Ein Hinweis zum Datenschutz:* Deine Termine bleiben immer privat: Alle anderen sehen nur „frei“ oder „belegt“, nie, was genau du vorhast.",
     "",
     "Auch noch gut zu wissen: Nachts von 1 bis 7 Uhr schläft der Server. In der Zeit funktioniert die App nur eingeschränkt.",
   ].join("\n");

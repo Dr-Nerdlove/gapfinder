@@ -10,15 +10,15 @@ describe("inviteMessage", () => {
   });
 
   it("names the number of days the link is valid", () => {
-    expect(text).toContain("Der Link gilt 14 Tage und funktioniert nur einmal.");
-    expect(inviteMessage("l", 3)).toContain("gilt 3 Tage");
+    expect(text).toContain("(Der Link funktioniert 14 Tage lang)");
+    expect(inviteMessage("l", 3)).toContain("funktioniert 3 Tage lang");
   });
 
   it("keeps the three steps and the two notes", () => {
     expect(text).toContain("*So geht's:*");
     expect(text).toMatch(/\n2\. Verknüpfe/);
     expect(text).toMatch(/\n3\. Das war's/);
-    expect(text).toContain("Datenschutz");
+    expect(text).toContain("*Deine Termine bleiben dabei immer privat:*");
     expect(text).toContain("1 bis 7 Uhr");
   });
 });
