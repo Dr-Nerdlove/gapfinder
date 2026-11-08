@@ -18,6 +18,17 @@ export const SEARCH_DEFAULT_WINDOW = { start: "09:00", end: "23:00" } as const;
 export const SEARCHES_PER_USER = 30;
 /** Near misses are only looked for with at least this many readable people. */
 export const NEAR_MISS_MIN_PEOPLE = 3;
+/** At most this many lines of times for most but not all people (`partial`), the best ones. */
+export const PARTIAL_MAX_ROWS = 50;
+
+/**
+ * How many people may be missing from a time for most people (`partial`), given how many people could be read:
+ * a fifth of them, at least one (3–9 people: 1, 10–14: 2, 15–19: 3, … 50: 10). 0 below `NEAR_MISS_MIN_PEOPLE`.
+ */
+export function partialMaxMissing(readablePeople: number): number {
+  if (readablePeople < NEAR_MISS_MIN_PEOPLE) return 0;
+  return Math.max(1, Math.floor(readablePeople / 5));
+}
 
 /** ISO weekday: 1 = Monday … 7 = Sunday. */
 export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -86,7 +97,7 @@ export interface HoursDay {
   slots: Slot[];
 }
 
-/** Hours mode: free times for everyone but one person. */
+/** Hours mode: free times for everyone but one person. Only for apps from before 9c, which read no `partial`. */
 export interface HoursNearMiss {
   date: string;
   missingPersonId: number;
@@ -103,9 +114,26 @@ export interface Stretch {
   starts?: string[];
 }
 
-/** Days mode: a stretch that is free for everyone but one person. */
+/** Days mode: a stretch that is free for everyone but one person. Only for apps from before 9c. */
 export interface StretchNearMiss extends Stretch {
   missingPersonId: number;
+}
+
+/**
+ * Hours mode: free times on one day for everybody except `missingPersonIds`. Each of those people is busy at
+ * some point within every one of the `slots` (never more is said about when); everybody else is free in all of
+ * them. Each slot is as long as it can be for exactly these people missing.
+ */
+export interface HoursPartial {
+  date: string;
+  /** Ascending, at least one and at most `partialMaxMissing` of the readable people. */
+  missingPersonIds: number[];
+  slots: Slot[];
+}
+
+/** Days mode: a stretch free for everybody except `missingPersonIds`, each of whom is busy on one of its days. */
+export interface StretchPartial extends Stretch {
+  missingPersonIds: number[];
 }
 
 /**
@@ -119,7 +147,11 @@ export interface SkippedPerson {
   reason: SkipReason;
 }
 
-/** The answer to a search; `skipped` lists everybody who was not taken into account. */
+/**
+ * The answer to a search; `skipped` lists everybody who was not taken into account. `partial` (since 9c, missing
+ * from older servers): the best times for most people, fewest missing first, then by time; at most
+ * `PARTIAL_MAX_ROWS`. `nearMisses` (exactly one missing, every one of them) stays for apps from before 9c.
+ */
 export type SearchResult =
-  | { mode: "hours"; skipped: SkippedPerson[]; days: HoursDay[]; nearMisses: HoursNearMiss[] }
-  | { mode: "days"; skipped: SkippedPerson[]; stretches: Stretch[]; nearMisses: StretchNearMiss[] };
+  | { mode: "hours"; skipped: SkippedPerson[]; days: HoursDay[]; nearMisses: HoursNearMiss[]; partial?: HoursPartial[] }
+  | { mode: "days"; skipped: SkippedPerson[]; stretches: Stretch[]; nearMisses: StretchNearMiss[]; partial?: StretchPartial[] };

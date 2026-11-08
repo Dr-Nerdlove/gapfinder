@@ -199,7 +199,8 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     everyone), with the name of the one person who is missing; only slots where **exactly one** person is
     missing, and only when the search has at least 3 readable people. A near miss is left out when it lies
     entirely within a result for everyone. Rejected: up to two missing (long lists), near misses only when
-    nothing fits everyone, and "Max only from 20:00" hints (reveal more of someone's day).
+    nothing fits everyone, and "Max only from 20:00" hints (reveal more of someone's day). Revised by 9c (a fifth
+    may be missing, see "Growing the circle").
   - **Unreadable calendars:** a person with no calendar, or with any calendar that cannot be read right now
     (broken, unreachable, or so large that it was not read completely), is **left out of the search with a
     clear notice** ("Max: Kalender nicht lesbar – nicht berücksichtigt"); with only one of several calendars
@@ -558,6 +559,15 @@ Order of work:
   names of who cannot). This revises the rejection of "up to two missing" in phase 3 (long lists): to settle are
   from how many people it applies, how many may be missing, how long the list is and how it is sorted, and that it
   reveals no more than "busy" about anybody (no "Max only from 20:00").
+  Settled with the owner on 2026-11-08: the "Fast alle" list allows **a fifth of the readable people** to be missing,
+  at least one (3–9 people: 1 as before, 10–14: 2, 15–19: 3, … 50: 10; `partialMaxMissing` in `shared/src/gaps.ts`),
+  still only from 3 people; **fewest missing first**, then by date; at most **50 lines** (`PARTIAL_MAX_ROWS`); a line
+  reads **"13 von 15 können"** with "ohne dich, Anna und Tim" below. A line is one day (or stretch) and one group of
+  missing people, with each time as long as it can be for exactly these people: each of them is busy at some point
+  in it, everybody else is free in all of it, so it says no more than "busy" (as the old list did). Built in
+  `server/src/gaps/search.ts` (`partialRuns`, new answer field `partial`); the old `nearMisses` (exactly one missing)
+  are still sent for apps from before 9c, and the app falls back to them while the server is older. Measured in the
+  cloud session: 50 people with 900 events each over a year take about 0.1 s for the whole search.
 - **9d Notice to the owner when the server is down** (Opus to plan). Today the owner only notices an outage when
   opening the app. A server that is down cannot report itself, so something outside the home PC has to check it.
   To settle: who checks (recommended to look at first: a scheduled GitHub Actions workflow that calls
