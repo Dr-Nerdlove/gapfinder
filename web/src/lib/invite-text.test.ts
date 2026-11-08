@@ -10,8 +10,8 @@ describe("inviteMessage", () => {
   });
 
   it("names the number of days the link is valid", () => {
-    expect(text).toContain("(Der Link funktioniert 14 Tage lang)");
-    expect(inviteMessage("l", 3)).toContain("funktioniert 3 Tage lang");
+    expect(text).toContain("(Der Link funktioniert 14 Tage lang und nur einmal)");
+    expect(inviteMessage("l", 3)).toContain("funktioniert 3 Tage lang und nur einmal");
   });
 
   it("keeps the three steps and the two notes", () => {
