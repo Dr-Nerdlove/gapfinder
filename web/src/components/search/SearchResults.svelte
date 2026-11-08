@@ -89,12 +89,15 @@
     {:else}
       <ul class="rows">
         {#each nearMisses.slice(0, nearShown) as row (row.key)}
-          <li>
+          <li class="near">
             <strong>{row.heading}</strong>
             <span class="detail">
               <span class="count">{row.count}</span>
               <span class="missing">{row.missing}</span>
-              {#if row.picks[0]?.kind === "timed"}{@render picks(row)}{:else}{row.detail}{@render picks(row)}{/if}
+              {#if row.picks[0]?.kind !== "timed"}{row.detail}{/if}
+            </span>
+            <span class="below">
+              {@render picks(row)}
               {#if row.extra}<span class="extra">{row.extra}</span>{/if}
             </span>
           </li>
@@ -150,6 +153,16 @@
     gap: 12px;
     padding: 10px 0;
     border-top: 1px solid var(--md-sys-color-outline-variant);
+  }
+
+  .rows li.near {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .below {
+    flex-basis: 100%;
+    text-align: right;
   }
 
   .rows li:first-child {
