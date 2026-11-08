@@ -75,7 +75,7 @@
     }
     deletePassword = "";
     loginNotice.text = "Dein Konto ist gelöscht.";
-    navigate("#/", { replace: true });
+    navigate("#/anmelden", { replace: true });
   }
 
   async function logout(): Promise<void> {
