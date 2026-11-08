@@ -44,6 +44,8 @@ export interface BuildAppOptions {
   sendPush?: SendPush;
   /** Rings Android phones instead of the real Firebase ringer; null switches the ring off (tests never touch the network). */
   ringDevice?: RingDevice | null;
+  /** Use this calendar cache instead of a new one (tests look into it). */
+  calendarCache?: CalendarCache;
 }
 
 /** Builds the server without listening, so tests can use `app.inject`. */
@@ -94,7 +96,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
     now,
     limiter: new RateLimiter(now),
     calendarKeyStatus,
-    calendarCache: new CalendarCache(now),
+    calendarCache: options.calendarCache ?? new CalendarCache(now),
     fetchCalendarText: options.fetchCalendarText ?? ((url) => fetchCalendarText(url)),
     sendPush: options.sendPush ?? createWebPushSender(vapid, vapidSubject(config.corsOrigins)),
     vapidPublicKey: vapid.publicKey,

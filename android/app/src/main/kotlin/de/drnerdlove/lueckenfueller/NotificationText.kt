@@ -37,6 +37,11 @@ object NotificationTexts {
         val kind = record.opt("kind") as? String
         val tag = if (shareToken != null && kind != null) "$shareToken:$kind" else shareToken ?: FALLBACK_TAG
 
+        // The one kind that belongs to no poll: it has no title and no token.
+        if (kind == "account_deleted" && actor != null) {
+            return NotificationText("Konto gelöscht", "$actor hat das eigene Konto gelöscht.", null, "account_deleted:$actor")
+        }
+
         if (pollTitle != null && actor != null) {
             when (kind) {
                 "poll_created" -> return NotificationText("Neue Abstimmung: $pollTitle", "$actor fragt, wann du Zeit hast. Stimm jetzt ab.", shareToken, tag)

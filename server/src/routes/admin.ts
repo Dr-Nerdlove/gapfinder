@@ -16,7 +16,7 @@ import {
 import type { FastifyInstance } from "fastify";
 import { createInvite, deleteUnusedInvite, isUsernameInvited, listOpenInvites, toAdminInvite } from "../accounts/invites.js";
 import { createPasswordReset } from "../accounts/resets.js";
-import { deleteUser, findUserById, findUserByKey, listUsers, toAdminUser, updateUsername } from "../accounts/users.js";
+import { deleteUserAndForgetCalendars, findUserById, findUserByKey, listUsers, toAdminUser, updateUsername } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
 import { readBackupStatus } from "../backup-status.js";
 import { countRingableDevices } from "../notifications/app-devices.js";
@@ -81,7 +81,7 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
     admin.delete("/api/admin/users/:id", async (request, reply) => {
       const id = idParam(request);
       if (id === authOf(request).user.id) throw new ApiError(400, "cannot_delete_self");
-      if (!deleteUser(ctx.db, id)) throw notFound();
+      if (!deleteUserAndForgetCalendars(ctx.db, ctx.calendarCache, id)) throw notFound();
       return reply.status(204).send();
     });
 

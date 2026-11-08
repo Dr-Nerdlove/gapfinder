@@ -79,6 +79,15 @@ export interface ChangePasswordRequest {
   newPassword: string;
 }
 
+/**
+ * `DELETE /api/me` → 204: the user deletes their own account after entering the password again. Wrong password:
+ * `wrong_password` (400, same rate limit as the password change). Admins get `cannot_delete_self` (400). Polls the user
+ * created stay (without creator); everything else of theirs goes. Every admin gets an `account_deleted` notification.
+ */
+export interface DeleteAccountRequest {
+  password: string;
+}
+
 /** An account in the admin area (`GET /api/admin/users` → `AdminUser[]`, sorted by username). */
 export interface AdminUser {
   id: number;

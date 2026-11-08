@@ -22,8 +22,10 @@ interface Stored {
   item: NotificationItem;
 }
 
-/** Stores one notification for each recipient whose setting is on. Returns what was stored. */
-function store(ctx: AppContext, pollId: number, data: NotificationData, recipients: Recipient[]): Stored[] {
+/**
+ * Stores one notification for each recipient whose setting is on (`setting: null` means always). Returns what was stored.
+ */
+function store(ctx: AppContext, pollId: number | null, data: NotificationData, recipients: Recipient[]): Stored[] {
   const settings = loadSettingsOf(ctx.db, recipients.map((recipient) => recipient.userId));
   const createdAt = ctx.now().toISOString();
   const insert = ctx.db.prepare("INSERT INTO notifications (user_id, poll_id, data, created_at) VALUES (?, ?, ?, ?)");
@@ -31,7 +33,7 @@ function store(ctx: AppContext, pollId: number, data: NotificationData, recipien
   const stored: Stored[] = [];
   purgeOldNotifications(ctx.db, ctx.now());
   for (const { userId, setting } of recipients) {
-    if (done.has(userId) || !settings.get(userId)?.[setting]) continue;
+    if (done.has(userId) || (setting !== null && !settings.get(userId)?.[setting])) continue;
     done.add(userId);
     const result = insert.run(userId, pollId, JSON.stringify(data), createdAt);
     stored.push({ userId, item: { id: Number(result.lastInsertRowid), createdAt, data } });
@@ -99,7 +101,7 @@ async function ring(ctx: AppContext, stored: Stored[]): Promise<void> {
  */
 export function notifyUsers(
   ctx: AppContext,
-  pollId: number,
+  pollId: number | null,
   data: NotificationData,
   recipients: Recipient[],
   skip: ReadonlySet<number> = new Set(),
@@ -118,6 +120,24 @@ export function notifyUsers(
   } catch (error) {
     ctx.log.warn({ kind: data.kind, err: (error as Error).name }, "Notification could not be stored");
     return new Set();
+  }
+}
+
+/**
+ * Tells every admin except `exceptUserId` that an account was deleted (no setting, no poll). The notification belongs
+ * to the admin, so it stays after the deleted user's row is gone. Never throws.
+ */
+export function notifyAdminsOfDeletedAccount(ctx: AppContext, username: string, exceptUserId: number): void {
+  try {
+    const rows = ctx.db.prepare("SELECT id FROM users WHERE is_admin = 1 AND id != ?").all(exceptUserId) as { id: number }[];
+    notifyUsers(
+      ctx,
+      null,
+      { kind: "account_deleted", actorName: username },
+      rows.map((row) => ({ userId: row.id, setting: null })),
+    );
+  } catch (error) {
+    ctx.log.warn({ kind: "account_deleted", err: (error as Error).name }, "Notification could not be stored");
   }
 }
 

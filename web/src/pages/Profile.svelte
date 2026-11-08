@@ -12,7 +12,7 @@
   import TextField from "../components/TextField.svelte";
   import { errorMessage } from "../lib/messages";
   import { navigate } from "../lib/router";
-  import { session, sessionState } from "../lib/session.svelte";
+  import { loginNotice, session, sessionState } from "../lib/session.svelte";
   import { setSystemColorsEnabled, systemColorState } from "../lib/theme-state.svelte";
   import { checkNewPassword } from "../lib/validation";
 
@@ -30,6 +30,10 @@
   let passwordDone = $state("");
 
   let loggingOut = $state(false);
+
+  let deletePassword = $state("");
+  let deleteBusy = $state(false);
+  let deleteError = $state("");
 
   async function pickColor(seed: string | null): Promise<void> {
     colorError = "";
@@ -57,6 +61,21 @@
     } else {
       passwordError = errorMessage(result);
     }
+  }
+
+  async function deleteAccount(event: SubmitEvent): Promise<void> {
+    event.preventDefault();
+    deleteError = "";
+    deleteBusy = true;
+    const result = await session.deleteAccount(deletePassword);
+    deleteBusy = false;
+    if (!result.ok) {
+      deleteError = errorMessage(result);
+      return;
+    }
+    deletePassword = "";
+    loginNotice.text = "Dein Konto ist gelöscht.";
+    navigate("#/", { replace: true });
   }
 
   async function logout(): Promise<void> {
@@ -107,6 +126,24 @@
     <div>
       <Button variant="tonal" disabled={loggingOut} onclick={logout}>Abmelden</Button>
     </div>
+
+    <Card title="Konto löschen">
+      {#if user.isAdmin}
+        <p class="note">Als Admin kannst du dein Konto nicht in der App löschen.</p>
+      {:else}
+        <form onsubmit={deleteAccount}>
+          <p class="note">
+            Dein Konto wird mit deinen Kalender-Links, Geräten, Gruppen, Einstellungen und Stimmen gelöscht. Abstimmungen, die du erstellt hast,
+            bleiben bis zu ihrem Ablauf bestehen; der Admin kann sie verwalten. Der Admin erfährt, dass du dein Konto gelöscht hast. Das lässt
+            sich nicht rückgängig machen.
+          </p>
+          <input type="text" name="username" autocomplete="username" value={user.username} hidden readonly />
+          <TextField label="Passwort zur Bestätigung" name="delete-password" type="password" autocomplete="current-password" bind:value={deletePassword} required disabled={deleteBusy || locked} />
+          <Message text={deleteError} />
+          <div><Button type="submit" variant="danger" disabled={deleteBusy || locked}>Konto endgültig löschen</Button></div>
+        </form>
+      {/if}
+    </Card>
   {/if}
 </Page>
 

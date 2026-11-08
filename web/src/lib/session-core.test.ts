@@ -141,6 +141,49 @@ describe("session", () => {
     expect(loadSession(storage)).toBeNull();
   });
 
+  describe("deleteAccount", () => {
+    it("sends the password with DELETE, then leaves this device without calling the server again", async () => {
+      const forgotten: string[] = [];
+      const storage = new MemoryStorage();
+      saveSession({ token: "old-token", user: anna }, storage);
+      const fetchImpl = vi.fn(async () => new Response(null, { status: 204 }));
+      const session = createSession({
+        storage,
+        fetchImpl: fetchImpl as unknown as typeof fetch,
+        baseUrl: "http://api.test",
+        appDevice: { disable: async () => "device-key" },
+        pushDevice: { endpoint: async () => "https://push.example/1", forget: async () => void forgotten.push("forget") },
+      });
+      const result = await session.deleteAccount("geheim123");
+      expect(result.ok).toBe(true);
+      expect(fetchImpl).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchImpl.mock.calls[0] as unknown as [string, RequestInit];
+      expect(url).toBe("http://api.test/api/me");
+      expect(init.method).toBe("DELETE");
+      expect(JSON.parse(init.body as string)).toEqual({ password: "geheim123" });
+      expect(session.state.token).toBeNull();
+      expect(session.state.user).toBeNull();
+      expect(loadSession(storage)).toBeNull();
+      expect(forgotten).toEqual(["forget"]);
+    });
+
+    it("stays logged in after a wrong password", async () => {
+      const { session, storage } = setup(() => jsonResponse({ code: "wrong_password" }, 400));
+      const result = await session.deleteAccount("nope");
+      expect(result.ok).toBe(false);
+      expect(session.state.token).toBe("old-token");
+      expect(loadSession(storage)?.token).toBe("old-token");
+    });
+
+    it("stays logged in when the server is offline", async () => {
+      const { session } = setup(() => {
+        throw new TypeError("Failed to fetch");
+      });
+      expect((await session.deleteAccount("geheim123")).ok).toBe(false);
+      expect(session.state.token).toBe("old-token");
+    });
+  });
+
   it("tells the server about the logout", async () => {
     const { session, fetchImpl } = setup(() => new Response(null, { status: 204 }));
     await session.logout();

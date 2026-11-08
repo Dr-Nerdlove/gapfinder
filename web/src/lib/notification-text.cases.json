@@ -79,6 +79,31 @@
         "shareToken": "tok_1",
         "tag": "tok_1:date_fixed"
       }
+    },
+    {
+      "name": "account deleted",
+      "data": {
+        "kind": "account_deleted",
+        "actorName": "Anna"
+      },
+      "expected": {
+        "title": "Konto gelöscht",
+        "body": "Anna hat das eigene Konto gelöscht.",
+        "shareToken": null,
+        "tag": "account_deleted:Anna"
+      }
+    },
+    {
+      "name": "account deleted without a name",
+      "data": {
+        "kind": "account_deleted"
+      },
+      "expected": {
+        "title": "Lückenfüller",
+        "body": "Es gibt Neuigkeiten.",
+        "shareToken": null,
+        "tag": "lueckenfueller"
+      }
     }
   ],
   "targets": [

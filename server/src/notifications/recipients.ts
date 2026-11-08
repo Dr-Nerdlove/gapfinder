@@ -4,7 +4,8 @@ import type { DatabaseSync } from "node:sqlite";
 /** An account that may get a notification, and the setting that has to be on for it. */
 export interface Recipient {
   userId: number;
-  setting: keyof NotificationSettings;
+  /** `null`: always (kinds that have no setting). */
+  setting: keyof NotificationSettings | null;
 }
 
 interface PollIds {

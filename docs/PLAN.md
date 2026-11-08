@@ -541,11 +541,17 @@ Order of work:
   a person whose account is deleted drops out of every group quietly (cascade). Built in `PeoplePicker.svelte`.
   Not tried in a real browser by the assistant (no running server in the cloud session): check it on the phone.
 - **9b Deleting one's own account** (Opus to plan, Sonnet for the steps). Today only the admin can delete an account.
-  Decided: everyone can delete their own account, with its calendar links, devices and settings. To settle: the
-  confirmation (password again, recommended); what happens to their polls and votes (recommended: the same as when
-  the admin deletes an account, see "Sharing and voting"); the admin cannot delete their own account in the app
-  (there must always be an admin, and the app never creates one), as `DELETE /api/admin/users/:id` already refuses
-  with `cannot_delete_self`; the privacy page names the new way.
+  Decided: everyone can delete their own account, with its calendar links, devices and settings. Settled with the
+  owner on 2026-11-08: the confirmation is the **password again** (route `DELETE /api/me` with `{ password }`, the same
+  rate limit as the password change); **polls they created stay** (creator becomes empty, as when the admin deletes an
+  account; only the admin manages them), their **votes, calendar links, devices, settings and groups go**; **admins are
+  refused** with `cannot_delete_self` (there must always be an admin, and the app never creates one), before the
+  password is checked; **every other admin gets an `account_deleted` notification** with the username (no
+  notification setting, always on), and migration 11 makes `notifications.poll_id` nullable (keeping the id counter, so
+  the Android app never sees an id twice); the calendars' contents are **dropped from the memory cache at once**, also
+  when the admin deletes an account. The Android app shows the new text only from the next APK; older apps show the
+  general text. `SHELL_VERSION` is not raised. Built in `Profile.svelte` ("Konto löschen" card), the privacy page names
+  the new way.
 - **9c Better results for large groups** (Opus for the search, Sonnet for the screens). With 15 or more people a
   time when everybody is free is rare, and "Fast alle" shows only times when exactly one person is missing.
   Decided: for larger searches the app shows the **best times with the most people** ("13 von 15 können", with the

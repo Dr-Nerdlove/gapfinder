@@ -1,5 +1,6 @@
 import type { AdminUser, Me, Person } from "@lueckenfueller/shared";
 import type { DatabaseSync } from "node:sqlite";
+import type { CalendarCache } from "../calendars/cache.js";
 
 export interface UserRow {
   id: number;
@@ -67,7 +68,24 @@ export function updatePasswordHash(db: DatabaseSync, id: number, passwordHash: s
   db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").run(passwordHash, id);
 }
 
+/** The ids of the user's calendars (read before the user is deleted, to drop them from the memory cache). */
+export function calendarIdsOf(db: DatabaseSync, userId: number): number[] {
+  const rows = db.prepare("SELECT id FROM calendars WHERE user_id = ?").all(userId) as { id: number }[];
+  return rows.map((row) => row.id);
+}
+
 /** Deletes the user; sessions and password resets go with it, invites keep their record. */
 export function deleteUser(db: DatabaseSync, id: number): boolean {
   return Number(db.prepare("DELETE FROM users WHERE id = ?").run(id).changes) > 0;
+}
+
+/**
+ * Deletes the user and, at once, forgets their calendars' contents in the memory cache (they would otherwise stay
+ * up to 15 minutes). Returns false when there was no such user.
+ */
+export function deleteUserAndForgetCalendars(db: DatabaseSync, cache: CalendarCache, id: number): boolean {
+  const calendarIds = calendarIdsOf(db, id);
+  if (!deleteUser(db, id)) return false;
+  for (const calendarId of calendarIds) cache.drop(calendarId);
+  return true;
 }
