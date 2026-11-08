@@ -115,6 +115,9 @@ every push and pull request, plus a build of the server's Docker image and check
 systemd units, compose file). The VM firewall's test needs root and is run by CI only:
 `sudo bash deploy/vm/test/firewall.test.sh` (needs `nft` and `ip`).
 
+The pictures in `docs/screenshots` are taken by `bash scripts/docs-screenshots/run.sh --install` on a throw-away server
+with made-up people ([`scripts/docs-screenshots/README.md`](scripts/docs-screenshots/README.md)).
+
 Android (JDK 21 and the Android SDK, see [`docs/android-app.md`](docs/android-app.md)): `bash scripts/android-apk.sh`
 checks that the committed Capacitor files are current, runs the Kotlin unit tests and the debug build; CI's `android`
 job does the same through `.github/actions/android-apk`.

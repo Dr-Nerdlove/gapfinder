@@ -192,15 +192,10 @@ missing, with a recommendation, and let the people choose.
   to run while files under `android/` are uncommitted (its stale-sync check). CI's `vm-scripts` job runs
   `shellcheck deploy/vm/*.sh deploy/vm/test/*.sh scripts/*.sh`; a cloud session has no shellcheck, but
   `pip install --target <scratchpad>/sc shellcheck-py` gives one in `<scratchpad>/sc/bin`.
-- **Screenshots for the docs** (`docs/screenshots`, used by the README) are taken in a cloud session like this: a throw-away
-  server started with `tsx` from a script in the scratchpad that calls `buildApp(config, { fetchCalendarText })` with a fake
-  fetcher (made-up calendars per user name, so no real calendar link and no private-address rule is touched), `DATA_DIR`
-  and `CALENDAR_KEY` in the scratchpad, accounts and groups made through the API (an admin from `node dist/cli.js
-  admin-link`), `npm run dev -w web` with `VITE_API_URL`, and Playwright at 390x844, scale 2. Traps: open the page as
-  `http://localhost:5173` (the server's CORS default; `127.0.0.1` makes the app think the server sleeps); the dev build
-  has no service worker, so the notification card says "gesperrt" unless the script overrides `Notification.permission`;
-  the start page shows the version number, so crop it out of screenshots taken before a release; the Tour dialog opens
-  on the first visit of a new account ("Überspringen"). Names, dates and calendars in the pictures are made up.
+- **Screenshots for the docs** (`docs/screenshots`, used by the README): `bash scripts/docs-screenshots/run.sh --install`
+  takes the pictures of the whole app on a throw-away server with made-up people and calendars (details, the traps
+  found and what it does not cover: `scripts/docs-screenshots/README.md`). Retake the pictures of every screen that a
+  change alters visibly, and look at them before committing; the start picture is cropped above the version line.
 - **Release:** On every push to `main`, `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
   image to GHCR (`ghcr.io/dr-nerdlove/lueckenfueller-api`, tags `latest` and `sha-<short>`). The VM updates
   itself hourly from GHCR and rolls back an image that is not healthy (`deploy/vm/update.sh`, guide
