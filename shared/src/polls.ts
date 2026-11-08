@@ -26,6 +26,8 @@ export const VOTE_NAME_MAX_LENGTH = 40;
 export const POLL_KEPT_DAYS_AFTER_LAST_PROPOSAL = 30;
 /** Guest vote writes (cast, change, withdraw) per address and 15 minutes. Every write counts. */
 export const GUEST_VOTE_WRITES_PER_IP = 30;
+/** Calendar checks of a poll page (`GET /api/poll-links/:shareToken/calendar-check`) per caller and 15 minutes. Every call counts. */
+export const POLL_CALENDAR_CHECKS_PER_CALLER = 60;
 /** Longest timed proposal. */
 export const POLL_MAX_TIMED_MINUTES = 24 * 60;
 /** Longest proposal of whole days. */
@@ -231,6 +233,22 @@ export interface FixCheck {
   unreadable: PollPerson[];
   /** Participants who have not added a calendar: nothing is known about them either. */
   noCalendar: PollPerson[];
+}
+
+/**
+ * `GET /api/poll-links/:shareToken/calendar-check` → `PollCalendarCheck`, for everyone with the link (guests too;
+ * a login is optional). Reads the calendars of the poll's participants (and of the logged-in caller) right now and
+ * tells who is left out and, for a logged-in caller, which proposals are busy in their own calendar. Works while the
+ * poll is closed or fixed. Needs the calendar key (`calendars_unavailable` otherwise). Has its own limit
+ * (`POLL_CALENDAR_CHECKS_PER_CALLER` per 15 minutes, per account or, for guests, per address; every call counts).
+ * Contains nothing from a calendar but these reasons and booleans: never titles or times. An unknown link behaves
+ * like `GET /api/poll-links/:shareToken`.
+ */
+export interface PollCalendarCheck {
+  /** Participants (creator included) left out right now: no calendar added, or a calendar that cannot be read completely. In the order of `PollView.participants`. */
+  skipped: { person: PollPerson; reason: "no_calendar" | "unreadable" }[];
+  /** Null for guests. For a logged-in caller (participant or not): their own calendars. */
+  mine: { readable: true; busyProposalIds: number[] } | { readable: false; reason: "no_calendar" | "unreadable" } | null;
 }
 
 /**

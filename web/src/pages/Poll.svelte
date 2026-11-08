@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { PollView, UpdatePollRequest } from "@lueckenfueller/shared";
+  import type { PollCalendarCheck, PollView, UpdatePollRequest } from "@lueckenfueller/shared";
   import { onMount } from "svelte";
   import * as api from "../lib/api";
   import type { ApiResult } from "../lib/api";
@@ -8,6 +8,7 @@
   import { buildPollLink } from "../lib/links";
   import { isServerNight } from "../lib/server-night";
   import { errorMessage } from "../lib/messages";
+  import { hintFor, pollSkippedNotices } from "../lib/poll-calendar";
   import { submitVote, withdrawVote } from "../lib/poll-actions";
   import { nextScreen, statusText, updatedText, type AnswerMap, type PollScreen } from "../lib/poll-view";
   import { startPolling } from "../lib/polling";
@@ -44,6 +45,17 @@
   let newest = 0;
   let applied = 0;
 
+  /** The calendar check, loaded once per page visit while the poll is open. Any problem: nothing is shown. */
+  let calendarCheck = $state<PollCalendarCheck | null>(null);
+  let checkAsked = false;
+
+  async function loadCalendarCheck(): Promise<void> {
+    checkAsked = true;
+    const forToken = token;
+    const result = await session.run((o) => api.pollCalendarCheck(forToken, o));
+    if (result.ok && forToken === token) calendarCheck = result.data;
+  }
+
   /** Asks the server and shows the answer. Answers that were overtaken by a newer one are ignored. */
   async function refresh(): Promise<void> {
     const mine = ++newest;
@@ -63,6 +75,8 @@
   $effect(() => {
     token;
     screen = { phase: "loading" };
+    calendarCheck = null;
+    checkAsked = false;
     voteProblem = manageProblem = fixProblem = "";
     void refresh();
     return startPolling(refresh);
@@ -81,6 +95,13 @@
   const ownVoteId = $derived(poll ? (loggedIn ? poll.myVoteId : (stored?.voteId ?? null)) : null);
   const locked = $derived(sessionState.offline);
   const fixed = $derived(poll ? fixedProposal(poll) : null);
+
+  // Once the poll is loaded and open (not on every refresh).
+  $effect(() => {
+    if (poll?.open && !checkAsked) void loadCalendarCheck();
+  });
+
+  const notices = $derived(calendarCheck ? pollSkippedNotices(calendarCheck, sessionState.user?.id ?? null) : []);
 
   const deps = { run: session.run };
 
@@ -198,6 +219,14 @@
 
     <PollResults {poll} busy={busy || locked} onremove={poll.canManage ? (id, name) => (removing = { id, name }) : undefined} />
 
+    {#if poll.open && notices.length > 0}
+      <Card tone="notice" title="Nicht berücksichtigt">
+        <ul class="plain">
+          {#each notices as notice (notice)}<li>{notice}</li>{/each}
+        </ul>
+      </Card>
+    {/if}
+
     {#if poll.open}
       <VoteForm
         {poll}
@@ -209,6 +238,7 @@
         problem={voteProblem}
         onsubmit={vote}
         onwithdraw={withdraw}
+        hintFor={hintFor(calendarCheck, poll)}
       />
     {:else if !fixed}
       <Card tone="notice"><p>{statusText(poll)}. Abstimmen geht nicht mehr.</p></Card>
@@ -258,6 +288,15 @@
 
   .status.closed {
     color: var(--md-sys-color-error);
+  }
+
+  .plain {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
   }
 
   .updated {

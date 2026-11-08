@@ -1,6 +1,7 @@
 <script lang="ts">
-  import type { PollView } from "@lueckenfueller/shared";
+  import type { PollView, VoteAnswer } from "@lueckenfueller/shared";
   import { VOTE_NAME_MAX_LENGTH } from "@lueckenfueller/shared";
+  import type { CalendarHint } from "../../lib/poll-calendar";
   import { ANSWER_LABELS, ANSWERS, answersOfVote, proposalLabel, type AnswerMap } from "../../lib/poll-view";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
@@ -21,9 +22,11 @@
     problem: string;
     onsubmit: (name: string, answers: AnswerMap) => void;
     onwithdraw: () => void;
+    /** What the person's own calendar says about a proposal, for the answer currently chosen in the form. */
+    hintFor?: (proposalId: number, answer: VoteAnswer | undefined) => CalendarHint | null;
   }
 
-  let { poll, loggedIn, voteId, initialName, busy, locked, problem, onsubmit, onwithdraw }: Props = $props();
+  let { poll, loggedIn, voteId, initialName, busy, locked, problem, onsubmit, onwithdraw, hintFor }: Props = $props();
 
   let name = $state("");
   let answers = $state<AnswerMap>({});
@@ -58,6 +61,10 @@
     {#each poll.proposals as proposal (proposal.id)}
       <fieldset>
         <legend>{proposalLabel(proposal)}</legend>
+        {#if hintFor}
+          {@const hint = hintFor(proposal.id, answers[proposal.id])}
+          {#if hint}<p class="hint {hint.tone}">{hint.text}</p>{/if}
+        {/if}
         <div class="answers">
           {#each ANSWERS as answer (answer)}
             <Chip label={ANSWER_LABELS[answer]} selected={answers[proposal.id] === answer} onclick={() => (answers[proposal.id] = answer)} />
@@ -96,6 +103,26 @@
     margin-bottom: 8px;
     font-weight: 600;
     color: var(--md-sys-color-on-surface);
+  }
+
+  .hint {
+    margin: 0;
+    font-size: 0.875rem;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .hint.busy {
+    color: var(--md-sys-color-on-surface);
+    font-style: italic;
+  }
+
+  .hint.conflict {
+    align-self: flex-start;
+    padding: 4px 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    background: var(--md-sys-color-error-container);
+    color: var(--md-sys-color-on-error-container);
   }
 
   .answers,
