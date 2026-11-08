@@ -5,6 +5,17 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [1.9.0] - 2026-11-08
+
+Lückenfüller is ready for a bigger circle of friends. On the search page you can find people with a search field and
+keep your own groups ("Spieleabend", "Uni-Leute") that add their people with one tap. With many people, the search now
+also shows the best times when only a few cannot ("13 von 15 können", with the names of those who cannot). The poll
+page names the people whose calendar was not considered and tells you, per proposal, whether you are free or busy
+according to your own calendar. Everyone can delete their own account in the profile, and a new invite comes with a
+ready "So geht's" text for WhatsApp. The owner now gets an e-mail when the server has been unreachable for about
+10 minutes. The server changes only add things, so the app also works with a server that is not updated yet; the
+Android app shows the new notification text for deleted accounts from the next APK.
+
 ### Added
 
 - On the poll page, the calendars are now checked once when the page opens. Everyone with the link (guests too) sees the same **"Nicht berücksichtigt"** card as in the search for participants who have no calendar or whose calendar cannot be read, and a logged-in person sees under each proposal in the vote form whether they are **free or busy according to their own calendar** (and a clear note when they chose "Ja" for a busy time). Votes are never changed automatically. New server route `GET /api/poll-links/:shareToken/calendar-check` (own limit of 60 calls per 15 minutes; it returns only reasons and yes/no answers, never titles or times, and the contents of calendars stay in memory). The server change is additive; until the server is updated, the app simply shows nothing extra.
