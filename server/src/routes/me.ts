@@ -1,10 +1,11 @@
-import { normalizeSeedColor, type ChangePasswordRequest, type Me, type UpdateMeRequest } from "@lueckenfueller/shared";
+import { normalizeSeedColor, type ChangePasswordRequest, type DeleteAccountRequest, type Me, type UpdateMeRequest } from "@lueckenfueller/shared";
 import type { FastifyInstance } from "fastify";
 import { deleteSessionsOfUser } from "../accounts/sessions.js";
-import { findUserById, toMe, updatePasswordHash, updateSeedColor } from "../accounts/users.js";
+import { deleteUserAndForgetCalendars, findUserById, toMe, updatePasswordHash, updateSeedColor } from "../accounts/users.js";
 import { authOf, createGuards } from "../auth/guards.js";
 import { hashPassword, verifyPassword } from "../auth/passwords.js";
 import { PASSWORD_FAILURES_PER_USER } from "../auth/rate-limit.js";
+import { notifyAdminsOfDeletedAccount } from "../notifications/dispatch.js";
 import type { AppContext } from "../context.js";
 import { ApiError, validation } from "../errors.js";
 import { checkedPassword, enforceLimits } from "./shared.js";
@@ -24,6 +25,12 @@ const changePasswordBody = {
     currentPassword: { type: "string", maxLength: 1000 },
     newPassword: { type: "string", maxLength: 1000 },
   },
+} as const;
+
+const deleteAccountBody = {
+  type: "object",
+  required: ["password"],
+  properties: { password: { type: "string", maxLength: 1000 } },
 } as const;
 
 export function registerMeRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -68,6 +75,28 @@ export function registerMeRoutes(app: FastifyInstance, ctx: AppContext): void {
 
       updatePasswordHash(ctx.db, user.id, await hashPassword(newPassword));
       deleteSessionsOfUser(ctx.db, user.id, tokenHash);
+      return reply.status(204).send();
+    },
+  );
+
+  app.delete<{ Body: DeleteAccountRequest }>(
+    "/api/me",
+    { onRequest: requireUser, schema: { body: deleteAccountBody } },
+    async (request, reply) => {
+      const { user } = authOf(request);
+      const limitKey = `password:${user.id}`;
+      enforceLimits(ctx, [[limitKey, PASSWORD_FAILURES_PER_USER]]);
+
+      // There must always be an admin, and the app never creates one: admins cannot delete themselves here.
+      if (user.is_admin === 1) throw new ApiError(400, "cannot_delete_self");
+      if (!(await verifyPassword(user.password_hash, request.body.password))) {
+        ctx.limiter.recordFailure(limitKey);
+        throw new ApiError(400, "wrong_password");
+      }
+      ctx.limiter.reset(limitKey);
+
+      deleteUserAndForgetCalendars(ctx.db, ctx.calendarCache, user.id);
+      notifyAdminsOfDeletedAccount(ctx, user.username, user.id);
       return reply.status(204).send();
     },
   );

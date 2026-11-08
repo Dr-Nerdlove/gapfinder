@@ -250,6 +250,31 @@ export const migrations: readonly Migration[] = [
     ) STRICT;
     CREATE INDEX people_group_members_member_id ON people_group_members (member_id);`,
   },
+  {
+    id: 11,
+    name: "notifications_without_poll",
+    // Rebuilds `notifications` with a nullable `poll_id`: "account deleted" belongs to no poll. SQLite cannot drop a
+    // NOT NULL constraint in place. Nothing references the table. An older server (after a rollback) still works: it
+    // always writes a poll_id, and a NULL one that is already stored is only ever read as JSON `data`. The
+    // AUTOINCREMENT counter is carried over by hand (dropping the table drops its `sqlite_sequence` row): the Android
+    // app reads `after=<last id>`, so an id must never be used twice, not even when the newest rows were deleted.
+    sql: `CREATE TABLE notifications_new (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      poll_id INTEGER REFERENCES polls (id) ON DELETE CASCADE,
+      data TEXT NOT NULL,
+      created_at TEXT NOT NULL
+    ) STRICT;
+    INSERT INTO notifications_new (id, user_id, poll_id, data, created_at)
+      SELECT id, user_id, poll_id, data, created_at FROM notifications;
+    CREATE TEMP TABLE notifications_seq AS SELECT seq FROM sqlite_sequence WHERE name = 'notifications';
+    DROP TABLE notifications;
+    ALTER TABLE notifications_new RENAME TO notifications;
+    CREATE INDEX notifications_user_id_id ON notifications (user_id, id);
+    DELETE FROM sqlite_sequence WHERE name = 'notifications';
+    INSERT INTO sqlite_sequence (name, seq) SELECT 'notifications', seq FROM notifications_seq;
+    DROP TABLE notifications_seq;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

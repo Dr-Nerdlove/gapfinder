@@ -13,6 +13,7 @@ import type {
   CalendarFeed,
   CalendarPreview,
   ChangePasswordRequest,
+  DeleteAccountRequest,
   CompletePasswordResetRequest,
   CreatePollRequest,
   CreateInviteRequest,
@@ -209,6 +210,10 @@ export const updateMe = (body: UpdateMeRequest, o: CallOptions = {}) =>
 
 export const changePassword = (body: ChangePasswordRequest, o: CallOptions = {}) =>
   request<void>("/api/me/password", { ...o, method: "POST", body });
+
+/** The server checks the password; a body on DELETE is allowed (CORS allows DELETE). */
+export const deleteAccount = (body: DeleteAccountRequest, o: CallOptions = {}) =>
+  request<void>("/api/me", { ...o, method: "DELETE", body });
 
 export const getInvite = (token: string, o: CallOptions = {}) => request<InviteInfo>(`/api/invites/${segment(token)}`, o);
 

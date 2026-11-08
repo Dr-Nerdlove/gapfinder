@@ -6,6 +6,9 @@ import type { Me } from "@lueckenfueller/shared";
 /** Reactive login state for the components. */
 export const sessionState = $state<SessionState>({ token: null, user: null, offline: false });
 
+/** A short text the login page shows once, e.g. after the account was deleted. */
+export const loginNotice = $state({ text: "" });
+
 let onUserChange: ((user: Me | null) => void) | undefined;
 
 export const session = createSession({

@@ -28,6 +28,11 @@ export function notificationText(data: unknown): NotificationText {
   const kind = typeof record["kind"] === "string" ? record["kind"] : null;
   const tag = shareToken !== null && kind !== null ? `${shareToken}:${kind}` : shareToken ?? FALLBACK_TAG;
 
+  // The one kind that belongs to no poll: it has no title and no token.
+  if (kind === "account_deleted" && actor !== null) {
+    return { title: "Konto gelöscht", body: `${actor} hat das eigene Konto gelöscht.`, shareToken: null, tag: `account_deleted:${actor}` };
+  }
+
   if (pollTitle !== null && actor !== null) {
     switch (kind) {
       case "poll_created":

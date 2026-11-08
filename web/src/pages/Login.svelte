@@ -6,7 +6,7 @@
   import Page from "../components/Page.svelte";
   import TextField from "../components/TextField.svelte";
   import { errorMessage } from "../lib/messages";
-  import { session, sessionState } from "../lib/session.svelte";
+  import { loginNotice, session, sessionState } from "../lib/session.svelte";
 
   let username = $state("");
   let password = $state("");
@@ -16,6 +16,7 @@
   async function submit(event: SubmitEvent): Promise<void> {
     event.preventDefault();
     error = "";
+    loginNotice.text = "";
     busy = true;
     const result = await session.login(username, password);
     busy = false;
@@ -26,6 +27,9 @@
 
 <Page title="Anmelden">
   <OfflineNotice />
+  {#if loginNotice.text}
+    <Message kind="success" text={loginNotice.text} />
+  {/if}
   <Card>
     <form onsubmit={submit}>
       <TextField label="Benutzername" name="username" autocomplete="username" bind:value={username} required disabled={busy || sessionState.offline} />

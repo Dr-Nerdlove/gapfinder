@@ -67,6 +67,22 @@
     </ul>
   </Card>
 
+  <Card title="Dein Konto löschen">
+    <ul>
+      <li>Du kannst dein Konto selbst löschen: unter „Profil“ ganz unten, mit deinem Passwort. Das lässt sich nicht rückgängig machen.</li>
+      <li>
+        Dann werden dein Konto, deine Kalender-Links, deine Geräte, deine Gruppen, deine Einstellungen, deine Benachrichtigungen und deine
+        Stimmen in Abstimmungen gelöscht. Der Server vergisst auch sofort, was er von deinen Kalendern gerade im Arbeitsspeicher hatte.
+      </li>
+      <li>
+        Abstimmungen, die du erstellt hast, bleiben bis zu ihrem Ablauf bestehen, dann aber ohne dich als Ersteller. Nur der Admin kann sie
+        noch verwalten.
+      </li>
+      <li>Der Admin bekommt eine Benachrichtigung mit deinem Benutzernamen, dass du dein Konto gelöscht hast.</li>
+      <li>Admins können ihr Konto nicht in der App löschen, damit es immer jemanden gibt, der die App verwaltet.</li>
+    </ul>
+  </Card>
+
   <Card title="Ehrlich gesagt: Wo die Grenze liegt" tone="notice">
     <ul>
       <li>

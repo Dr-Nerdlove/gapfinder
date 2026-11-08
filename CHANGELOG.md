@@ -9,8 +9,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - On the search page, a search field above the list of people and **own groups** ("Spieleabend", "Uni-Leute"): save the current choice as a group, tap a group to add its people to the choice, replace a group's people with the current choice, or delete it. Groups are private (nobody else sees them), kept on the server (the same on every device and in the Android app), at most 20 per person with names up to 40 characters. A person whose account is deleted drops out of every group quietly. The server change is additive (two new tables).
 
+- Everyone can now **delete their own account** in the profile ("Konto löschen", with the password as confirmation). The account, its calendar links, devices, groups, settings and votes are deleted; polls the person created stay until they expire and can then only be managed by the admin. Every admin gets a notification with the username (always on, no setting), and the contents of the person's calendars are forgotten at once. Admins cannot delete their own account in the app. The privacy page explains it. The server change is additive (the notifications table can now hold entries without a poll). The Android app shows the new notification text from the next APK; older apps show a general text.
+
 ### Changed
 
+- When the admin deletes an account, the server now also forgets that person's calendar contents from memory at once instead of after up to 15 minutes.
 - Buttons that were plain coloured text now have an outline so they are recognisable as buttons; in the admin's account list the three buttons per account sit in one row (on very narrow screens the third moves to a second row).
 
 ## [1.8.1] - 2026-11-06

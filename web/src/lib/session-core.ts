@@ -159,6 +159,28 @@ export function createSession(deps: SessionDeps = {}) {
       }
     },
 
+    /**
+     * Deletes the account on the server (after the password was checked there) and then leaves this device like a
+     * logout does. The server rows are gone already, so the device is not switched off on the server: that would only
+     * answer 401. A wrong password or an offline server leaves everything as it is.
+     */
+    async deleteAccount(password: string): Promise<ApiResult<void>> {
+      const result = await run((o) => api.deleteAccount({ password }, o));
+      if (!result.ok) return result;
+      try {
+        await deps.appDevice?.disable();
+      } catch {
+        // ignore
+      }
+      clear();
+      try {
+        await deps.pushDevice?.forget();
+      } catch {
+        // ignore
+      }
+      return result;
+    },
+
     /** Asks the server whether it is back and updates the offline flag. */
     async checkConnection(): Promise<boolean> {
       const result = await checkHealth(deps.baseUrl ?? API_URL, deps.fetchImpl ? { fetchImpl: deps.fetchImpl } : {});

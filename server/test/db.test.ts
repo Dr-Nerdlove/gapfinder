@@ -225,7 +225,7 @@ describe("migrations", () => {
     runMigrations(db);
 
     expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
-    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10]);
+    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]);
     // The old poll is not fixed and still readable.
     expect(db.prepare("SELECT title, fixed_proposal_id, fixed_at, fixed_sequence FROM polls").get()).toEqual({
       title: "x",
@@ -282,6 +282,55 @@ describe("migrations", () => {
     db.prepare("DELETE FROM users WHERE id = 1").run();
     expect(db.prepare("SELECT COUNT(*) AS n FROM push_subscriptions").get()).toEqual({ n: 0 });
     expect(db.prepare("SELECT COUNT(*) AS n FROM notification_prefs").get()).toEqual({ n: 0 });
+  });
+
+  it("migration 11 makes notifications.poll_id nullable, keeps rows and ids and never reuses an id", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 10));
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    db.prepare(
+      "INSERT INTO polls (share_token, creator_id, title, kind, created_at, updated_at, expires_at) VALUES ('t', 1, 'x', 'days', 'a', 'a', 'z')",
+    ).run();
+    const insert = db.prepare("INSERT INTO notifications (user_id, poll_id, data, created_at) VALUES (1, 1, ?, 'a')");
+    for (const data of ["one", "two", "three", "four", "five"]) insert.run(data);
+    // The newest rows are gone before the migration: the counter stays at 5.
+    db.prepare("DELETE FROM notifications WHERE id > 3").run();
+    expect(db.prepare("SELECT seq FROM sqlite_sequence WHERE name = 'notifications'").get()).toEqual({ seq: 5 });
+
+    runMigrations(db);
+
+    expect(db.prepare("SELECT id, user_id, poll_id, data, created_at FROM notifications ORDER BY id").all()).toEqual([
+      { id: 1, user_id: 1, poll_id: 1, data: "one", created_at: "a" },
+      { id: 2, user_id: 1, poll_id: 1, data: "two", created_at: "a" },
+      { id: 3, user_id: 1, poll_id: 1, data: "three", created_at: "a" },
+    ]);
+    const columns = db.prepare("PRAGMA table_info(notifications)").all() as { name: string; notnull: number }[];
+    expect(columns.map((c) => c.name)).toEqual(["id", "user_id", "poll_id", "data", "created_at"]);
+    expect(columns.find((c) => c.name === "poll_id")?.notnull).toBe(0);
+    expect(db.prepare("SELECT name FROM sqlite_master WHERE name = 'notifications_user_id_id'").get()).toBeDefined();
+
+    const next = db.prepare("INSERT INTO notifications (user_id, poll_id, data, created_at) VALUES (1, NULL, 'x', 'a')").run();
+    expect(Number(next.lastInsertRowid)).toBe(6);
+    // The foreign keys are still there: with the poll or the user, the rows go.
+    db.prepare("DELETE FROM polls WHERE id = 1").run();
+    expect(db.prepare("SELECT id FROM notifications").all()).toEqual([{ id: 6 }]);
+    db.prepare("DELETE FROM users WHERE id = 1").run();
+    expect(db.prepare("SELECT COUNT(*) AS n FROM notifications").get()).toEqual({ n: 0 });
+  });
+
+  it("migration 11 works on a database that never stored a notification", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 10));
+    runMigrations(db);
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    const result = db.prepare("INSERT INTO notifications (user_id, poll_id, data, created_at) VALUES (1, NULL, 'x', 'a')").run();
+    expect(Number(result.lastInsertRowid)).toBe(1);
   });
 
   it("waits for a locked database instead of failing at once", () => {
