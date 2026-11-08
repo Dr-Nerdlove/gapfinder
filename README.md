@@ -9,19 +9,24 @@ only**; everything else (code, docs, commits) is English. All decisions and the 
 
 ## Status
 
-**Phases 1 to 7 are done (releases up to v1.7.0).** The app is deployed automatically and the server runs on the home PC with automatic
-updates.
+**Phases 1 to 7 and 9 ("Growing the circle", 9a to 9e) are done (release v1.9.0).** The app is deployed automatically and the
+server runs on the home PC with automatic updates. The load test of the home server (9f) is still to do.
 
 - **Accounts:** friends join through a personal invite link from the admin, log in with username and password, and
   change their password and colour in their profile (the admin sets and changes usernames). The admin manages invites and accounts in "Verwaltung"
-  and creates links for forgotten passwords.
+  and creates links for forgotten passwords; a new invite comes with a ready "So geht's" text that is sent together
+  with the link (e.g. over WhatsApp). Everyone except the admin can delete their own account in the profile.
 - **Calendars:** everyone links calendars through their subscription link (the server tries the link at once,
   stores it encrypted and never shows it again), sets which count as busy and which is the default, and sees a
   preview of their own next 4 weeks. Calendar contents are never stored.
-- **Gap search:** choose people, a period and a duration (or whole days) and see when everyone is free, and the
-  best times when almost everyone is ("13 von 15 können"; up to a fifth of the people may be missing).
+- **Gap search:** choose people (with a search field and your own private groups such as "Spieleabend"), a period and a
+  duration (or whole days) and see when everyone is free, and the best times when almost everyone is ("13 von 15
+  können"; up to a fifth of the people may be missing). People without a readable calendar are named, not silently
+  left out.
 - **Voting:** pick free times as proposals and share one link; everybody with it, guests too, votes with
-  Ja / Vielleicht / Nein and sees the state of the vote. "Meine Abstimmungen" lists your polls.
+  Ja / Vielleicht / Nein and sees the state of the vote. A card names the people whose calendar was not considered,
+  and a logged-in person sees under each proposal whether they are free or busy according to their own calendar.
+  "Meine Abstimmungen" lists your polls.
 - **Fixing the date:** the creator or the admin fixes one proposal after a fresh calendar check (a warning, never
   a block). Everybody with the link sees the date and can download it as `.ics` or add it to Google Calendar or
   Outlook; in the profile, a personal calendar feed puts the fixed dates into any calendar app.
@@ -41,21 +46,25 @@ admin sees a warning on the start page when a backup is missing or the monthly t
 | ---------------------------------------- | ------------------------------------------ | ---------------------------------------------------- |
 | ![Login page](docs/screenshots/login.png) | ![Invite page](docs/screenshots/invite.png) | ![Start page, logged in](docs/screenshots/start-logged-in.png) |
 
-| Profile (own colour)                         | Admin area (dark mode)                      | Server off                                                     |
+| Profile (with "Konto löschen" at the end)    | Admin area: new invite with "So geht's" text (dark mode) | Server off                                                     |
 | -------------------------------------------- | ------------------------------------------- | -------------------------------------------------------------- |
 | ![Profile page](docs/screenshots/profile.png) | ![Admin area](docs/screenshots/admin.png)   | ![Start page, server asleep](docs/screenshots/start-offline.png) |
 
-| Gap search (settings)                            | Result: hours, "Fast alle"                       | Result: days in a row                                  |
+| Gap search: own groups and the choice of people  | Result: hours, "Fast alle" for 12 people         | Result: days in a row                                  |
 | ------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------ |
 | ![Search settings](docs/screenshots/search-form.png) | ![Search result](docs/screenshots/search-results.png) | ![Result, days](docs/screenshots/search-results-days.png) |
 
-| Poll: state and voting                              | Fixing the date: choose, then check                 | Date fixed (what everybody sees)                          |
+| Poll: state and voting                              | Poll: left-out people and own calendar              | Fixing the date: choose, then check                       |
 | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------- |
-| ![Poll state](docs/screenshots/polls/3-state.png) | ![Fixing the date](docs/screenshots/fix-date/2-fix-check.png) | ![Date fixed](docs/screenshots/fix-date/4-date-fixed-guest.png) |
+| ![Poll state](docs/screenshots/polls/3-state.png) | ![Poll calendar check](docs/screenshots/polls/7-calendar-check.png) | ![Fixing the date](docs/screenshots/fix-date/2-fix-check.png) |
 
-| Notifications (profile card)                                  | Reminder (poll creator)                                    | iPhone: add to the home screen first                                |
-| ------------------------------------------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------- |
-| ![Notifications card](docs/screenshots/notifications/profile-card-on.png) | ![Reminder card](docs/screenshots/notifications/reminder-sent.png) | ![iPhone hint](docs/screenshots/notifications/profile-card-iphone.png) |
+| Date fixed (what everybody sees)                          | Notifications (profile card)                                  | Reminder (poll creator)                                    |
+| --------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| ![Date fixed](docs/screenshots/fix-date/4-date-fixed-guest.png) | ![Notifications card](docs/screenshots/notifications/profile-card-on.png) | ![Reminder card](docs/screenshots/notifications/reminder-sent.png) |
+
+| iPhone: add to the home screen first                                |
+| ------------------------------------------------------------------- |
+| ![iPhone hint](docs/screenshots/notifications/profile-card-iphone.png) |
 
 ## Repository layout
 

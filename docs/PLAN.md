@@ -541,7 +541,8 @@ Order of work:
   `shared/src/groups.ts`); tapping a group **adds** its people to the current choice; at most **20 groups** per
   person, names **1 to 40 characters**, one name once per person (case ignored), at most 49 other people per group;
   a person whose account is deleted drops out of every group quietly (cascade). Built in `PeoplePicker.svelte`.
-  Not tried in a real browser by the assistant (no running server in the cloud session): check it on the phone.
+  Built and tried on 2026-11-08 in a real (headless) browser against a local test server (screenshots in the README);
+  the phone itself is still to check.
 - **9b Deleting one's own account** (Opus to plan, Sonnet for the steps). Today only the admin can delete an account.
   Decided: everyone can delete their own account, with its calendar links, devices and settings. Settled with the
   owner on 2026-11-08: the confirmation is the **password again** (route `DELETE /api/me` with `{ password }`, the same
@@ -598,7 +599,8 @@ Order of work:
   `web/src/lib/invite-text.ts` (`inviteMessage`, WhatsApp bold with `*...*`; the days come from `INVITE_VALID_DAYS`,
   which is **14**, not 7) and the new invite in `InviteCreator.svelte` gets the button "Mit Anleitung teilen"
   (`LinkBox` prop `message`; "Mit Anleitung kopieren" where the browser cannot share). Change the wording in that one
-  file. Frontend only; the share sheet is not tried in a real browser by the assistant: check it on the phone.
+  file. Frontend only; the button "Mit Anleitung kopieren" was seen in a desktop browser (screenshot in the README), the
+  phone's share sheet is not tried by the assistant: check it on the phone.
 - **9f Load test of the home server** (Opus), **planned for the week from 2026-11-09**; not urgent at 10–15 users.
   The VM has 1 GB of memory; a search reads every chosen person's calendars fresh (up to 400 days ahead, at most 8
   at a time) and the reading of a calendar runs in one piece, so other requests wait meanwhile. Measure with
@@ -606,7 +608,8 @@ Order of work:
   memory it needs, and how long other requests wait during it. Only then decide whether anything has to change
   (fewer days ahead, splitting the work, more memory for the VM, the limit of 50 people per search).
 
-**Release:** once 9a–9e are merged, the owner wants to release **1.9.0** (decided 2026-11-07). 9f is a measurement;
+**Release:** 9a–9e are merged and the documentation and screenshots are updated (2026-11-08); the owner wants to release
+**1.9.0** (decided 2026-11-07). 9f is a measurement;
 it goes into 1.9.0 only if it is done by then and changes something. The assistant suggests the release when 9e is
 merged; as always, nothing is released without the owner's word.
 
