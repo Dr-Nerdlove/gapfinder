@@ -102,11 +102,12 @@
     searching = false;
     if (result.ok) {
       const skipped: SkippedPerson[] = result.data.skipped;
+      const readable = readablePeople(request.people.length, skipped);
       answer = {
         summary: requestSummary(request),
         notices: skippedNotices(skipped, everyone, user.id),
-        view: resultView(result.data, everyone, user.id),
-        nearMissesPossible: readablePeople(request.people.length, skipped) >= NEAR_MISS_MIN_PEOPLE,
+        view: resultView(result.data, everyone, user.id, readable),
+        nearMissesPossible: readable >= NEAR_MISS_MIN_PEOPLE,
         source: {
           durationMinutes: request.mode === "hours" ? request.durationMinutes : 0,
           periodDays: request.mode === "days" ? request.days : 1,
@@ -158,6 +159,7 @@
           everyone={answer.view.everyone}
           nearMisses={answer.view.nearMisses}
           nearMissesPossible={answer.nearMissesPossible}
+          maxMissing={answer.view.maxMissing}
           stale={searching}
           chosen={selected.map((p) => p.id)}
           ontoggle={toggle}

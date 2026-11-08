@@ -3,6 +3,9 @@ import {
   SEARCH_MAX_BUFFER_MINUTES,
   SEARCH_MAX_DURATION_MINUTES,
   SEARCH_MAX_PERIOD_DAYS,
+  PARTIAL_MAX_ROWS,
+  partialMaxMissing,
+  NEAR_MISS_MIN_PEOPLE,
   type Person,
   type SearchRequest,
   type SearchResult,
@@ -402,7 +405,9 @@ export interface Row {
   detail: string;
   /** Only with a starting weekday: "Start möglich: Sa 1. Aug., Sa 8. Aug." */
   extra?: string;
-  /** Only for near misses: "alle außer Max". */
+  /** Only for "Fast alle": "13 von 15 können". */
+  count?: string;
+  /** Only for "Fast alle": "ohne Max und Anna" ("dich" first). */
   missing?: string;
   /** What can be chosen for a poll: one entry per free time of a day, or the stretch. */
   picks: PollPick[];
@@ -410,23 +415,39 @@ export interface Row {
 
 export interface ResultView {
   everyone: Row[];
+  /** The "Fast alle" lines: times free for everybody except one or a few people. */
   nearMisses: Row[];
+  /** The most people who may be missing from a line of `nearMisses` (0: the list is not made). */
+  maxMissing: number;
 }
 
 type NameOf = (personId: number) => string;
 
-/** How a person is called in the result: "dir" for the searcher. */
-export function makeNameOf(people: readonly Person[], selfId: number): { name: NameOf; except: NameOf } {
+/** How a person is called in the result: "Du" for the searcher. */
+export function makeNameOf(people: readonly Person[], selfId: number): { name: NameOf } {
   const names = new Map(people.map((p) => [p.id, p.username]));
   return {
     name: (id) => (id === selfId ? "Du" : (names.get(id) ?? "Jemand")),
-    except: (id) => `alle außer ${id === selfId ? "dir" : (names.get(id) ?? "jemandem")}`,
   };
 }
 
-const timedPicks = (slots: readonly Slot[], missingPersonId?: number): PollPick[] =>
+/** "ohne Max", "ohne dich, Anna und Tim": the searcher first, the others by name, unknown people last. */
+function missingText(ids: readonly number[], people: readonly Person[], selfId: number): string {
+  const names = new Map(people.map((p) => [p.id, p.username]));
+  const others = ids
+    .filter((id) => id !== selfId && names.has(id))
+    .map((id) => names.get(id)!)
+    .sort((a, b) => a.localeCompare(b, "de", { sensitivity: "base" }));
+  const parts = [...(ids.includes(selfId) ? ["dich"] : []), ...others, ...Array<string>(ids.filter((id) => id !== selfId && !names.has(id)).length).fill("jemanden")];
+  const list = parts.length > 1 ? `${parts.slice(0, -1).join(", ")} und ${parts[parts.length - 1]}` : parts[0]!;
+  return `ohne ${list}`;
+}
+
+const countText = (readable: number, missing: number): string => `${Math.max(0, readable - missing)} von ${readable} können`;
+
+const timedPicks = (slots: readonly Slot[], missingKey = ""): PollPick[] =>
   slots.map((slot) => ({
-    id: `timed:${slot.start}:${slot.end}:${missingPersonId ?? ""}`,
+    id: `timed:${slot.start}:${slot.end}:${missingKey}`,
     kind: "timed" as const,
     label: formatSlot(slot),
     slot,
@@ -434,26 +455,33 @@ const timedPicks = (slots: readonly Slot[], missingPersonId?: number): PollPick[
 
 const daysText = (n: number): string => (n === 1 ? "1 Tag" : `${n} Tage`);
 
-/** Turns the server's answer into lines. Near misses are sorted by day (hours) or start (days). */
-export function resultView(result: SearchResult, people: readonly Person[], selfId: number): ResultView {
-  const { except } = makeNameOf(people, selfId);
+/**
+ * Turns the server's answer into lines. "Fast alle" comes from `partial`; an older server sends only `nearMisses`
+ * (exactly one person missing), which is turned into the same shape. `readable` is how many people could be searched.
+ */
+export function resultView(result: SearchResult, people: readonly Person[], selfId: number, readable: number): ResultView {
+  const maxMissing = readable < NEAR_MISS_MIN_PEOPLE ? 0 : result.partial !== undefined ? partialMaxMissing(readable) : 1;
+  const text = (ids: readonly number[]): { count: string; missing: string } => ({
+    count: countText(readable, ids.length),
+    missing: missingText(ids, people, selfId),
+  });
   if (result.mode === "hours") {
+    const partial =
+      result.partial ?? result.nearMisses.map((n) => ({ date: n.date, missingPersonIds: [n.missingPersonId], slots: n.slots })).slice(0, PARTIAL_MAX_ROWS);
     return {
       everyone: result.days.map((d) => ({ key: d.date, heading: formatDay(d.date), detail: d.slots.map(formatSlot).join(", "), picks: timedPicks(d.slots) })),
-      nearMisses: result.nearMisses.map((n) => ({
-        key: `${n.date}:${n.missingPersonId}`,
-        heading: formatDay(n.date),
-        detail: n.slots.map(formatSlot).join(", "),
-        missing: except(n.missingPersonId),
-        picks: timedPicks(n.slots, n.missingPersonId),
-      })),
+      nearMisses: partial.map((n) => {
+        const ids = n.missingPersonIds.join("-");
+        return { key: `${n.date}:${ids}`, heading: formatDay(n.date), detail: n.slots.map(formatSlot).join(", "), ...text(n.missingPersonIds), picks: timedPicks(n.slots, ids) };
+      }),
+      maxMissing,
     };
   }
-  const stretchRow = (s: { first: string; last: string; days: number; starts?: string[] }, key: string, missingPersonId?: number): Row => ({
+  const stretchRow = (s: { first: string; last: string; days: number; starts?: string[] }, key: string, missingKey = ""): Row => ({
     key,
     picks: [
       {
-        id: `days:${s.first}:${s.last}:${missingPersonId ?? ""}`,
+        id: `days:${s.first}:${s.last}:${missingKey}`,
         kind: "days",
         label: daysText(s.days),
         first: s.first,
@@ -466,9 +494,14 @@ export function resultView(result: SearchResult, people: readonly Person[], self
     detail: daysText(s.days),
     ...(s.starts !== undefined && s.starts.length > 0 ? { extra: `Start möglich: ${s.starts.map(formatDayLong).join(", ")}` } : {}),
   });
+  const partial = result.partial ?? result.nearMisses.map((n) => ({ ...n, missingPersonIds: [n.missingPersonId] })).slice(0, PARTIAL_MAX_ROWS);
   return {
     everyone: result.stretches.map((s) => stretchRow(s, s.first)),
-    nearMisses: result.nearMisses.map((n) => ({ ...stretchRow(n, `${n.first}:${n.missingPersonId}`, n.missingPersonId), missing: except(n.missingPersonId) })),
+    nearMisses: partial.map((n) => {
+      const ids = n.missingPersonIds.join("-");
+      return { ...stretchRow(n, `${n.first}:${ids}`, ids), ...text(n.missingPersonIds) };
+    }),
+    maxMissing,
   };
 }
 
