@@ -31,6 +31,7 @@ describe("maskTokens", () => {
     ["/api/poll-links/SECRET/votes/5", "/api/poll-links/***/votes/5"],
     ["/api/poll-links/SECRET/my-vote?x=1", "/api/poll-links/***/my-vote?x=1"],
     ["/api/poll-links/SECRET/event.ics", "/api/poll-links/***/event.ics"],
+    ["/api/poll-links/SECRET/calendar-check", "/api/poll-links/***/calendar-check"],
     ["/api/calendar-feeds/SECRET", "/api/calendar-feeds/***"],
     ["/api/calendar-feeds/SECRET.ics", "/api/calendar-feeds/***"],
     ["/api/calendar-feeds/SECRET.ics?x=1", "/api/calendar-feeds/***?x=1"],

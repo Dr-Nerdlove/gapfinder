@@ -311,6 +311,7 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     `fixed_sequence`, table `calendar_feeds`); types `FixPollRequest`, `FixCheck`, `CalendarFeed` and the
     `poll_not_fixed` code in `shared/src/polls.ts` and `index.ts`; routes `PUT/DELETE /api/polls/:id/fixed`,
     `POST /api/polls/:id/fix-check`, `GET /api/poll-links/:shareToken/event.ics` in `server/src/routes/polls.ts`
+    (later: `GET /api/poll-links/:shareToken/calendar-check`, the "Nicht berücksichtigt" card and the own-calendar hints on the poll page)
     and `GET/POST/DELETE /api/me/calendar-feed`, `GET /api/calendar-feeds/:token` in `server/src/routes/feeds.ts`;
     the calendar file writer is `server/src/calendars/ics-write.ts`, the shared calendar reading
     `server/src/calendars/busy.ts`, the feed contents `server/src/polls/feed.ts`. A wrong feed token is not

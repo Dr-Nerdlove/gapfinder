@@ -1,6 +1,7 @@
 import {
   GUEST_VOTE_WRITES_PER_IP,
   POLL_MAX_PARTICIPANTS,
+  POLL_CALENDAR_CHECKS_PER_CALLER,
   POLL_MAX_GUEST_VOTES,
   POLL_MAX_PROPOSALS,
   POLLS_PER_USER,
@@ -11,6 +12,7 @@ import {
   type GuestVoteCreated,
   type GuestVoteRequest,
   type NewShareLink,
+  type PollCalendarCheck,
   type PollList,
   type PollView,
   type UpdatePollRequest,
@@ -25,7 +27,7 @@ import { writeCalendar } from "../calendars/ics-write.js";
 import { requireCalendarKey } from "../calendars/service.js";
 import type { AppContext } from "../context.js";
 import { inTransaction, isUniqueViolation } from "../db.js";
-import { ApiError, forbidden, notFound, validation } from "../errors.js";
+import { ApiError, forbidden, notFound, rateLimited, validation } from "../errors.js";
 import {
   buildPollView,
   countGuestVotes,
@@ -349,6 +351,46 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
   app.get("/api/poll-links/:shareToken", async (request): Promise<PollView> => {
     const poll = pollByLinkOrFail(request);
     return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now());
+  });
+
+  // What the calendars say right now: who is left out (for everyone with the link) and, for a logged-in caller,
+  // which proposals are busy in their own calendars. Never contains anything of a calendar but these answers.
+  app.get("/api/poll-links/:shareToken/calendar-check", async (request): Promise<PollCalendarCheck> => {
+    const poll = pollByLinkOrFail(request);
+    requireCalendarKey(ctx);
+    const viewer = optionalUser(ctx, request);
+    // Its own bucket (not the search's): every call counts.
+    const limitKey = viewer ? `poll-calendar-check:user:${viewer.id}` : `poll-calendar-check:ip:${clientKey(request)}`;
+    const wait = ctx.limiter.blockedFor(limitKey, POLL_CALENDAR_CHECKS_PER_CALLER);
+    if (wait !== null) throw rateLimited(wait);
+    ctx.limiter.recordFailure(limitKey);
+
+    const participants = participantsOf(ctx.db, poll.id);
+    const ids = participants.map((participant) => participant.id);
+    if (viewer && !ids.includes(viewer.id)) ids.push(viewer.id);
+    const { readable, skipped } = await collectBusyTimes(ctx, ids, poll.kind === "days" ? "days" : "hours");
+    const reasonOf = (id: number) => skipped.find((person) => person.personId === id)?.reason;
+
+    let mine: PollCalendarCheck["mine"] = null;
+    if (viewer) {
+      const own = readable.find((person) => person.id === viewer.id);
+      const reason = reasonOf(viewer.id);
+      if (own) {
+        const busyProposalIds = proposalRowsOf(ctx.db, poll.id)
+          .filter((proposal) => isBusyDuring(own.busy, proposalSpan(poll.kind, proposal)))
+          .map((proposal) => proposal.id);
+        mine = { readable: true, busyProposalIds };
+      } else {
+        mine = { readable: false, reason: reason ?? "unreadable" };
+      }
+    }
+    return {
+      skipped: participants.flatMap((participant) => {
+        const reason = reasonOf(participant.id);
+        return reason ? [{ person: toPerson(participant), reason }] : [];
+      }),
+      mine,
+    };
   });
 
   // The fixed date as a calendar file, for everyone with the link (guests too).

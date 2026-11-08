@@ -34,6 +34,7 @@ import type {
   NewShareLink,
   NotificationSettings,
   PeopleList,
+  PollCalendarCheck,
   PollList,
   PollView,
   AppDeviceRegistered,
@@ -318,6 +319,10 @@ export const removePollVote = (pollId: number, voteId: number, o: CallOptions = 
 
 export const getPollByLink = (shareToken: string, o: CallOptions = {}) =>
   request<PollView>(`/api/poll-links/${segment(shareToken)}`, o);
+
+/** The calendar check of a poll: who is left out, and (logged in) which proposals are busy in the own calendar. */
+export const pollCalendarCheck = (shareToken: string, o: CallOptions = {}) =>
+  request<PollCalendarCheck>(`/api/poll-links/${segment(shareToken)}/calendar-check`, o);
 
 export const castAccountVote = (shareToken: string, body: AccountVoteRequest, o: CallOptions = {}) =>
   request<PollView>(`/api/poll-links/${segment(shareToken)}/my-vote`, { ...o, method: "PUT", body });
