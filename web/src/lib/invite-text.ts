@@ -5,7 +5,7 @@
  */
 export function inviteMessage(link: string, validDays: number): string {
   return [
-    "Hallo! 👋 Hier deine persönliche Einladung zum Lückenfüller. Das ist eine kleine App, die herausfindet, wann wir alle im Freundeskreis gleichzeitig Zeit haben. So müssen wir das nicht mehr umständlich durchs Hin-und-her-Chatten herausfinden.",
+    "Hello there! 👋 Hier deine persönliche Einladung zum Lückenfüller. Das ist eine kleine App, die herausfindet, wann wir alle im Freundeskreis gleichzeitig Zeit haben. So müssen wir das nicht mehr umständlich durchs Hin-und-her-Chatten herausfinden.",
     "",
     "*So geht's:*",
     `1. Öffne deinen Einladungslink und leg ein Passwort fest: ${link}`,

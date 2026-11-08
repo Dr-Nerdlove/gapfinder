@@ -4,7 +4,8 @@ import { inviteMessage } from "./invite-text";
 describe("inviteMessage", () => {
   const text = inviteMessage("https://x.test/#/einladung/tok", 14);
 
-  it("contains the invite link", () => {
+  it("greets and contains the invite link", () => {
+    expect(text.startsWith("Hello there! 👋")).toBe(true);
     expect(text).toContain("leg ein Passwort fest: https://x.test/#/einladung/tok\n");
   });
 
