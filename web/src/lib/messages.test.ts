@@ -29,6 +29,10 @@ describe("messages", () => {
     expect(ERROR_MESSAGES.calendar_limit).toContain("10 Kalender");
   });
 
+  it("has a German text for the group limit", () => {
+    expect(ERROR_MESSAGES.group_limit).toContain("20 Gruppen");
+  });
+
   it("has a text for every username problem", () => {
     expect(Object.keys(USERNAME_MESSAGES).sort()).toEqual(["invalid_characters", "too_long", "too_short"]);
     for (const text of Object.values(USERNAME_MESSAGES)) expect(text.trim()).not.toBe("");

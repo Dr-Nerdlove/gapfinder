@@ -229,6 +229,27 @@ export const migrations: readonly Migration[] = [
     sql: `ALTER TABLE app_devices ADD COLUMN fcm_token TEXT;
     CREATE UNIQUE INDEX app_devices_fcm_token ON app_devices (fcm_token);`,
   },
+  {
+    id: 10,
+    name: "people_groups",
+    // Additive only: two new tables, so an older server (after a rollback) ignores them. A group belongs to one
+    // user and is invisible to everybody else. A member who is deleted drops out quietly (cascade), and all of a
+    // user's groups go with the user. `name_key` is the lower case name: one name per user once.
+    sql: `CREATE TABLE people_groups (
+      id INTEGER PRIMARY KEY,
+      user_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      name TEXT NOT NULL,
+      name_key TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      UNIQUE (user_id, name_key)
+    ) STRICT;
+    CREATE TABLE people_group_members (
+      group_id INTEGER NOT NULL REFERENCES people_groups (id) ON DELETE CASCADE,
+      member_id INTEGER NOT NULL REFERENCES users (id) ON DELETE CASCADE,
+      PRIMARY KEY (group_id, member_id)
+    ) STRICT;
+    CREATE INDEX people_group_members_member_id ON people_group_members (member_id);`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

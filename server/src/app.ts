@@ -23,6 +23,7 @@ import { registerCalendarRoutes } from "./routes/calendars.js";
 import { registerFeedRoutes } from "./routes/feeds.js";
 import { registerInviteRoutes } from "./routes/invites.js";
 import { registerNotificationRoutes } from "./routes/notifications.js";
+import { registerGroupRoutes } from "./routes/groups.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerPasswordResetRoutes } from "./routes/password-resets.js";
 import { registerPollRoutes } from "./routes/polls.js";
@@ -140,6 +141,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   registerMeRoutes(app, ctx);
   registerCalendarRoutes(app, ctx);
   registerSearchRoutes(app, ctx);
+  registerGroupRoutes(app, ctx);
   registerPollRoutes(app, ctx);
   registerNotificationRoutes(app, ctx);
   registerFeedRoutes(app, ctx);
