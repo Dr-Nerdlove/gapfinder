@@ -272,10 +272,30 @@ describe("calendar endpoints", () => {
     ["calendar_too_large", 422],
     ["calendar_limit", 409],
     ["calendars_unavailable", 503],
+    ["group_limit", 409],
   ] as const)("understands the error code %s", async (code, status) => {
     const fetchImpl = mockFetch(() => jsonResponse({ statusCode: status, error: "x", code }, status));
     const result = await api.addCalendar({ link: "https://x.test/a.ics" }, { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) });
     expect(result).toEqual({ ok: false, kind: "error", status, code });
+  });
+
+  it("calls the group routes", async () => {
+    const seen: string[] = [];
+    const fetchImpl = mockFetch((url, init) => {
+      seen.push(`${init.method ?? "GET"} ${url}`);
+      return init.method === "DELETE" ? new Response(null, { status: 204 }) : jsonResponse({ groups: [] });
+    });
+    const o = { baseUrl: "http://api.test", fetchImpl: asFetch(fetchImpl) };
+    await api.listGroups(o);
+    await api.createGroup({ name: "A", members: [2] }, o);
+    await api.updateGroup(5, { members: [] }, o);
+    await api.deleteGroup(5, o);
+    expect(seen).toEqual([
+      "GET http://api.test/api/groups",
+      "POST http://api.test/api/groups",
+      "PATCH http://api.test/api/groups/5",
+      "DELETE http://api.test/api/groups/5",
+    ]);
   });
 
   it("keeps the field of a link problem", async () => {

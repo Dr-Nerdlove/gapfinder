@@ -36,6 +36,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   reminder_too_soon: "Du hast schon vor Kurzem erinnert. Bitte warte bis morgen.",
   push_endpoint_invalid: "Dieses Gerät kann keine Benachrichtigungen empfangen.",
   vote_name_taken: "Diesen Namen gibt es hier schon. Bitte nimm einen anderen, z. B. mit Nachnamen.",
+  group_limit: "Du hast schon 20 Gruppen. Lösche erst eine.",
   error: "Das hat nicht geklappt. Bitte versuche es noch einmal.",
 };
 
@@ -59,6 +60,7 @@ const FIELD_NAMES: Record<string, string> = {
   name: "Name",
   seedColor: "Farbe",
   link: "Kalender-Link",
+  members: "Mitglieder",
 };
 
 /** "Zu viele Versuche. Bitte warte 3 Minuten." Rounds up, at least one minute. */

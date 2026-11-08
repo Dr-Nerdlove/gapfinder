@@ -4,6 +4,7 @@
     SEARCH_MAX_BUFFER_MINUTES,
     SEARCH_MAX_DURATION_MINUTES,
     SEARCH_MAX_PERIOD_DAYS,
+    type Group,
     type Person,
     type Weekday,
   } from "@lueckenfueller/shared";
@@ -21,12 +22,15 @@
   import Card from "../Card.svelte";
   import Chip from "../Chip.svelte";
   import Message from "../Message.svelte";
+  import PeoplePicker from "./PeoplePicker.svelte";
   import SelectField from "../SelectField.svelte";
 
   interface Props {
     settings: SearchSettings;
     /** Everyone with an account except the searcher. */
     others: Person[];
+    groups: Group[];
+    ongroups: (groups: Group[]) => void;
     today: string;
     searching: boolean;
     /** The server is asleep: nothing can be searched. */
@@ -35,7 +39,7 @@
     onsearch: () => void;
   }
 
-  let { settings = $bindable(), others, today, searching, locked, problem, onsearch }: Props = $props();
+  let { settings = $bindable(), others, groups, ongroups, today, searching, locked, problem, onsearch }: Props = $props();
 
   const durations = Array.from({ length: SEARCH_MAX_DURATION_MINUTES / 60 }, (_, i) => {
     const minutes = (i + 1) * 60;
@@ -63,15 +67,10 @@
   const months = $derived(monthOptions(today));
   const presets = Object.keys(RANGE_LABELS) as RangePreset[];
 
-  const everyoneChosen = $derived(others.length > 0 && others.every((p) => settings.people.includes(p.id)));
   const crossesMidnight = $derived(
     settings.windowStart !== settings.windowEnd && settings.windowEnd < settings.windowStart,
   );
   const windowLength = $derived(windowMinutes(settings.windowStart, settings.windowEnd));
-
-  function togglePerson(id: number): void {
-    settings.people = settings.people.includes(id) ? settings.people.filter((p) => p !== id) : [...settings.people, id];
-  }
 
   function toggleWeekday(day: Weekday): void {
     settings.weekdays = settings.weekdays.includes(day)
@@ -96,31 +95,7 @@
     {#if others.length === 0}
       <p>Außer dir gibt es noch niemanden. Lade Freunde ein, dann kannst du mit ihnen suchen.</p>
     {:else}
-      <ul class="people">
-        {#each others as person (person.id)}
-          <li>
-            <label class="person">
-              <input
-                type="checkbox"
-                checked={settings.people.includes(person.id)}
-                disabled={searching}
-                onchange={() => togglePerson(person.id)}
-              />
-              <span class="name">{person.username}</span>
-            </label>
-          </li>
-        {/each}
-      </ul>
-      <div class="inline">
-        <span class="note" aria-live="polite">{settings.people.length} ausgewählt</span>
-        <Button
-          variant="outlined"
-          disabled={searching}
-          onclick={() => (settings.people = everyoneChosen ? [] : others.map((p) => p.id))}
-        >
-          {everyoneChosen ? "Keine" : "Alle"}
-        </Button>
-      </div>
+      <PeoplePicker {others} bind:chosen={settings.people} {groups} {searching} {locked} {ongroups} />
     {/if}
   </Card>
 
@@ -238,40 +213,4 @@
     gap: 12px;
   }
 
-  .inline {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px;
-  }
-
-  .people {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .person {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    min-height: 48px;
-    cursor: pointer;
-  }
-
-  .person input {
-    flex: none;
-    width: 24px;
-    height: 24px;
-    margin: 0;
-    accent-color: var(--md-sys-color-primary);
-  }
-
-  .name {
-    min-width: 0;
-    overflow-wrap: anywhere;
-    color: var(--md-sys-color-on-surface);
-  }
 </style>

@@ -21,6 +21,9 @@ import type {
   ErrorCode,
   FixCheck,
   FixPollRequest,
+  CreateGroupRequest,
+  Group,
+  GroupList,
   GuestVoteCreated,
   GuestVoteRequest,
   InviteInfo,
@@ -42,6 +45,7 @@ import type {
   SearchResult,
   SessionResponse,
   UpdateCalendarRequest,
+  UpdateGroupRequest,
   UpdateMeRequest,
   UpdatePollRequest,
 } from "@lueckenfueller/shared";
@@ -119,6 +123,7 @@ const KNOWN_CODES: Record<ErrorCode, true> = {
   reminder_too_soon: true,
   push_endpoint_invalid: true,
   vote_name_taken: true,
+  group_limit: true,
   error: true,
 };
 
@@ -262,6 +267,19 @@ export const deleteCalendar = (id: number, o: CallOptions = {}) =>
 
 export const getCalendarPreview = (o: CallOptions = {}) =>
   request<CalendarPreview>("/api/calendars/preview", { timeoutMs: CALENDAR_REQUEST_TIMEOUT_MS, ...o });
+
+// Own groups of people (`shared/src/groups.ts`), private to the caller.
+
+export const listGroups = (o: CallOptions = {}) => request<GroupList>("/api/groups", o);
+
+export const createGroup = (body: CreateGroupRequest, o: CallOptions = {}) =>
+  request<Group>("/api/groups", { ...o, method: "POST", body });
+
+export const updateGroup = (id: number, body: UpdateGroupRequest, o: CallOptions = {}) =>
+  request<Group>(`/api/groups/${segment(id)}`, { ...o, method: "PATCH", body });
+
+export const deleteGroup = (id: number, o: CallOptions = {}) =>
+  request<void>(`/api/groups/${segment(id)}`, { ...o, method: "DELETE" });
 
 // Gap search (`shared/src/gaps.ts`). The server reads the calendars fresh, up to 8 at a time, so it can take long.
 

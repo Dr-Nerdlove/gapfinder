@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- On the search page, a search field above the list of people and **own groups** ("Spieleabend", "Uni-Leute"): save the current choice as a group, tap a group to add its people to the choice, replace a group's people with the current choice, or delete it. Groups are private (nobody else sees them), kept on the server (the same on every device and in the Android app), at most 20 per person with names up to 40 characters. A person whose account is deleted drops out of every group quietly. The server change is additive (two new tables).
+
 ### Changed
 
 - Buttons that were plain coloured text now have an outline so they are recognisable as buttons; in the admin's account list the three buttons per account sit in one row (on very narrow screens the third moves to a second row).

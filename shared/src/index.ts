@@ -4,6 +4,7 @@ export const API_VERSION = 1;
 export * from "./accounts.js";
 export * from "./calendars.js";
 export * from "./gaps.js";
+export * from "./groups.js";
 export * from "./notifications.js";
 export * from "./polls.js";
 
@@ -113,6 +114,8 @@ export type ErrorCode =
   | "reminder_too_soon"
   /** The push address is not one of the known push services (https, port 443), or its keys are malformed. */
   | "push_endpoint_invalid"
+  /** The person already has the most groups allowed (`GROUPS_PER_USER`). */
+  | "group_limit"
   /** A guest's name is an account's username or another guest's name in this poll. */
   | "vote_name_taken"
   /** Anything else (server errors, unknown routes). */

@@ -534,10 +534,12 @@ Order of work:
 - **9a Own groups in the people choice** (Sonnet; the server part is small). With 50+ names the flat list of
   check boxes on `#/suche` gets long. Decided: a **search field** above the list, and **groups that each user makes
   for themselves** ("Spieleabend", "Uni-Leute"), chosen with one tap; nobody else sees them. Rejected for now:
-  groups shared by everybody. To settle: kept on the server (same groups on every device and in the Android app;
-  an additive migration) or only on the device (recommended: on the server); whether choosing a group adds to the
-  current choice or replaces it; limits (number of groups, name length); a person whose account is deleted drops
-  out of every group quietly.
+  groups shared by everybody. Settled with the owner on 2026-11-08: kept **on the server** (migration 10, tables
+  `people_groups` and `people_group_members`; routes `GET/POST /api/groups`, `PATCH/DELETE /api/groups/:id`, types in
+  `shared/src/groups.ts`); tapping a group **adds** its people to the current choice; at most **20 groups** per
+  person, names **1 to 40 characters**, one name once per person (case ignored), at most 49 other people per group;
+  a person whose account is deleted drops out of every group quietly (cascade). Built in `PeoplePicker.svelte`.
+  Not tried in a real browser by the assistant (no running server in the cloud session): check it on the phone.
 - **9b Deleting one's own account** (Opus to plan, Sonnet for the steps). Today only the admin can delete an account.
   Decided: everyone can delete their own account, with its calendar links, devices and settings. To settle: the
   confirmation (password again, recommended); what happens to their polls and votes (recommended: the same as when

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { NEAR_MISS_MIN_PEOPLE, type Person, type SearchRequest, type SkippedPerson } from "@lueckenfueller/shared";
+  import { NEAR_MISS_MIN_PEOPLE, type Group, type Person, type SearchRequest, type SkippedPerson } from "@lueckenfueller/shared";
   import { tick, untrack } from "svelte";
   import * as api from "../lib/api";
   import {
@@ -37,6 +37,7 @@
   let loadingPeople = $state(true);
   let peopleLoaded = $state(false);
   let loadError = $state("");
+  let groups = $state<Group[]>([]);
 
   let searching = $state(false);
   let problem = $state("");
@@ -70,8 +71,14 @@
     // Offline: the notice explains it; the chosen people stay as the device remembers them.
   }
 
+  // Groups are a convenience: when they cannot be loaded the search works without them.
+  async function loadGroups(): Promise<void> {
+    const result = await session.run((o) => api.listGroups(o));
+    if (result.ok) groups = result.data.groups;
+  }
+
   $effect(() => {
-    if (user) untrack(() => void loadPeople());
+    if (user) untrack(() => void Promise.all([loadPeople(), loadGroups()]));
   });
 
   // The device remembers the last settings (also what was chosen but not searched yet).
@@ -142,7 +149,7 @@
       <p>Sobald der Server wieder wach ist, kannst du hier Freunde auswählen. Deine letzte Auswahl bleibt erhalten.</p>
     </Card>
   {:else}
-    <SearchForm bind:settings {others} {today} {searching} {locked} {problem} onsearch={search} />
+    <SearchForm bind:settings {others} {groups} ongroups={(next) => (groups = next)} {today} {searching} {locked} {problem} onsearch={search} />
     {#if answer}
       <div bind:this={resultBox} class="scroll-target">
         <SearchResults
