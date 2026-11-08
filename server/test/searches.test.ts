@@ -380,6 +380,12 @@ describe("POST /api/searches: results", () => {
         { date: "2026-11-07", missingPersonId: e.anna.id, slots: [slot("2026-11-07T08:00:00Z", "2026-11-07T09:30:00Z")] },
         { date: "2026-11-07", missingPersonId: e.ben.id, slots: [slot("2026-11-07T12:30:00Z", "2026-11-07T22:00:00Z")] },
       ],
+      // The same for the app since 9c, by time.
+      partial: [
+        { date: "2026-11-07", missingPersonIds: [e.anna.id], slots: [slot("2026-11-07T08:00:00Z", "2026-11-07T09:30:00Z")] },
+        { date: "2026-11-07", missingPersonIds: [e.me.id], slots: [slot("2026-11-07T09:30:00Z", "2026-11-07T19:30:00Z")] },
+        { date: "2026-11-07", missingPersonIds: [e.ben.id], slots: [slot("2026-11-07T12:30:00Z", "2026-11-07T22:00:00Z")] },
+      ],
     });
     for (const text of allStrings(result)) {
       expect(text).not.toMatch(/Zahnarzt|Frühschicht|Kino|secret|example/i);
@@ -419,6 +425,10 @@ describe("POST /api/searches: results", () => {
         { first: "2026-11-02", last: "2026-11-07", days: 6, missingPersonId: e.anna.id },
         { first: "2026-11-05", last: "2026-11-10", days: 6, missingPersonId: e.ben.id },
       ],
+      partial: [
+        { first: "2026-11-02", last: "2026-11-07", days: 6, missingPersonIds: [e.anna.id] },
+        { first: "2026-11-05", last: "2026-11-10", days: 6, missingPersonIds: [e.ben.id] },
+      ],
     });
   });
 
@@ -443,9 +453,10 @@ describe("POST /api/searches: results", () => {
       ],
       days: [],
       nearMisses: [],
+      partial: [],
     });
     const days = await search(e, daysBody({ people: [e.anna.id] }));
-    expect(days.json<SearchResult>()).toMatchObject({ mode: "days", stretches: [], nearMisses: [] });
+    expect(days.json<SearchResult>()).toMatchObject({ mode: "days", stretches: [], nearMisses: [], partial: [] });
   });
 });
 

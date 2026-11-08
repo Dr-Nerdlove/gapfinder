@@ -13,6 +13,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- **Better results for larger groups:** the "Fast alle" list on the search page now also shows times when more than one person cannot, up to a fifth of the people (with 15 people up to 3, with 50 up to 10; below 10 people it stays at one). The best times come first: those with the fewest people missing, then by date, at most 50 lines. Each line says "13 von 15 können" and, below, who cannot ("ohne dich, Anna und Tim"); nobody learns more about anyone than that they are busy at some point in that time. Until the server is updated, the app shows the list as before.
 - When the admin deletes an account, the server now also forgets that person's calendar contents from memory at once instead of after up to 15 minutes.
 - Buttons that were plain coloured text now have an outline so they are recognisable as buttons; in the admin's account list the three buttons per account sit in one row (on very narrow screens the third moves to a second row).
 

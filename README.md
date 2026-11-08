@@ -18,8 +18,8 @@ updates.
 - **Calendars:** everyone links calendars through their subscription link (the server tries the link at once,
   stores it encrypted and never shows it again), sets which count as busy and which is the default, and sees a
   preview of their own next 4 weeks. Calendar contents are never stored.
-- **Gap search:** choose people, a period and a duration (or whole days) and see when everyone, or almost
-  everyone, is free.
+- **Gap search:** choose people, a period and a duration (or whole days) and see when everyone is free, and the
+  best times when almost everyone is ("13 von 15 können"; up to a fifth of the people may be missing).
 - **Voting:** pick free times as proposals and share one link; everybody with it, guests too, votes with
   Ja / Vielleicht / Nein and sees the state of the vote. "Meine Abstimmungen" lists your polls.
 - **Fixing the date:** the creator or the admin fixes one proposal after a fresh calendar check (a warning, never

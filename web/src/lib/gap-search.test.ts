@@ -1,4 +1,4 @@
-import type { Person, SearchResult } from "@lueckenfueller/shared";
+import { PARTIAL_MAX_ROWS, partialMaxMissing, type Person, type SearchResult } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
 import type { Row } from "./gap-search";
 
@@ -292,7 +292,7 @@ describe("the answer", () => {
   };
 
   it("shows one line per day with all its free times", () => {
-    const view = resultView(hours, people, 1);
+    const view = resultView(hours, people, 1, 3);
     expect(view.everyone.map(withoutPicks)).toEqual([
       { key: "2026-12-12", heading: "Sa 12.12.", detail: "14:00–23:00" },
       { key: "2026-12-19", heading: "Sa 19.12.", detail: "10:00–12:00, 18:00–23:00" },
@@ -300,7 +300,7 @@ describe("the answer", () => {
   });
 
   it("offers every free time of a day as its own pick for a poll", () => {
-    const view = resultView(hours, people, 1);
+    const view = resultView(hours, people, 1, 3);
     expect(view.everyone[1]!.picks.map((p) => [p.kind, p.label])).toEqual([
       ["timed", "10:00–12:00"],
       ["timed", "18:00–23:00"],
@@ -311,18 +311,107 @@ describe("the answer", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("says who is missing, and 'dir' for the searcher", () => {
-    const view = resultView(hours, people, 1);
-    expect(view.nearMisses.map((r) => [r.heading, r.missing, r.detail])).toEqual([
-      ["Sa 26.12.", "alle außer Clara", "18:00–23:00"],
-      ["Sa 26.12.", "alle außer dir", "10:00–12:00"],
+  it("says who is missing, and 'dich' for the searcher (from an older server's near misses)", () => {
+    const view = resultView(hours, people, 1, 3);
+    expect(view.nearMisses.map((r) => [r.heading, r.count, r.missing, r.detail])).toEqual([
+      ["Sa 26.12.", "2 von 3 können", "ohne Clara", "18:00–23:00"],
+      ["Sa 26.12.", "2 von 3 können", "ohne dich", "10:00–12:00"],
     ]);
     expect(new Set(view.nearMisses.map((r) => r.key)).size).toBe(2);
   });
 
   it("does not break on a person who is not in the list", () => {
-    const view = resultView({ ...hours, nearMisses: [{ ...hours.nearMisses[0]!, missingPersonId: 99 }] }, people, 1);
-    expect(view.nearMisses[0]!.missing).toBe("alle außer jemandem");
+    const view = resultView({ ...hours, nearMisses: [{ ...hours.nearMisses[0]!, missingPersonId: 99 }] }, people, 1, 3);
+    expect(view.nearMisses[0]!.missing).toBe("ohne jemanden");
+  });
+
+  describe("Fast alle", () => {
+    const slot = (day: string) => ({ start: `${day}T17:00:00.000Z`, end: `${day}T22:00:00.000Z` });
+    const many: Person[] = [
+      ...people,
+      { id: 4, username: "tim", seedColor: null },
+      { id: 5, username: "Émile", seedColor: null },
+    ];
+
+    it("uses `partial` when the server sends it", () => {
+      const result: SearchResult = {
+        ...hours,
+        partial: [
+          { date: "2026-12-26", missingPersonIds: [2], slots: [slot("2026-12-26")] },
+          { date: "2027-01-02", missingPersonIds: [1, 3, 4], slots: [slot("2027-01-02")] },
+          { date: "2027-01-09", missingPersonIds: [2, 4, 99], slots: [slot("2027-01-09")] },
+        ],
+      };
+      const view = resultView(result, many, 1, 15);
+      expect(view.nearMisses.map((r) => [r.count, r.missing])).toEqual([
+        ["14 von 15 können", "ohne Ben"],
+        ["12 von 15 können", "ohne dich, Clara und tim"],
+        ["12 von 15 können", "ohne Ben, tim und jemanden"],
+      ]);
+      expect(view.maxMissing).toBe(3);
+    });
+
+    it("sorts the other names without regard to case", () => {
+      const result: SearchResult = { ...hours, partial: [{ date: "2026-12-26", missingPersonIds: [4, 3, 2], slots: [slot("2026-12-26")] }] };
+      expect(resultView(result, many, 99, 10).nearMisses[0]!.missing).toBe("ohne Ben, Clara und tim");
+    });
+
+    it("takes maxMissing from partialMaxMissing, and 0 below three people", () => {
+      const withPartial: SearchResult = { ...hours, partial: [] };
+      for (const n of [3, 9, 10, 14, 15, 50]) {
+        expect(resultView(withPartial, people, 1, n).maxMissing).toBe(partialMaxMissing(n));
+      }
+      expect(resultView(withPartial, people, 1, 2).maxMissing).toBe(0);
+      expect(resultView(hours, people, 1, 2).maxMissing).toBe(0);
+    });
+
+    it("falls back to the near misses of an older server: one missing, same order, maxMissing 1", () => {
+      const view = resultView(hours, people, 1, 15);
+      expect(view.maxMissing).toBe(1);
+      expect(view.nearMisses.map((r) => r.count)).toEqual(["14 von 15 können", "14 von 15 können"]);
+      expect(view.nearMisses.map((r) => r.missing)).toEqual(["ohne Clara", "ohne dich"]);
+    });
+
+    it("cuts the fallback to PARTIAL_MAX_ROWS", () => {
+      const nearMisses = Array.from({ length: PARTIAL_MAX_ROWS + 7 }, (_, i) => ({
+        date: `2027-${String(1 + Math.floor(i / 28)).padStart(2, "0")}-${String(1 + (i % 28)).padStart(2, "0")}`,
+        missingPersonId: 2,
+        slots: [slot("2027-01-01")],
+      }));
+      const view = resultView({ ...hours, nearMisses }, people, 1, 4);
+      expect(view.nearMisses).toHaveLength(PARTIAL_MAX_ROWS);
+      expect(view.nearMisses[0]!.key).toBe(`${nearMisses[0]!.date}:2`);
+    });
+
+    it("gives different missing groups on one day different keys and pick ids", () => {
+      const result: SearchResult = {
+        ...hours,
+        partial: [
+          { date: "2026-12-26", missingPersonIds: [2], slots: [slot("2026-12-26")] },
+          { date: "2026-12-26", missingPersonIds: [2, 3], slots: [slot("2026-12-26")] },
+          { date: "2026-12-26", missingPersonIds: [3], slots: [slot("2026-12-26")] },
+        ],
+      };
+      const view = resultView(result, people, 1, 15);
+      expect(new Set(view.nearMisses.map((r) => r.key)).size).toBe(3);
+      const ids = view.nearMisses.flatMap((r) => r.picks.map((p) => p.id));
+      expect(new Set(ids).size).toBe(3);
+    });
+
+    it("uses `partial` in days mode too", () => {
+      const days: SearchResult = {
+        mode: "days",
+        skipped: [],
+        stretches: [],
+        nearMisses: [],
+        partial: [{ first: "2027-02-14", last: "2027-02-28", days: 15, missingPersonIds: [1, 2] }],
+      };
+      const view = resultView(days, people, 1, 10);
+      expect(view.nearMisses.map(withoutPicks)).toEqual([
+        { key: "2027-02-14:1-2", heading: "14.–28. Feb.", detail: "15 Tage", count: "8 von 10 können", missing: "ohne dich und Ben" },
+      ]);
+      expect(view.nearMisses[0]!.picks[0]!.id).toBe("days:2027-02-14:2027-02-28:1-2");
+    });
   });
 
   it("merges stretches into one line and tells where a period can start", () => {
@@ -335,12 +424,12 @@ describe("the answer", () => {
       ],
       nearMisses: [{ first: "2027-02-14", last: "2027-02-28", days: 15, missingPersonId: 2 }],
     };
-    const view = resultView(days, people, 1);
+    const view = resultView(days, people, 1, 3);
     expect(view.everyone.map(withoutPicks)).toEqual([
       { key: "2026-08-03", heading: "3.–16. Aug.", detail: "14 Tage", extra: "Start möglich: Mo 3. Aug., Mo 10. Aug." },
       { key: "2026-10-05", heading: "5. Okt.", detail: "1 Tag" },
     ]);
-    expect(view.nearMisses.map(withoutPicks)).toEqual([{ key: "2027-02-14:2", heading: "14.–28. Feb.", detail: "15 Tage", missing: "alle außer Ben" }]);
+    expect(view.nearMisses.map(withoutPicks)).toEqual([{ key: "2027-02-14:2", heading: "14.–28. Feb.", detail: "15 Tage", count: "2 von 3 können", missing: "ohne Ben" }]);
     expect(view.everyone[0]!.picks).toEqual([
       { id: "days:2026-08-03:2026-08-16:", kind: "days", label: "14 Tage", first: "2026-08-03", last: "2026-08-16", days: 14, starts: ["2026-08-03", "2026-08-10"] },
     ]);

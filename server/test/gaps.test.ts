@@ -47,11 +47,12 @@ describe("searchHours", () => {
     expect(hours([person(1)])).toEqual({
       days: [{ date: "2026-11-07", slots: [slot("2026-11-07T08:00:00Z", "2026-11-07T22:00:00Z")] }],
       nearMisses: [],
+      partial: [],
     });
   });
 
   it("finds nothing without people", () => {
-    expect(hours([])).toEqual({ days: [], nearMisses: [] });
+    expect(hours([])).toEqual({ days: [], nearMisses: [], partial: [] });
   });
 
   it("cuts a busy time out of the day and reports every slot that is left", () => {

@@ -1,11 +1,14 @@
 // The gap search itself: pure functions, no I/O and no clock. Everything (busy times, "now") comes in as
 // arguments, so the tests can check every rule, including the daylight saving days, without a server.
 import {
-  NEAR_MISS_MIN_PEOPLE,
+  PARTIAL_MAX_ROWS,
+  partialMaxMissing,
   type HoursDay,
   type HoursNearMiss,
+  type HoursPartial,
   type Stretch,
   type StretchNearMiss,
+  type StretchPartial,
   type TimeWindow,
   type Weekday,
 } from "@lueckenfueller/shared";
@@ -97,6 +100,64 @@ function intersect(a: Interval[], b: Interval[]): Interval[] {
 
 const iso = (ms: number): string => new Date(ms).toISOString();
 
+/** A run of consecutive units (time pieces or days), both ends included, and who is busy somewhere in it. */
+interface PartialRun {
+  first: number;
+  last: number;
+  /** Indexes of the people, ascending; at least one. */
+  missing: number[];
+}
+
+/**
+ * The runs of consecutive units in which at most `maxMissing` people are busy, each as long as it can be for
+ * exactly the people busy in it: one more unit on either side would add somebody. `busy[u]` lists who is busy
+ * in unit `u`. Runs in which nobody is busy (times for everybody) are not returned. In order of `first`.
+ *
+ * A run that can be made longer without adding anybody is never returned, so the same people never appear
+ * for two overlapping runs, and a run is never inside a run of fewer missing people.
+ */
+function partialRuns(busy: readonly (readonly number[])[], peopleCount: number, maxMissing: number): PartialRun[] {
+  const runs: PartialRun[] = [];
+  const inRun = new Uint8Array(peopleCount);
+  const members: number[] = [];
+  const within = (people: readonly number[]) => people.every((p) => inRun[p] === 1);
+  for (let first = 0; first < busy.length; first++) {
+    const before = first > 0 ? busy[first - 1]! : null;
+    // Nobody busy just before: every run from here can start one unit earlier.
+    if (before !== null && before.length === 0) continue;
+    for (const p of members) inRun[p] = 0;
+    members.length = 0;
+    for (let last = first; last < busy.length; last++) {
+      for (const p of busy[last]!) {
+        if (inRun[p] === 0) {
+          inRun[p] = 1;
+          members.push(p);
+        }
+      }
+      if (members.length > maxMissing) break;
+      // From here on the unit before adds nobody: these runs all start earlier.
+      if (before !== null && within(before)) break;
+      const after = last + 1 < busy.length ? busy[last + 1]! : null;
+      if (members.length > 0 && (after === null || !within(after))) {
+        runs.push({ first, last, missing: [...members].sort((a, b) => a - b) });
+      }
+    }
+  }
+  for (const p of members) inRun[p] = 0;
+  return runs;
+}
+
+/** Fewest missing first, then the earlier time, then by the people's ids. */
+function byFewestMissing(a: { missing: number[]; at: number; to: number }, b: { missing: number[]; at: number; to: number }): number {
+  if (a.missing.length !== b.missing.length) return a.missing.length - b.missing.length;
+  if (a.at !== b.at) return a.at - b.at;
+  if (a.to !== b.to) return a.to - b.to;
+  for (let i = 0; i < a.missing.length; i++) {
+    if (a.missing[i] !== b.missing[i]) return a.missing[i]! - b.missing[i]!;
+  }
+  return 0;
+}
+
 export interface HoursSearchInput {
   people: SearchPersonInput[];
   /** First and last German day, both included. */
@@ -112,20 +173,27 @@ export interface HoursSearchInput {
 
 /**
  * Hours mode. For each German day of the range on one of the weekdays: the times within the window at which
- * everybody is free for at least `durationMinutes`, with the buffer taken off every busy event; and the same
- * for everybody but one person (near misses), unless that is already inside a result for everybody.
+ * everybody is free for at least `durationMinutes`, with the buffer taken off every busy event. With at least
+ * `NEAR_MISS_MIN_PEOPLE` people also the times free for all but a few (`partial`, see `partialRuns`), and the
+ * ones with exactly one missing as `nearMisses` for older apps.
  */
-export function searchHours(input: HoursSearchInput): { days: HoursDay[]; nearMisses: HoursNearMiss[] } {
+export function searchHours(input: HoursSearchInput): {
+  days: HoursDay[];
+  nearMisses: HoursNearMiss[];
+  partial: HoursPartial[];
+} {
   const days: HoursDay[] = [];
   const nearMisses: HoursNearMiss[] = [];
+  const partialRows: { missing: number[]; at: number; to: number; row: HoursPartial }[] = [];
   const { people } = input;
-  if (people.length === 0) return { days, nearMisses };
+  if (people.length === 0) return { days, nearMisses, partial: [] };
 
   const bufferMs = input.bufferMinutes * MINUTE_MS;
   const minimumMs = input.durationMinutes * MINUTE_MS;
   const busy = people.map((person) =>
     union(person.busy.map((i) => ({ start: i.start - bufferMs, end: i.end + bufferMs }))),
   );
+  const maxMissing = partialMaxMissing(people.length);
   const startMinutes = clockMinutes(input.window.start);
   const endMinutes = clockMinutes(input.window.end);
   // An end at or before the start is on the next day.
@@ -134,6 +202,7 @@ export function searchHours(input: HoursSearchInput): { days: HoursDay[]; nearMi
   const weekdays = new Set<number>(input.weekdays);
   const last = dayNumber(input.to);
   const longEnough = (intervals: Interval[]) => intervals.filter((i) => i.end - i.start >= minimumMs);
+  const toSlot = (i: Interval) => ({ start: iso(i.start), end: iso(i.end) });
 
   for (let n = dayNumber(input.from); n <= last; n++) {
     const day = datePartsOfDayNumber(n);
@@ -144,34 +213,62 @@ export function searchHours(input: HoursSearchInput): { days: HoursDay[]; nearMi
     );
     const windowEnd = berlinWallToUtc(day.year, day.month, day.day, endOffset).getTime();
     if (windowStart >= windowEnd) continue;
+    const date = formatDateParts(day);
 
-    const free = busy.map((list) => freeWithin(windowStart, windowEnd, list));
-    // prefix[i]: free for everybody before person i; suffix[i]: free for everybody from person i on.
-    const whole: Interval[] = [{ start: windowStart, end: windowEnd }];
-    const prefix: Interval[][] = [whole];
-    for (let i = 0; i < free.length; i++) prefix.push(intersect(prefix[i]!, free[i]!));
-    const suffix: Interval[][] = new Array<Interval[]>(free.length + 1);
-    suffix[free.length] = whole;
-    for (let i = free.length - 1; i >= 0; i--) suffix[i] = intersect(suffix[i + 1]!, free[i]!);
+    let everybody: Interval[] = [{ start: windowStart, end: windowEnd }];
+    for (const list of busy) everybody = intersect(everybody, freeWithin(windowStart, windowEnd, list));
+    const slots = longEnough(everybody);
+    if (slots.length > 0) days.push({ date, slots: slots.map(toSlot) });
+    if (maxMissing === 0) continue;
 
-    const slots = longEnough(prefix[free.length]!);
-    if (slots.length > 0) {
-      days.push({ date: formatDateParts(day), slots: slots.map((s) => ({ start: iso(s.start), end: iso(s.end) })) });
-    }
-    if (people.length < NEAR_MISS_MIN_PEOPLE) continue;
-    people.forEach((person, index) => {
-      const withoutPerson = longEnough(intersect(prefix[index]!, suffix[index + 1]!));
-      const missed = withoutPerson.filter((i) => !slots.some((s) => i.start >= s.start && i.end <= s.end));
-      if (missed.length > 0) {
-        nearMisses.push({
-          date: formatDateParts(day),
-          missingPersonId: person.id,
-          slots: missed.map((s) => ({ start: iso(s.start), end: iso(s.end) })),
-        });
+    // The window cut into pieces at every start and end of a busy time; who is busy in each piece.
+    const inWindow = busy.map((list) => {
+      const clipped: Interval[] = [];
+      for (let i = firstEndingAfter(list, windowStart); i < list.length && list[i]!.start < windowEnd; i++) {
+        clipped.push({ start: Math.max(list[i]!.start, windowStart), end: Math.min(list[i]!.end, windowEnd) });
+      }
+      return clipped;
+    });
+    const points = [...new Set([windowStart, windowEnd, ...inWindow.flatMap((l) => l.flatMap((i) => [i.start, i.end]))])];
+    points.sort((x, y) => x - y);
+    const pointIndex = new Map(points.map((point, index) => [point, index]));
+    const pieceBusy: number[][] = Array.from({ length: points.length - 1 }, () => []);
+    inWindow.forEach((list, person) => {
+      for (const interval of list) {
+        const to = pointIndex.get(interval.end)!;
+        for (let piece = pointIndex.get(interval.start)!; piece < to; piece++) pieceBusy[piece]!.push(person);
       }
     });
+
+    // One line per group of missing people, with all of its times on this day (they never overlap).
+    const groups = new Map<string, { missing: number[]; slots: Interval[] }>();
+    for (const run of partialRuns(pieceBusy, people.length, maxMissing)) {
+      const interval = { start: points[run.first]!, end: points[run.last + 1]! };
+      if (interval.end - interval.start < minimumMs) continue;
+      const key = run.missing.join(",");
+      const group = groups.get(key);
+      if (group === undefined) groups.set(key, { missing: run.missing, slots: [interval] });
+      else group.slots.push(interval);
+    }
+    const alone: { person: number; slots: Interval[] }[] = [];
+    for (const group of groups.values()) {
+      const ids = group.missing.map((index) => people[index]!.id).sort((x, y) => x - y);
+      const first = group.slots[0]!;
+      partialRows.push({
+        missing: ids,
+        at: first.start,
+        to: first.end,
+        row: { date, missingPersonIds: ids, slots: group.slots.map(toSlot) },
+      });
+      if (group.missing.length === 1) alone.push({ person: group.missing[0]!, slots: group.slots });
+    }
+    alone.sort((x, y) => x.person - y.person);
+    for (const near of alone) {
+      nearMisses.push({ date, missingPersonId: people[near.person]!.id, slots: near.slots.map(toSlot) });
+    }
   }
-  return { days, nearMisses };
+  partialRows.sort(byFewestMissing);
+  return { days, nearMisses, partial: partialRows.slice(0, PARTIAL_MAX_ROWS).map((r) => r.row) };
 }
 
 export interface DaysSearchInput {
@@ -224,12 +321,17 @@ function runsOf(first: number, count: number, isFree: (index: number) => boolean
 
 /**
  * Days mode. A day is free for a person when no busy event overlaps it (German midnight to midnight, no
- * buffer). Result: runs of consecutive days free for everybody that a period of `days` fits in, and the same
- * for everybody but one person, unless that run lies inside a result for everybody. Today is never offered.
+ * buffer). Result: runs of consecutive days free for everybody that a period of `days` fits in; with at least
+ * `NEAR_MISS_MIN_PEOPLE` people also the runs free for all but a few (`partial`, see `partialRuns`) that a period
+ * fits in, and the ones with exactly one missing as `nearMisses` for older apps. Today is never offered.
  */
-export function searchDays(input: DaysSearchInput): { stretches: Stretch[]; nearMisses: StretchNearMiss[] } {
+export function searchDays(input: DaysSearchInput): {
+  stretches: Stretch[];
+  nearMisses: StretchNearMiss[];
+  partial: StretchPartial[];
+} {
   const { people } = input;
-  const result = { stretches: [] as Stretch[], nearMisses: [] as StretchNearMiss[] };
+  const result = { stretches: [] as Stretch[], nearMisses: [] as StretchNearMiss[], partial: [] as StretchPartial[] };
   if (people.length === 0) return result;
 
   const tomorrow = dayNumber(addDaysToDate(berlinDateOf(new Date(input.now)), 1));
@@ -238,42 +340,39 @@ export function searchDays(input: DaysSearchInput): { stretches: Stretch[]; near
   if (count <= 0) return result;
 
   const busy = people.map((person) => union(person.busy.filter((i) => i.end > i.start)));
-  // busyOn[p][i]: person p has a busy event on day first + i.
-  const busyOn = busy.map((list) => {
-    const flags: boolean[] = [];
-    for (let i = 0; i < count; i++) {
-      const day = datePartsOfDayNumber(first + i);
-      const dayStart = berlinWallToUtc(day.year, day.month, day.day, 0).getTime();
-      const dayEnd = berlinWallToUtc(day.year, day.month, day.day, 1440).getTime();
+  // busyOn[i]: the people (indexes, ascending) with a busy event on day first + i.
+  const busyOn: number[][] = [];
+  for (let i = 0; i < count; i++) {
+    const day = datePartsOfDayNumber(first + i);
+    const dayStart = berlinWallToUtc(day.year, day.month, day.day, 0).getTime();
+    const dayEnd = berlinWallToUtc(day.year, day.month, day.day, 1440).getTime();
+    const onDay: number[] = [];
+    busy.forEach((list, person) => {
       const next = list[firstEndingAfter(list, dayStart)];
-      flags.push(next !== undefined && next.start < dayEnd);
-    }
-    return flags;
-  });
-  const busyCount = Array.from({ length: count }, (_, i) => busyOn.reduce((sum, flags) => sum + (flags[i] ? 1 : 0), 0));
-
-  const everybody = runsOf(first, count, (i) => busyCount[i] === 0);
-  const qualifying: Run[] = [];
-  for (const run of everybody) {
-    const stretch = stretchOf(run, input.days, input.startWeekday);
-    if (stretch === null) continue;
-    qualifying.push(run);
-    result.stretches.push(stretch);
+      if (next !== undefined && next.start < dayEnd) onDay.push(person);
+    });
+    busyOn.push(onDay);
   }
-  if (people.length < NEAR_MISS_MIN_PEOPLE) return result;
 
-  const found: { first: number; stretch: StretchNearMiss }[] = [];
-  people.forEach((person, index) => {
-    const flags = busyOn[index]!;
-    const runs = runsOf(first, count, (i) => busyCount[i] === 0 || (busyCount[i] === 1 && flags[i] === true));
-    for (const run of runs) {
-      if (qualifying.some((q) => run.first >= q.first && run.last <= q.last)) continue;
-      const stretch = stretchOf(run, input.days, input.startWeekday);
-      if (stretch !== null) found.push({ first: run.first, stretch: { ...stretch, missingPersonId: person.id } });
-    }
-  });
-  // Stable: for the same first day, the order of the people stays.
-  found.sort((a, b) => a.first - b.first);
-  result.nearMisses = found.map((f) => f.stretch);
+  for (const run of runsOf(first, count, (i) => busyOn[i]!.length === 0)) {
+    const stretch = stretchOf(run, input.days, input.startWeekday);
+    if (stretch !== null) result.stretches.push(stretch);
+  }
+  const maxMissing = partialMaxMissing(people.length);
+  if (maxMissing === 0) return result;
+
+  const rows: { missing: number[]; at: number; to: number; row: StretchPartial }[] = [];
+  const alone: { at: number; person: number; stretch: Stretch }[] = [];
+  for (const run of partialRuns(busyOn, people.length, maxMissing)) {
+    const stretch = stretchOf({ first: first + run.first, last: first + run.last }, input.days, input.startWeekday);
+    if (stretch === null) continue;
+    const ids = run.missing.map((index) => people[index]!.id).sort((x, y) => x - y);
+    rows.push({ missing: ids, at: run.first, to: run.last, row: { ...stretch, missingPersonIds: ids } });
+    if (run.missing.length === 1) alone.push({ at: run.first, person: run.missing[0]!, stretch });
+  }
+  alone.sort((x, y) => x.at - y.at || x.person - y.person);
+  result.nearMisses = alone.map((a) => ({ ...a.stretch, missingPersonId: people[a.person]!.id }));
+  rows.sort(byFewestMissing);
+  result.partial = rows.slice(0, PARTIAL_MAX_ROWS).map((r) => r.row);
   return result;
 }

@@ -13,6 +13,8 @@
     nearMisses: Row[];
     /** At least `NEAR_MISS_MIN_PEOPLE` people could be read. */
     nearMissesPossible: boolean;
+    /** The most people who may be missing from a line of `nearMisses`. */
+    maxMissing: number;
     /** The last answer is shown while a new search is running. */
     stale: boolean;
     /** The ids of the free times chosen for a poll. */
@@ -20,7 +22,7 @@
     ontoggle: (pick: PollPick) => void;
   }
 
-  let { summary, notices, everyone, nearMisses, nearMissesPossible, stale, chosen, ontoggle }: Props = $props();
+  let { summary, notices, everyone, nearMisses, nearMissesPossible, maxMissing, stale, chosen, ontoggle }: Props = $props();
 
   const STEP = 10;
   let everyoneShown = $state(STEP);
@@ -79,15 +81,23 @@
     {#if !nearMissesPossible}
       <p>Diese Liste gibt es erst, wenn mindestens {NEAR_MISS_MIN_PEOPLE} Personen gesucht werden können.</p>
     {:else if nearMisses.length === 0}
-      <p>Keine Lücke gefunden, in der nur eine Person fehlt.</p>
+      <p>
+        {maxMissing === 1
+          ? "Keine Lücke gefunden, in der nur eine Person fehlt."
+          : `Keine Lücke gefunden, in der höchstens ${maxMissing} Personen fehlen.`}
+      </p>
     {:else}
       <ul class="rows">
         {#each nearMisses.slice(0, nearShown) as row (row.key)}
-          <li>
+          <li class="near">
             <strong>{row.heading}</strong>
             <span class="detail">
+              <span class="count">{row.count}</span>
               <span class="missing">{row.missing}</span>
-              {#if row.picks[0]?.kind === "timed"}{@render picks(row)}{:else}{row.detail}{@render picks(row)}{/if}
+              {#if row.picks[0]?.kind !== "timed"}{row.detail}{/if}
+            </span>
+            <span class="below">
+              {@render picks(row)}
               {#if row.extra}<span class="extra">{row.extra}</span>{/if}
             </span>
           </li>
@@ -145,6 +155,16 @@
     border-top: 1px solid var(--md-sys-color-outline-variant);
   }
 
+  .rows li.near {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .below {
+    flex-basis: 100%;
+    text-align: right;
+  }
+
   .rows li:first-child {
     border-top: 0;
     padding-top: 0;
@@ -162,9 +182,13 @@
     text-align: right;
   }
 
-  .missing {
+  .count {
     font-weight: 500;
     color: var(--md-sys-color-on-surface);
+  }
+
+  .missing {
+    color: var(--md-sys-color-on-surface-variant);
   }
 
   .picks {
