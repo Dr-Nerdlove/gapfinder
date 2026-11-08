@@ -144,6 +144,8 @@ of pulling it: `docker compose build`.
   hour, switches to a new image and goes back to the previous one if the new one is not healthy
   ([`deploy/vm/update.sh`](deploy/vm/update.sh)). Setting up the VM, Tailscale Funnel and these updates:
   [`docs/server-setup.md`](docs/server-setup.md).
+- **Server watch:** `.github/workflows/health.yml` checks `/api/health` hourly (not at night) and GitHub e-mails the
+  owner when the server has not answered for about 10 minutes.
 - Versions follow `vMAJOR.MINOR.PATCH`; changes are listed in [`CHANGELOG.md`](CHANGELOG.md).
 - **GitHub release:** made automatically (`.github/workflows/release.yml`) after the deploy of a push to `main` finished
   green and that push carries a version in `package.json` that has no release yet: it sets the tag `vX.Y.Z` and creates the release with the summary at the top

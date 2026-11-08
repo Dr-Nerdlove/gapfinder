@@ -290,6 +290,12 @@ missing, with a recommendation, and let the people choose.
     fingerprint).
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
+  - Health workflow (`health.yml`, `scripts/health-watch.sh`, phase 9d): GitHub e-mails a failed scheduled run to the user
+    who created the workflow, last changed its cron line or last re-enabled it, so the owner disables and re-enables
+    it once under Actions. In public repositories GitHub disables schedules after 60 days without activity (re-enable
+    under Actions). The step name "Server down marker" is shared by the workflow and the script (`HEALTH_MARKER_STEP`):
+    the script finds out from it whether the previous run already reported the outage; change both together. A cloud
+    session cannot reach the server, so the script is only tested with fake `curl`, `gh`, `date` and `sleep`.
 - **Android release:** `release.yml` builds the signed APK (`lueckenfueller-<version>.apk`) for the release commit and
   attaches it, with its SHA-256 signature in the notes. It needs the secrets `ANDROID_KEYSTORE_BASE64` and
   `ANDROID_KEYSTORE_PASSWORD` and the committed `android/signing-fingerprint.txt` (made by the owner, see
@@ -311,8 +317,8 @@ missing, with a recommendation, and let the people choose.
   which is why the workflow does it. If a run fails, repeat it under Actions, "Release",
   "Run workflow".
 - **Repository:** Licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
-  CI: `.github/workflows/ci.yml` (checks), `deploy.yml` (Pages + server image) and `release.yml` (tag + GitHub
-  release after a green deploy of a new version).
+  CI: `.github/workflows/ci.yml` (checks), `deploy.yml` (Pages + server image), `release.yml` (tag + GitHub
+  release after a green deploy of a new version) and `health.yml` (hourly check of the server).
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
   tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
   later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never

@@ -15,6 +15,8 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - In the administration, a new invite link now comes with a **"So geht's" text** for new people (what the app is, sign-up, linking a calendar, privacy, the night break). The button "Mit Anleitung teilen" (or "Mit Anleitung kopieren" where the phone offers no sharing) sends the text and the personal link together, e.g. over WhatsApp. Frontend only.
 
+- The owner now gets an e-mail from GitHub when the server has not been reachable for about 10 minutes. A scheduled check runs every hour, not at night between 00:55 and 07:30, and sends one mail per outage (none when the server is back). Nothing changes for other users and nothing on the VM.
+
 ### Changed
 
 - **Better results for larger groups:** the "Fast alle" list on the search page now also shows times when more than one person cannot, up to a fifth of the people (with 15 people up to 3, with 50 up to 10; below 10 people it stays at one). The best times come first: those with the fewest people missing, then by date, at most 50 lines. Each line says "13 von 15 können" and, below, who cannot ("ohne dich, Anna und Tim"); nobody learns more about anyone than that they are busy at some point in that time. Until the server is updated, the app shows the list as before.

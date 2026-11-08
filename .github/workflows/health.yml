@@ -1,0 +1,52 @@
+# Checks the home server's /api/health every hour and fails (GitHub then e-mails the owner) when it is down.
+# - Runs at minute 37 because GitHub delays or drops scheduled runs at the start of the hour.
+# - Down = no valid answer in 3 tries over about 10 minutes (scripts/health-watch.sh).
+# - Night pause: nothing is checked from 00:55 to 07:30 Berlin time (the home PC is off), tested before every try.
+# - One mail per outage: the step "Server down marker" runs only when the server was down; the next run reports
+#   again only if the previous completed run did not have that step succeed. No mail when the server is back.
+#   The step name is shared with the script (HEALTH_MARKER_STEP): change both together.
+# - GitHub e-mails failed scheduled runs to the user who created the workflow, or who last changed its cron line,
+#   or who last re-enabled it. So the owner disables and re-enables the workflow once under Actions.
+# - "Run workflow" with test_alarm fails on purpose, to try the mail.
+# - In public repositories GitHub disables schedules after 60 days without repository activity; re-enable the
+#   workflow under Actions then.
+# Needs the repository variable API_URL (the same one deploy.yml uses).
+name: Server health
+
+on:
+  schedule:
+    - cron: "37 * * * *"
+  workflow_dispatch:
+    inputs:
+      test_alarm:
+        description: "Fail on purpose to test the e-mail"
+        type: boolean
+        default: false
+
+permissions:
+  actions: read
+  contents: read
+
+concurrency:
+  group: health
+  cancel-in-progress: false
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          sparse-checkout: scripts/health-watch.sh
+          sparse-checkout-cone-mode: false
+      - name: Check the server
+        id: check
+        env:
+          API_URL: ${{ vars.API_URL }}
+          GH_TOKEN: ${{ github.token }}
+          TEST_ALARM: ${{ inputs.test_alarm && 'true' || 'false' }}
+        run: bash scripts/health-watch.sh
+      - name: Server down marker
+        if: always() && steps.check.outputs.state == 'down'
+        run: echo "The server is down. The next run reports again only after the server was up in between."

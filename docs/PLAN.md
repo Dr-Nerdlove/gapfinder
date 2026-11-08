@@ -580,6 +580,15 @@ Order of work:
   check already asks the server about every 15 minutes) and show a notification itself. That changes the native
   app: a new notification text in `NotificationText.kt` and a higher `SHELL_VERSION`, so everybody is offered an
   app update (the only point of phase 9 that would need one).
+  Settled with the owner on 2026-11-08: **e-mail** through a scheduled GitHub Actions workflow
+  (`.github/workflows/health.yml`, script `scripts/health-watch.sh`); no in-app notification, so no app update is
+  needed. It runs hourly at minute 37. The server counts as down when it does not answer in 3 tries over about
+  10 minutes. Night pause 00:55 to 07:30 Berlin time (checked before every try, so a run that slides into the night
+  does not report). One mail per outage: the next run looks at the previous run's "Server down marker" step and
+  stays green when the outage was reported already; there is no mail when the server is back. GitHub sends the mail
+  to whoever created the workflow or last changed its schedule or re-enabled it, so the owner disables and
+  re-enables the workflow once under Actions; "Run workflow" with the test alarm tries the mail. The assistant has
+  not tried it against the real server (a cloud session cannot reach it); the script is tested with fakes.
 - **9e A short "So geht's" text to pass on** (Sonnet). A short German text the owner sends to new people together
   with their invite link (e.g. over WhatsApp): what the app is, how to sign up, how to link a calendar. To settle:
   where it lives (recommended: a "Teilen" button next to a new invite in the admin area that sends link and text
