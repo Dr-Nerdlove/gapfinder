@@ -296,6 +296,9 @@ missing, with a recommendation, and let the people choose.
     under Actions). The step name "Server down marker" is shared by the workflow and the script (`HEALTH_MARKER_STEP`):
     the script finds out from it whether the previous run already reported the outage; change both together. A cloud
     session cannot reach the server, so the script is only tested with fake `curl`, `gh`, `date` and `sleep`.
+    From day 50 after the last commit on `main`, the run at 12:37 Berlin time fails once a day as a reminder
+    (`scripts/inactivity-reminder.sh`, last step of the workflow); a run failed because of the reminder does not
+    affect the outage marker.
 - **Android release:** `release.yml` builds the signed APK (`lueckenfueller-<version>.apk`) for the release commit and
   attaches it, with its SHA-256 signature in the notes. It needs the secrets `ANDROID_KEYSTORE_BASE64` and
   `ANDROID_KEYSTORE_PASSWORD` and the committed `android/signing-fingerprint.txt` (made by the owner, see

@@ -589,6 +589,7 @@ Order of work:
   to whoever created the workflow or last changed its schedule or re-enabled it, so the owner disables and
   re-enables the workflow once under Actions; "Run workflow" with the test alarm tries the mail. The assistant has
   not tried it against the real server (a cloud session cannot reach it); the script is tested with fakes.
+  Added on 2026-11-08 with the owner: from day 50 without a change on `main`, the run at 12:37 fails once a day as a reminder (`scripts/inactivity-reminder.sh`), because GitHub switches the schedule off after 60 days.
 - **9e A short "So geht's" text to pass on** (Sonnet). A short German text the owner sends to new people together
   with their invite link (e.g. over WhatsApp): what the app is, how to sign up, how to link a calendar. To settle:
   where it lives (recommended: a "Teilen" button next to a new invite in the admin area that sends link and text

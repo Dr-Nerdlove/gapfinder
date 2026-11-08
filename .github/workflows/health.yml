@@ -8,8 +8,9 @@
 # - GitHub e-mails failed scheduled runs to the user who created the workflow, or who last changed its cron line,
 #   or who last re-enabled it. So the owner disables and re-enables the workflow once under Actions.
 # - "Run workflow" with test_alarm fails on purpose, to try the mail.
-# - In public repositories GitHub disables schedules after 60 days without repository activity; re-enable the
-#   workflow under Actions then.
+# - GitHub disables schedules in public repos after 60 days without activity; from day 50 after the last change on
+#   main the run at 12:37 Berlin time fails once a day as a reminder (scripts/inactivity-reminder.sh); merge any
+#   change, or re-enable the workflow under Actions if it was switched off.
 # Needs the repository variable API_URL (the same one deploy.yml uses).
 name: Server health
 
@@ -38,7 +39,9 @@ jobs:
     steps:
       - uses: actions/checkout@v5
         with:
-          sparse-checkout: scripts/health-watch.sh
+          sparse-checkout: |
+            scripts/health-watch.sh
+            scripts/inactivity-reminder.sh
           sparse-checkout-cone-mode: false
       - name: Check the server
         id: check
@@ -50,3 +53,8 @@ jobs:
       - name: Server down marker
         if: always() && steps.check.outputs.state == 'down'
         run: echo "The server is down. The next run reports again only after the server was up in between."
+      - name: Remind before GitHub switches the check off
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: bash scripts/inactivity-reminder.sh
