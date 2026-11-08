@@ -6,12 +6,20 @@ describe("inviteMessage", () => {
 
   it("greets and contains the invite link", () => {
     expect(text.startsWith("Hello there! 👋")).toBe(true);
-    expect(text).toContain("leg ein Passwort fest: https://x.test/#/einladung/tok\n");
+    expect(text).toContain("nur einmal: https://x.test/#/einladung/tok\n");
   });
 
   it("names the number of days the link is valid", () => {
-    expect(text).toContain("(Der Link funktioniert 14 Tage lang und nur einmal)");
+    expect(text).toContain("Der Link funktioniert 14 Tage lang und nur einmal:");
     expect(inviteMessage("l", 3)).toContain("funktioniert 3 Tage lang und nur einmal");
+  });
+
+  it("keeps each step on one line, so WhatsApp indents all of it", () => {
+    const lines = text.split("\n");
+    const start = lines.indexOf("*So geht's:*");
+    expect(lines.slice(start + 1, start + 4).map((line) => line.slice(0, 3))).toEqual(["1. ", "2. ", "3. "]);
+    expect(lines[start + 2]).toContain("*Deine Termine bleiben dabei immer privat:*");
+    expect(lines[start + 4]).toBe("");
   });
 
   it("keeps the three steps and the two notes", () => {
