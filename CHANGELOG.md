@@ -11,6 +11,8 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - Everyone can now **delete their own account** in the profile ("Konto löschen", with the password as confirmation). The account, its calendar links, devices, groups, settings and votes are deleted; polls the person created stay until they expire and can then only be managed by the admin. Every admin gets a notification with the username (always on, no setting), and the contents of the person's calendars are forgotten at once. Admins cannot delete their own account in the app. The privacy page explains it. The server change is additive (the notifications table can now hold entries without a poll). The Android app shows the new notification text from the next APK; older apps show a general text.
 
+- In the administration, a new invite link now comes with a **"So geht's" text** for new people (what the app is, sign-up, linking a calendar, privacy, the night break). The button "Mit Anleitung teilen" (or "Mit Anleitung kopieren" where the phone offers no sharing) sends the text and the personal link together, e.g. over WhatsApp. Frontend only.
+
 ### Changed
 
 - **Better results for larger groups:** the "Fast alle" list on the search page now also shows times when more than one person cannot, up to a fifth of the people (with 15 people up to 3, with 50 up to 10; below 10 people it stays at one). The best times come first: those with the fewest people missing, then by date, at most 50 lines. Each line says "13 von 15 können" and, below, who cannot ("ohne dich, Anna und Tim"); nobody learns more about anyone than that they are busy at some point in that time. Until the server is updated, the app shows the list as before.

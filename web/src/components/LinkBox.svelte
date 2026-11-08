@@ -11,9 +11,11 @@
     shareText: string;
     /** Offer the phone's share sheet (not for a private link that must stay with one person). */
     shareable?: boolean;
+    /** A full message that holds the link (e.g. the invite with "So geht's"); adds a button to send it as it is. */
+    message?: string;
   }
 
-  let { label, link, note, shareText, shareable = true }: Props = $props();
+  let { label, link, note, shareText, shareable = true, message }: Props = $props();
 
   const id = $props.id();
   const shareEnv: NativeShareEnv = {
@@ -42,6 +44,23 @@
       // The person closed the share sheet; nothing to do.
     }
   }
+
+  async function copyMessage(): Promise<void> {
+    try {
+      await navigator.clipboard.writeText(message ?? "");
+      feedback = "Text mit Link kopiert";
+    } catch {
+      feedback = "Kopieren hat nicht geklappt.";
+    }
+  }
+
+  async function shareMessage(): Promise<void> {
+    try {
+      await shareLink(shareEnv, { title: "Lückenfüller", text: message ?? "", url: "" });
+    } catch {
+      // The person closed the share sheet; nothing to do.
+    }
+  }
 </script>
 
 <div class="box">
@@ -50,6 +69,13 @@
   <div class="actions">
     <Button variant="tonal" onclick={copy}>Kopieren</Button>
     {#if canShare && shareable}<Button variant="tonal" onclick={share}>Teilen</Button>{/if}
+    {#if message}
+      {#if canShare}
+        <Button variant="tonal" onclick={shareMessage}>Mit Anleitung teilen</Button>
+      {:else}
+        <Button variant="tonal" onclick={copyMessage}>Mit Anleitung kopieren</Button>
+      {/if}
+    {/if}
     <span class="feedback" aria-live="polite">{feedback}</span>
   </div>
   <p class="note">{note}</p>

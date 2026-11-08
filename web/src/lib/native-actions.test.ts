@@ -22,6 +22,12 @@ describe("share", () => {
     expect(share).not.toHaveBeenCalled();
   });
 
+  it("leaves the address out of the browser's share when it is empty", async () => {
+    const browserShare = vi.fn(async () => undefined);
+    await shareLink({ isApp: false, app: { share: vi.fn() }, browserShare }, { ...data, url: "" });
+    expect(browserShare).toHaveBeenCalledWith({ title: data.title, text: data.text });
+  });
+
   it("offers no share button in a browser without navigator.share", () => {
     expect(canShare({ isApp: false, app: { share: async () => undefined } })).toBe(false);
   });

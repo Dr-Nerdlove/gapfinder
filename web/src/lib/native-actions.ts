@@ -6,16 +6,17 @@ export interface NativeShareEnv {
   isApp: boolean;
   app: Pick<LueckenfuellerPlugin, "share">;
   /** `navigator.share`, where the browser has it. */
-  browserShare?: ((data: { title: string; text: string; url: string }) => Promise<void>) | undefined;
+  browserShare?: ((data: { title: string; text: string; url?: string }) => Promise<void>) | undefined;
 }
 
 export function canShare(env: NativeShareEnv): boolean {
   return env.isApp || typeof env.browserShare === "function";
 }
 
+/** `url` may be empty when the text already holds the link; the browser would otherwise add this page's address. */
 export async function shareLink(env: NativeShareEnv, data: { title: string; text: string; url: string }): Promise<void> {
   if (env.isApp) await env.app.share(data);
-  else await env.browserShare?.(data);
+  else await env.browserShare?.(data.url ? data : { title: data.title, text: data.text });
 }
 
 export interface IcsEnv {
