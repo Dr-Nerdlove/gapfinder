@@ -15,7 +15,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - In the administration, a new invite link now comes with a **"So geht's" text** for new people (what the app is, sign-up, linking a calendar, privacy, the night break). The button "Mit Anleitung teilen" (or "Mit Anleitung kopieren" where the phone offers no sharing) sends the text and the personal link together, e.g. over WhatsApp. Frontend only.
 
-- The owner now gets an e-mail from GitHub when the server has not been reachable for about 10 minutes. A scheduled check runs every hour, not at night between 00:55 and 07:30, and sends one mail per outage (none when the server is back). Nothing changes for other users and nothing on the VM.
+- The owner now gets an e-mail from GitHub when the server has not been reachable for about 10 minutes. A scheduled check runs every hour, not at night between 00:55 and 07:30, and sends one mail per outage (none when the server is back). Nothing changes for other users and nothing on the VM. From 50 days without any change, a daily reminder mail asks for a small change, because GitHub would switch the check off after 60 days.
 
 ### Changed
 
