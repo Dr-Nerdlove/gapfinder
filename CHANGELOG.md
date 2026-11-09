@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.1.1] - 2026-11-09
+
+The server needs far less memory after a search: it used to keep the whole text of every calendar it had read, now
+only what the search needs, so even very large calendars no longer make it run out of memory. The round "?" help
+symbols are a little smaller. Nothing changes in how you install or update; the server updates itself within about
+an hour, and the Android app needs no new installation.
+
 ### Changed
 
 - The round question-mark help symbol is a little smaller (the tap area stays 44 px).
