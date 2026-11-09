@@ -5,6 +5,14 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-11-09
+
+The calendar page now shows how big each of your calendars is, with a tip when one is very large and slows the server
+down. Admins are told once when someone's calendar gets very large (over 5 MB) or all calendars together get too
+large, and the admin page shows the total; only the size is stored, never what is in a calendar. Nothing changes in
+how you install or update. The server updates itself within about an hour. The Android app needs no new installation;
+admins who want these notifications with their own text instead of a general one can install the new APK by hand.
+
 ### Added
 
 - The calendar page shows how big each of your calendars is, with a hint when one is very large (over 5 MB) and
