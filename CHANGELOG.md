@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- The round question-mark help symbol is a little smaller (the tap area stays 44 px).
+
 ### Fixed
 
 - The server needs far less memory for the calendars it keeps for 15 minutes after a search: it used to keep each

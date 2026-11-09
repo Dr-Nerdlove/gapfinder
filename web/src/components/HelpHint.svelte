@@ -35,13 +35,13 @@
 </dialog>
 
 <style>
-  /* 24px circle, 44px touch target through padding; negative margin keeps the line height. */
+  /* 18px circle, 44px touch target through padding; negative margin keeps the line height. */
   .help {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 10px;
-    margin: -10px 0;
+    padding: 13px;
+    margin: -13px 0;
     border: 0;
     background: none;
     color: inherit;
@@ -56,12 +56,12 @@
     align-items: center;
     justify-content: center;
     box-sizing: border-box;
-    width: 24px;
-    height: 24px;
-    border: 1.5px solid var(--md-sys-color-primary);
+    width: 18px;
+    height: 18px;
+    border: 1.25px solid var(--md-sys-color-primary);
     border-radius: 50%;
     color: var(--md-sys-color-primary);
-    font-size: 0.875rem;
+    font-size: 0.6875rem;
     font-weight: 600;
     line-height: 1;
   }
