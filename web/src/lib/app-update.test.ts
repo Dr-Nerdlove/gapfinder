@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
-import { APK_DOWNLOAD_URL, MANUAL_TEXT, availableText, installNote, isNewerVersion, isUnimplemented, loadAppUpdate, type AppUpdateApi } from "./app-update";
+import { APK_DOWNLOAD_URL, apkDownloadUrl, MANUAL_TEXT, availableText, installNote, isNewerVersion, isUnimplemented, loadAppUpdate, type AppUpdateApi } from "./app-update";
 
 const answering = (state: "available" | "current" | "unknown", version?: string): AppUpdateApi => ({
   appUpdate: async () => ({ state, installedShell: 2, ...(version ? { version } : {}) }),
@@ -97,13 +97,25 @@ describe("isNewerVersion", () => {
   });
 });
 
-describe("APK_DOWNLOAD_URL", () => {
-  it("points at the file that every release uploads under a fixed name", () => {
-    const workflow = readFileSync(fileURLToPath(new URL("../../../.github/workflows/release.yml", import.meta.url)), "utf8");
-    const name = APK_DOWNLOAD_URL.split("/").pop() ?? "";
-    expect(APK_DOWNLOAD_URL).toBe(`https://github.com/Dr-Nerdlove/gapfinder/releases/latest/download/${name}`);
-    const copy = new RegExp(`^\\s*latest_apk="\\$RUNNER_TEMP/${name.replace(".", "\\.")}"$`, "m");
-    expect(workflow).toMatch(copy);
-    expect(workflow).toMatch(/gh release create "\$tag" "\$APK" "\$latest_apk" /);
+describe("apkDownloadUrl", () => {
+  it("links to the versioned APK of that release", () => {
+    expect(apkDownloadUrl("2.0.0")).toBe("https://github.com/Dr-Nerdlove/gapfinder/releases/download/v2.0.0/lueckenfueller-2.0.0.apk");
+  });
+
+  it("uses the file name that app-update-json.sh prints and the Kotlin apkName builds", () => {
+    const script = readFileSync(fileURLToPath(new URL("../../../scripts/app-update-json.sh", import.meta.url)), "utf8");
+    expect(script).toContain('"apk":"lueckenfueller-%s.apk"');
+    const kotlin = readFileSync(
+      fileURLToPath(new URL("../../../android/app/src/main/kotlin/de/drnerdlove/lueckenfueller/AppUpdate.kt", import.meta.url)),
+      "utf8",
+    );
+    expect(kotlin).toContain('fun apkName(version: String) = "lueckenfueller-$version.apk"');
+    expect(apkDownloadUrl("3.1.4").split("/").pop()).toBe("lueckenfueller-3.1.4.apk");
+  });
+
+  it("the exported link belongs to the version in web/package.json", () => {
+    const pkg = JSON.parse(readFileSync(fileURLToPath(new URL("../../package.json", import.meta.url)), "utf8")) as { version: string };
+    expect(APK_DOWNLOAD_URL).toBe(apkDownloadUrl(pkg.version));
+    expect(APK_DOWNLOAD_URL).toContain(`/v${pkg.version}/lueckenfueller-${pkg.version}.apk`);
   });
 });

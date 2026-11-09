@@ -10,9 +10,8 @@ name: Release
 # Next to the APK every release carries app-update.json (scripts/app-update-json.sh: version, shell version, APK name,
 # SHA-256). The Android app reads it from the latest release to offer a self-update (phase 7c). Both files are uploaded
 # in the one `gh release create` call below, so the draft-then-publish step covers both.
-# A third file is the same APK under the fixed name lueckenfueller.apk: the web app's "Android-App herunterladen" button
-# links to releases/latest/download/lueckenfueller.apk (APK_DOWNLOAD_URL in web/src/lib/app-update.ts), which then
-# downloads the newest APK directly, without the release page.
+# The web app's "Android-App herunterladen" button links to this versioned file (apkDownloadUrl in
+# web/src/lib/app-update.ts), so no second copy under a fixed name is made.
 #
 # It runs only after the Deploy workflow has finished green for a push to main (tests passed, app and server image
 # published), so a version that never went live gets no release. The release is set on the commit Deploy ran on.
@@ -89,8 +88,6 @@ jobs:
           test -f "$APK" && test -n "$FINGERPRINT"
           tag="v$VERSION"
           bash scripts/app-update-json.sh "$VERSION" "$APK" android/app/build.gradle > app-update.json
-          latest_apk="$RUNNER_TEMP/lueckenfueller.apk"
-          cp "$APK" "$latest_apk"
           bash scripts/release-notes.sh "$VERSION" CHANGELOG.md "$GITHUB_REPOSITORY" > release-notes.md
           {
             echo
@@ -99,5 +96,5 @@ jobs:
             echo "Signature (SHA-256): \`$FINGERPRINT\`"
           } >> release-notes.md
           # With files, gh creates a draft, uploads them and only then publishes, so a failed upload leaves no release.
-          gh release create "$tag" "$APK" "$latest_apk" app-update.json --target "$TARGET_SHA" --title "Lückenfüller $VERSION" --notes-file release-notes.md --latest
+          gh release create "$tag" "$APK" app-update.json --target "$TARGET_SHA" --title "Lückenfüller $VERSION" --notes-file release-notes.md --latest
           echo "Created release $tag on $TARGET_SHA."

@@ -313,7 +313,7 @@ missing, with a recommendation, and let the people choose.
   the same commit as the app (`APP_BUILD`, set by `deploy.yml`, against the server's `APP_VERSION`, both `sha-<7>`).
   Between releases the commit is what tells whether the server is up to date. **The owner decides when a new version
   is released; the assistant suggests it** after a bigger change (a new feature or anything the users notice) and
-  names the number: new feature `1.x.0`, fix `1.0.x`, breaking change `2.0.0`. Nothing is released without the
+  names the number: new feature `1.x.0`, fix `1.0.x`, breaking change `2.0.0`. The owner wants no version number above 9 in any part (decided 2026-11-09): after `x.9.y` a new feature release is `(x+1).0.0`, and after `x.y.9` a fix is `x.(y+1).0`. Nothing is released without the
   owner's word. A release is one pull request (version in the `package.json` files, `CHANGELOG.md` with
   "[Unreleased]" turned into "[x.y.z] - date" and a short summary in plain words before its first `###` heading,
   nothing else). The summary becomes the release notes on its own, so it must not point at the entries "below";

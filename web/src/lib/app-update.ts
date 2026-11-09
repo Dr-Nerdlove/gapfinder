@@ -1,14 +1,23 @@
 // The app's self-update on the start page (Android app only, phase 7c). Pure: the state and the
 // texts. Do not import this from `sw.ts`.
 
+import { APP_RELEASE } from "./config";
+
 /** The release page, for an app that cannot update itself yet. */
 export const RELEASE_PAGE_URL = "https://github.com/Dr-Nerdlove/gapfinder/releases/latest";
 
+/** The APK of release `version`, downloaded directly; the file name is the one `release.yml` uploads. */
+export function apkDownloadUrl(version: string): string {
+  return `https://github.com/Dr-Nerdlove/gapfinder/releases/download/v${version}/lueckenfueller-${version}.apk`;
+}
+
 /**
- * The APK of the latest release, downloaded directly. Every release from 1.8.0 on carries a copy of its APK under this
- * fixed name (`release.yml`); older releases do not, so this link works only once such a release is the latest.
+ * The APK of the version this web app belongs to (the button "Android-App herunterladen"). Known, accepted gap: right
+ * after a release is merged, the new page is live about 2 minutes before `release.yml` has created the release, so for
+ * those minutes this link answers 404 (the owner accepted this on 2026-11-09 instead of asking the GitHub API from the
+ * browser).
  */
-export const APK_DOWNLOAD_URL = "https://github.com/Dr-Nerdlove/gapfinder/releases/latest/download/lueckenfueller.apk";
+export const APK_DOWNLOAD_URL = apkDownloadUrl(APP_RELEASE);
 
 export type AppUpdateView =
   /** Nothing to show: not in the app, up to date, or not known. */

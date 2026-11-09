@@ -126,8 +126,7 @@ job does the same through `.github/actions/android-apk`.
 
 An Android app (a Capacitor shell around the live web app, with notifications from a background check) is built from
 `android/`. Install, signing key, local build and rules for changes: [`docs/android-app.md`](docs/android-app.md).
-CI builds it on every push; each release carries the signed APK (also as `lueckenfueller.apk`, the newest one at
-`releases/latest/download/lueckenfueller.apk`) and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
+CI builds it on every push; each release carries the signed APK (`lueckenfueller-<version>.apk`) and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
 Firebase "doorbell") need a one-time Firebase setup: [`docs/firebase-setup.md`](docs/firebase-setup.md).
 
 ## Run the server with Docker Compose
