@@ -9,6 +9,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - The round question-mark help symbol is a little smaller (the tap area stays 44 px).
 
+### Fixed
+
+- The server needs far less memory for the calendars it keeps for 15 minutes after a search: it used to keep each
+  calendar's whole text, now only the times and titles it needs. A search for 50 people with very large calendars
+  no longer makes the server run out of memory and restart.
+
 ## [2.1.0] - 2026-11-09
 
 The start page now suggests installing Lückenfüller on your phone. On the iPhone and iPad it explains how to put it on
