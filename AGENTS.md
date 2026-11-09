@@ -292,6 +292,9 @@ missing, with a recommendation, and let the people choose.
     handling follows firebase-admin's source (`lib/messaging/messaging-errors-internal.js`). The doorbell was verified on the owner's phone on
     2026-11-05 (instant notification on the locked phone, also after the API key was restricted to the app id and
     fingerprint).
+  - `deploy.yml` runs one at a time (workflow-level `concurrency`, not cancelled): two merges a few seconds apart once
+    ran side by side and the older run, finishing last, put 1.9.0 back over 2.0.0 on Pages (2026-11-09; fixed by
+    re-running the newer Deploy). After merging several pull requests, check that the newest Deploy run finished last.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
   - Health workflow (`health.yml`, `scripts/health-watch.sh`, phase 9d): GitHub e-mails a failed scheduled run to the user
