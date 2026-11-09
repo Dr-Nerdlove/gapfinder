@@ -607,6 +607,35 @@ Order of work:
   made-up but realistically large calendars (50 people, 100+ calendars): how long a first search takes, how much
   memory it needs, and how long other requests wait during it. Only then decide whether anything has to change
   (fewer days ahead, splitting the work, more memory for the VM, the limit of 50 people per search).
+  Measured on 2026-11-09 in the cloud session (`scripts/load-test`, README there): the real server with a heap limit of
+  512 MB (Node's own choice on 1 GB), 50 people, 130 calendars, the calendar services made up with 0.3–1.5 s per
+  answer. **Found and fixed:** every cached calendar kept its whole feed text in memory, because the titles were
+  slices of it (V8 keeps the whole string while a slice lives); with calendars near the 10 MB limit the server ran out
+  of memory while the calendars were being linked, before any search. Titles and names are now copied
+  (`ownCopy` in `server/src/calendars/ics.ts`, test `calendar-ics-memory.test.ts`). Results with the fix, on Node 24
+  (as in the Docker image; Node 22 needs less, e.g. 226 MB instead of 318 MB at the highest in the realistic case):
+
+  | Case (search for all 50 over a year)       | realistic: 107 MB of calendars | heavy: 770 MB (9.5 MB per calendar) |
+  | ------------------------------------------ | ------------------------------ | ----------------------------------- |
+  | First search (empty memory)                | 19 s                           | 51 s                                |
+  | Same search again (within 15 minutes)      | 0.1 s                          | 0.1 s                               |
+  | Server memory at the highest (RSS)         | 318 MB (before the fix 440 MB) | 600 MB (before: crashed)            |
+  | JavaScript heap at the highest / limit     | 135 / 512 MB (before 230)      | 278 / 512 MB                        |
+  | Others' requests waited at most            | 0.5 s                          | 2.9 s                               |
+  | Three groups of 17 at once                 | waited 0.9 s, RSS 323 MB       | waited 3.6 s, RSS 703 MB, 3 people left out (calendar reads ran into the 20 s timeout) |
+
+  The VM, read by the owner on 2026-11-09: 901 MB of memory, 436 MB available with the server running (`free -m`),
+  547 MB swap; the idle server uses 64 MB (`docker stats`); Node's heap limit there is 499 MB, so the test's 512 MB
+  matched. A realistic search needs about 210–220 MB more than the idle server (the test's idle server had 105 MB):
+  it fits. The heavy case needs 500–600 MB more: more than is free, so the VM would swap and become slow (not
+  expected to crash, the heap stays far below its limit). Real calendars of the circle are far smaller than that.
+  Not measured: the VM's CPU, and how fast the real calendar services answer (the first search's duration is mostly
+  waiting for them, 8 calendars at a time).
+  **Decided** by the owner (2026-11-09, on the assistant's recommendation): nothing else changes for now (no worker
+  thread, no more parallel reads, the 10 MB limit and the VM's memory stay). The Node 24 figures for the heavy case
+  came after that decision and were reported to the owner. If calendars get very large: fewer reads at a time
+  (`MAX_CONCURRENT_READS` in `server/src/calendars/busy.ts`) or more memory for the VM. Rerun the load test (with
+  Node 24) when calendars or the circle grow a lot, or after changes to reading, caching or the search.
 
 **Release:** 9a–9e are merged and the documentation and screenshots are updated (2026-11-08); the owner wants to release
 **1.9.0** (decided 2026-11-07). 9f is a measurement;
