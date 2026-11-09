@@ -2,6 +2,8 @@ import type { FixCheck, Proposal } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
 import type { ApiResult } from "./api";
 import {
+  calendarButtonOrder,
+  defaultProvider,
   eventOf,
   fixedIdOf,
   fixedProposal,
@@ -131,3 +133,22 @@ describe("the check before fixing", () => {
   });
 });
 
+
+describe("order of the add-to-calendar buttons", () => {
+  it("puts the default calendar's provider first", () => {
+    expect(calendarButtonOrder("google")).toEqual(["google", "ics", "outlook"]);
+    expect(calendarButtonOrder("outlook")).toEqual(["outlook", "ics", "google"]);
+  });
+
+  it("keeps the .ics first for Apple, other and no default", () => {
+    for (const provider of ["apple", "other", null] as const) {
+      expect(calendarButtonOrder(provider)).toEqual(["ics", "google", "outlook"]);
+    }
+  });
+
+  it("finds the provider of the default calendar, or null", () => {
+    expect(defaultProvider([{ provider: "apple", isDefault: false }, { provider: "outlook", isDefault: true }])).toBe("outlook");
+    expect(defaultProvider([{ provider: "google", isDefault: false }])).toBeNull();
+    expect(defaultProvider([])).toBeNull();
+  });
+});
