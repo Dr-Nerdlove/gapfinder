@@ -607,6 +607,24 @@ Order of work:
   made-up but realistically large calendars (50 people, 100+ calendars): how long a first search takes, how much
   memory it needs, and how long other requests wait during it. Only then decide whether anything has to change
   (fewer days ahead, splitting the work, more memory for the VM, the limit of 50 people per search).
+  Measured on 2026-11-09 in the cloud session (`scripts/load-test`, README there): the real server with a heap limit of
+  512 MB (Node's own choice on 1 GB), 50 people, 130 calendars, the calendar services made up with 0.3–1.5 s per
+  answer. **Found and fixed:** every cached calendar kept its whole feed text in memory, because the titles were
+  slices of it (V8 keeps the whole string while a slice lives); with calendars near the 10 MB limit the server ran out
+  of memory while the calendars were being linked, before any search. Titles and names are now copied
+  (`ownCopy` in `server/src/calendars/ics.ts`, test `calendar-ics-memory.test.ts`). Results with the fix:
+
+  | Case (search for all 50 over a year)       | realistic: 107 MB of calendars | heavy: 770 MB (9.5 MB per calendar) |
+  | ------------------------------------------ | ------------------------------ | --------------------------- |
+  | First search (empty memory)                | 20 s                           | 49 s                        |
+  | Same search again (within 15 minutes)      | 0.1 s                          | 0.1 s                       |
+  | Server memory at the highest (RSS)         | 226 MB (before the fix 360 MB) | 433 MB (before: crashed)    |
+  | JavaScript heap at the highest / limit     | 105 / 512 MB (before 212)      | 167 / 512 MB                |
+  | Others' requests waited at most            | 0.5 s                          | 1.8 s                       |
+  | Three groups of 17 at once: waited at most | 1.3 s                          | 7 s (RSS 506 MB)            |
+
+  Not measured: the VM itself (its CPU, how much of the 1 GB Debian, Docker and Tailscale leave), and how fast the real
+  calendar services answer (the first search's duration is mostly waiting for them, 8 calendars at a time).
 
 **Release:** 9a–9e are merged and the documentation and screenshots are updated (2026-11-08); the owner wants to release
 **1.9.0** (decided 2026-11-07). 9f is a measurement;

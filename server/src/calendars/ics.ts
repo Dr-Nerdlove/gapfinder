@@ -188,6 +188,16 @@ function cut(text: string, max: number): string {
   return trimmed.length > max ? Array.from(trimmed).slice(0, max).join("").trimEnd() : trimmed;
 }
 
+/**
+ * The text as a string of its own. The parser and `trim` hand out slices of the whole feed, and V8 keeps the whole
+ * feed in memory as long as one slice lives. Titles and names stay in the calendar cache, so without the copy every
+ * cached calendar kept its full text (found by the load test, phase 9f: up to 10 MB per calendar).
+ */
+function ownCopy(text: string): string {
+  // UTF-16 keeps every string exactly as it was, even a broken one (UTF-8 would turn half an emoji into "�").
+  return Buffer.from(text, "utf16le").toString("utf16le");
+}
+
 function textOf(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
@@ -230,7 +240,7 @@ function specOf(event: ICAL.Event): EventSpec | null {
     days,
     busy: textOf(component.getFirstPropertyValue("transp")).toUpperCase() !== "TRANSPARENT",
     cancelled: textOf(component.getFirstPropertyValue("status")).toUpperCase() === "CANCELLED",
-    title: cut(textOf(component.getFirstPropertyValue("summary")), MAX_TITLE),
+    title: ownCopy(cut(textOf(component.getFirstPropertyValue("summary")), MAX_TITLE)),
     wallZone: isWallTime(start) ? (typeof tzid === "string" && formatterFor(tzid) ? tzid : HOME_ZONE) : null,
   };
 }
@@ -438,6 +448,6 @@ function collect(root: ICAL.Component, windowStart: number, windowEnd: number): 
   const rawName = textOf(root.getFirstPropertyValue("x-wr-calname")).replace(/\\([nN,;\\])/g, (_m, c: string) =>
     c === "n" || c === "N" ? " " : c,
   );
-  const name = cut(rawName, MAX_NAME);
+  const name = ownCopy(cut(rawName, MAX_NAME));
   return { name: name || null, events, truncated };
 }
