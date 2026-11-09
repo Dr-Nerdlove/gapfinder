@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- The round question-mark help symbol is a little smaller (the tap area stays 44 px).
+
 ## [2.1.0] - 2026-11-09
 
 The start page now suggests installing Lückenfüller on your phone. On the iPhone and iPad it explains how to put it on
