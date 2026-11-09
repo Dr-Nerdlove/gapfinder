@@ -37,6 +37,12 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
   await b.page.reload();
   await b.page.waitForTimeout(2500);
   await shot(b.page, "profile.png");
+  // Calendars page: Anna's calendar with its two switches and the preview of the next 4 weeks.
+  await b.page.goto(BASE + "#/kalender");
+  await b.page.reload();
+  await b.page.getByText("Deine nächsten 4 Wochen").waitFor();
+  await b.page.waitForTimeout(2500);
+  await shot(b.page, "calendars.png");
   await b.browser.close();
 
   // Admin area in dark mode: a new invite with its "So geht's" text, the open invites and the first accounts.
@@ -110,6 +116,7 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
     const target = path.resolve(__dirname, "../../docs/screenshots");
     const where = {
       "login.png": "login.png", "invite.png": "invite.png", "start-logged-in.png": "start-logged-in.png", "profile.png": "profile.png",
+      "calendars.png": "calendars.png",
       "admin.png": "admin.png", "search-form.png": "search-form.png", "search-results.png": "search-results.png",
       "poll-calendar-check.png": "polls/7-calendar-check.png", "fix-check.png": "fix-date/2-fix-check.png", "date-fixed-guest.png": "fix-date/4-date-fixed-guest.png",
     };
