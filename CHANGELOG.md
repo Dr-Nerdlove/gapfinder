@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- The start page now suggests installing Lückenfüller: on the iPhone and iPad how to put it on the home screen, on Android a button to download the Android app. "Nicht mehr zeigen" hides the hint on that device.
+
 ## [2.0.0] - 2026-11-09
 
 Small "?" buttons next to eleven features now explain them in a short window: when a calendar counts as busy, the

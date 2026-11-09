@@ -4,6 +4,7 @@
   import AppUpdateCard from "../components/AppUpdateCard.svelte";
   import Button from "../components/Button.svelte";
   import Card from "../components/Card.svelte";
+  import InstallHint from "../components/InstallHint.svelte";
   import MenuItem from "../components/MenuItem.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import ServerStatus from "../components/ServerStatus.svelte";
@@ -98,6 +99,7 @@
         </nav>
       </div>
     </Card>
+    <InstallHint />
     {#if calendarList && calendarList.calendars.length === 0}
       <Card tone="notice">
         <p>Verknüpfe deinen Kalender, damit Lückenfüller weiß, wann du Zeit hast.</p>
