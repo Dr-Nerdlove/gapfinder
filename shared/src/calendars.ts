@@ -17,6 +17,10 @@ export const DAYS_SEARCH_MIN_EVENT_HOURS = 6;
 export const CALENDAR_CACHE_MINUTES = 15;
 /** The preview of one's own busy times covers this many days from today. */
 export const CALENDAR_PREVIEW_DAYS = 28;
+/** One calendar larger than this (in bytes, MB = 1024 * 1024) is "very large": the owner gets a hint, the admins a notification. */
+export const CALENDAR_LARGE_BYTES = 5 * 1024 * 1024;
+/** All calendars together larger than this (in bytes) make the admins get a notification. */
+export const CALENDARS_LARGE_TOTAL_BYTES = 300 * 1024 * 1024;
 
 /** Who serves the calendar, told from the link's host name. */
 export type CalendarProvider = "google" | "apple" | "outlook" | "other";
@@ -41,6 +45,8 @@ export interface Calendar {
   isDefault: boolean;
   status: CalendarStatus;
   createdAt: string;
+  /** Size of the calendar's feed in bytes; null when not read yet, missing from servers older than this change. */
+  sizeBytes?: number | null;
 }
 
 /**
@@ -106,4 +112,12 @@ export interface CalendarPreview {
   events: PreviewEvent[];
   /** Calendars that could not be read this time (missing from `events`). */
   problems: { calendarId: number; problem: CalendarReadProblem }[];
+}
+
+/** `GET /api/admin/calendar-sizes` (admin only). Missing from servers older than this. */
+export interface CalendarSizes {
+  /** All linked calendars together, in bytes (calendars not read yet count as 0). */
+  totalBytes: number;
+  /** Usernames (unique, sorted) of people with a calendar over `CALENDAR_LARGE_BYTES`. */
+  largeCalendarOwners: string[];
 }

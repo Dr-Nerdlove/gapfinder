@@ -8,6 +8,7 @@ import {
   type AdminRenameUserRequest,
   type AdminUser,
   type BackupStatus,
+  type CalendarSizes,
   type CreateInviteRequest,
   type CreatedInvite,
   type CreatedPasswordReset,
@@ -21,6 +22,7 @@ import { authOf, createGuards } from "../auth/guards.js";
 import { readBackupStatus } from "../backup-status.js";
 import { countRingableDevices } from "../notifications/app-devices.js";
 import { countBroken } from "../calendars/store.js";
+import { readCalendarSizes } from "../calendars/size.js";
 import { isUniqueViolation } from "../db.js";
 import type { AppContext } from "../context.js";
 import { ApiError, notFound, validation } from "../errors.js";
@@ -57,6 +59,8 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
       devicesWithToken: countRingableDevices(ctx.db, ctx.now()),
       lastRing: ctx.doorbell.lastRing,
     }));
+
+    admin.get("/api/admin/calendar-sizes", async (): Promise<CalendarSizes> => readCalendarSizes(ctx.db));
 
     admin.patch<{ Body: AdminRenameUserRequest }>(
       "/api/admin/users/:id",

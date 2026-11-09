@@ -141,6 +141,16 @@ export function notifyAdminsOfDeletedAccount(ctx: AppContext, username: string, 
   }
 }
 
+/** Tells every admin (no setting, no poll), the person the news is about included. Never throws. */
+export function notifyAdmins(ctx: AppContext, data: NotificationData): void {
+  try {
+    const rows = ctx.db.prepare("SELECT id FROM users WHERE is_admin = 1").all() as { id: number }[];
+    notifyUsers(ctx, null, data, rows.map((row) => ({ userId: row.id, setting: null })));
+  } catch (error) {
+    ctx.log.warn({ kind: data.kind, err: (error as Error).name }, "Notification could not be stored");
+  }
+}
+
 /** Like `notifyUsers`, but returns only how many accounts got it. */
 export function notify(ctx: AppContext, pollId: number, data: NotificationData, recipients: Recipient[]): number {
   return notifyUsers(ctx, pollId, data, recipients).size;

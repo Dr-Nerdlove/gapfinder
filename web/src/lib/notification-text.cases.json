@@ -104,6 +104,72 @@
         "shareToken": null,
         "tag": "lueckenfueller"
       }
+    },
+    {
+      "name": "large calendar",
+      "data": {
+        "kind": "calendar_large",
+        "actorName": "Anna",
+        "sizeBytes": 6501171
+      },
+      "expected": {
+        "title": "Großer Kalender",
+        "body": "Ein Kalender von Anna ist 6,2 MB groß. Am besten darauf ansprechen.",
+        "shareToken": null,
+        "tag": "calendar_large:Anna"
+      }
+    },
+    {
+      "name": "large calendar over 100 MB",
+      "data": {
+        "kind": "calendar_large",
+        "actorName": "Tim",
+        "sizeBytes": 326000000
+      },
+      "expected": {
+        "title": "Großer Kalender",
+        "body": "Ein Kalender von Tim ist 311 MB groß. Am besten darauf ansprechen.",
+        "shareToken": null,
+        "tag": "calendar_large:Tim"
+      }
+    },
+    {
+      "name": "large calendar without a size",
+      "data": {
+        "kind": "calendar_large",
+        "actorName": "Anna"
+      },
+      "expected": {
+        "title": "Lückenfüller",
+        "body": "Es gibt Neuigkeiten.",
+        "shareToken": null,
+        "tag": "lueckenfueller"
+      }
+    },
+    {
+      "name": "calendars large in total",
+      "data": {
+        "kind": "calendars_large_total",
+        "totalBytes": 314572800
+      },
+      "expected": {
+        "title": "Kalender werden groß",
+        "body": "Alle Kalender zusammen sind 300 MB groß. Details in der Verwaltung.",
+        "shareToken": null,
+        "tag": "calendars_large_total"
+      }
+    },
+    {
+      "name": "calendars large in total without a size",
+      "data": {
+        "kind": "calendars_large_total"
+      },
+      "expected": {
+        "title": "Lückenfüller",
+        "body": "Es gibt Neuigkeiten.",
+        "shareToken": null,
+        "tag": "lueckenfueller"
+      }
     }
   ],
   "targets": [

@@ -16,12 +16,17 @@
   <Card title="Was der Admin in der App sieht">
     <ul>
       <li>Die Benutzernamen und wie viele Kalender gerade ein Problem haben. Keine Termine und keine Kalender-Links.</li>
+      <li>
+        Wenn einer deiner Kalender sehr groß ist (über 5 MB): deinen Namen und die Größe, damit dich der Admin darauf ansprechen kann.
+        Welcher Kalender es ist und was darin steht, sieht der Admin nicht.
+      </li>
     </ul>
   </Card>
 
   <Card title="Was du selbst siehst">
     <ul>
       <li>Auf der Seite „Kalender“ siehst du deine nächsten 4 Wochen mit den Titeln deiner Termine. Diese Vorschau bekommst nur du.</li>
+      <li>Dort siehst du auch, wie groß jeder deiner Kalender ist.</li>
     </ul>
   </Card>
 
@@ -32,6 +37,10 @@
         Deine Termine werden nie gespeichert. Der Server liest deinen Kalender nur, wenn er ihn braucht: für deine Vorschau, für eine Suche
         und bevor ein Termin festgelegt wird. Danach behält er ihn höchstens 15 Minuten im Arbeitsspeicher und vergisst ihn dann. Termine
         landen nie in der Datenbank, in einem Protokoll oder in einer Sicherung.
+      </li>
+      <li>
+        Wie groß jeder Kalender ist (nur die Größe in Megabyte, nie sein Inhalt). So kann der Server Admins melden, wenn ein Kalender sehr groß
+        wird, und du siehst die Größe auf deiner Kalender-Seite.
       </li>
       <li>Entfernst du einen Kalender oder wird dein Konto gelöscht, ist auch der Link weg.</li>
       <li>

@@ -2,6 +2,7 @@
   import type { AdminInvite, AdminUser } from "@lueckenfueller/shared";
   import * as api from "../lib/api";
   import BackupCard from "../components/admin/BackupCard.svelte";
+  import CalendarSizeCard from "../components/admin/CalendarSizeCard.svelte";
   import DoorbellCard from "../components/admin/DoorbellCard.svelte";
   import ServerCard from "../components/admin/ServerCard.svelte";
   import InviteCreator from "../components/admin/InviteCreator.svelte";
@@ -56,6 +57,7 @@
     <ServerCard />
     <BackupCard />
     <DoorbellCard />
+    <CalendarSizeCard />
     <InviteCreator oncreated={(invite) => (invites = [invite, ...invites])} />
     {#if loadError}
       <Card>

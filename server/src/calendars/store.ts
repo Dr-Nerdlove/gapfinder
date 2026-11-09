@@ -15,6 +15,8 @@ export interface CalendarRow {
   status: CalendarStatus;
   created_at: string;
   updated_at: string;
+  size_bytes: number | null;
+  size_warned: number;
 }
 
 /** The API shape of a row: never the link. */
@@ -28,6 +30,7 @@ export function toCalendar(row: CalendarRow): Calendar {
     isDefault: row.is_default === 1,
     status: row.status,
     createdAt: row.created_at,
+    sizeBytes: row.size_bytes,
   };
 }
 

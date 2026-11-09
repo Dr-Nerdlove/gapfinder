@@ -275,6 +275,15 @@ export const migrations: readonly Migration[] = [
     INSERT INTO sqlite_sequence (name, seq) SELECT 'notifications', seq FROM notifications_seq;
     DROP TABLE notifications_seq;`,
   },
+  {
+    id: 12,
+    name: "calendar_sizes",
+    // Additive only (new columns): an older server keeps working on this database. Only the size of a feed in bytes
+    // is stored, never anything of its contents. `size_warned` remembers that the admins were told about this
+    // calendar, so they are told once; the same for the total, in `meta` (`calendars_total_warned`).
+    sql: `ALTER TABLE calendars ADD COLUMN size_bytes INTEGER;
+    ALTER TABLE calendars ADD COLUMN size_warned INTEGER NOT NULL DEFAULT 0;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

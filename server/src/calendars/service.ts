@@ -17,6 +17,7 @@ import type { CalendarRead } from "./cache.js";
 import { normalizeCalendarUrl, type FetchFailure } from "./fetch.js";
 import { parseCalendar, type ParsedCalendar } from "./ics.js";
 import { providerOfLink } from "./provider.js";
+import { recordCalendarSize } from "./size.js";
 import { listCalendars, setStatus, type CalendarRow } from "./store.js";
 
 /** Calendars are read from a day ago to this many days ahead; the gap search needs up to a year. */
@@ -70,6 +71,8 @@ export interface CheckedLink {
   linkEncrypted: string;
   provider: CalendarProvider;
   parsed: ParsedCalendar;
+  /** Size of the fetched feed in bytes (nothing else of it is kept). */
+  sizeBytes: number;
 }
 
 /**
@@ -90,7 +93,7 @@ export async function checkLink(ctx: AppContext, userId: number, rawLink: string
   if (!fetched.ok) throw failureError(fetched.reason);
   const parsed = parseCalendar(fetched.text, horizon(ctx.now()));
   if (parsed === null) throw new ApiError(400, "calendar_not_ics");
-  return { linkEncrypted: encryptSecret(key, url.href), provider: providerOfLink(url), parsed };
+  return { linkEncrypted: encryptSecret(key, url.href), provider: providerOfLink(url), parsed, sizeBytes: Buffer.byteLength(fetched.text, "utf8") };
 }
 
 /** The name to store for a new calendar: the given one, else the feed's, else "". */
@@ -134,6 +137,7 @@ export function readStoredCalendar(ctx: AppContext, row: CalendarRow): Promise<C
     const parsed = parseCalendar(fetched.text, horizon(ctx.now()));
     if (parsed === null) return { ok: false, problem: "unreachable" };
     setStatus(ctx.db, row.id, row.link_encrypted, "ok", ctx.now().toISOString());
+    recordCalendarSize(ctx, row.id, row.link_encrypted, Buffer.byteLength(fetched.text, "utf8"));
     return { ok: true, calendar: parsed };
   });
 }

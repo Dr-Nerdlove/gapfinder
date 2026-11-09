@@ -636,6 +636,17 @@ Order of work:
   came after that decision and were reported to the owner. If calendars get very large: fewer reads at a time
   (`MAX_CONCURRENT_READS` in `server/src/calendars/busy.ts`) or more memory for the VM. Rerun the load test (with
   Node 24) when calendars or the circle grow a lot, or after changes to reading, caching or the search.
+  **Follow-up, size warning** (decided with the owner on 2026-11-09, variant "B" of four: admin page only, admin page
+  plus notification, a CLI command, a lower 10 MB limit): the server stores each calendar's size in bytes after every
+  successful read (migration 12: `calendars.size_bytes`, `size_warned`; nothing of the contents), in
+  `server/src/calendars/size.ts`. Every admin gets a notification **once** when a calendar passes **5 MB**
+  (`calendar_large`, with the owner's username and the size) or all calendars together pass **300 MB**
+  (`calendars_large_total`); it is armed again only after the size was below the limit. No setting (like
+  `account_deleted`); the calendar's owner gets no notification (owner's choice: the hint on their page is enough,
+  and the admin talks to them). The owner of a calendar sees each calendar's size on the calendar page and a hint
+  under one over 5 MB; the admin page card "Kalendergröße" shows the total and the names of people with a calendar
+  over 5 MB, not which calendar. The Android app has the texts from its next APK (`SHELL_VERSION` not raised).
+  Measured on the VM on 2026-11-09 after a search for everybody over a year: 135 MB for the server, so far below.
 
 **Release:** 9a–9e are merged and the documentation and screenshots are updated (2026-11-08); the owner wants to release
 **1.9.0** (decided 2026-11-07). 9f is a measurement;
