@@ -628,7 +628,7 @@ Order of work:
   matched. A realistic search needs about 125 MB more than the idle server, the heavy case about 330 MB: both fit.
   Not measured: the VM's CPU, and how fast the real calendar services answer (the first search's duration is mostly
   waiting for them, 8 calendars at a time).
-  **Decided** (recommended by the assistant, 2026-11-09): nothing else changes for now (no worker thread, no more
+  **Recommended** by the assistant (2026-11-09), to be confirmed by the owner: nothing else changes for now (no worker thread, no more
   parallel reads, the 10 MB limit and the VM's memory stay). Rerun the load test when calendars or the circle grow
   a lot, or after changes to reading, caching or the search.
 
