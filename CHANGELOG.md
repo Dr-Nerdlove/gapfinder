@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-11-09
+
+The start page now suggests installing Lückenfüller on your phone. On the iPhone and iPad it explains how to put it on
+the home screen, which is also what makes notifications possible there; on Android it offers the Android app. Tap
+"Nicht mehr zeigen" to hide the hint on that device. Nothing changes in how you install or update, and the Android app
+needs no new installation.
+
 ### Added
 
 - The start page now suggests installing Lückenfüller: on the iPhone and iPad how to put it on the home screen, on Android a button to download the Android app. "Nicht mehr zeigen" hides the hint on that device.
