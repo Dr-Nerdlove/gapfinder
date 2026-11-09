@@ -49,7 +49,7 @@
   const notices = $derived(preview ? problemNotices(preview.problems, calendars) : []);
 </script>
 
-<Card title="Deine nächsten 4 Wochen">
+<Card title="Deine nächsten 4 Wochen" help="calendarPreview">
   {#if error}
     <Message text={error} />
   {/if}

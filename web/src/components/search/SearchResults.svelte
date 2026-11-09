@@ -47,7 +47,7 @@
   </Card>
 
   {#if notices.length > 0}
-    <Card tone="notice" title="Nicht berücksichtigt">
+    <Card tone="notice" title="Nicht berücksichtigt" help="resultsSkipped">
       <ul class="plain">
         {#each notices as notice (notice)}<li>{notice}</li>{/each}
       </ul>
@@ -77,7 +77,7 @@
     {/if}
   </Card>
 
-  <Card title="Fast alle">
+  <Card title="Fast alle" help="resultsPartial">
     {#if !nearMissesPossible}
       <p>Diese Liste gibt es erst, wenn mindestens {NEAR_MISS_MIN_PEOPLE} Personen gesucht werden können.</p>
     {:else if nearMisses.length === 0}

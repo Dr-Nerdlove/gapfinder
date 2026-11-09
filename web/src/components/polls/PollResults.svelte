@@ -26,7 +26,7 @@
   const missing = $derived(notVotedYet(poll));
 </script>
 
-<Card title="Stand der Abstimmung">
+<Card title="Stand der Abstimmung" help="pollAnswers">
   {#if poll.votes.length === 0}
     <p>Noch niemand hat abgestimmt.</p>
   {/if}

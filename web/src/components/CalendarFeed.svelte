@@ -55,7 +55,7 @@
 
 <!-- Asleep and OfflineNotice already says so: the card stays away instead of repeating it. -->
 {#if !(screen.phase === "waiting" && sessionState.offline)}
-<Card title="Mein Lückenfüller-Kalender">
+<Card title="Mein Lückenfüller-Kalender" help="calendarFeed">
   {#if screen.phase === "loading"}
     <p aria-live="polite">Einen Moment …</p>
   {:else if screen.phase === "waiting"}

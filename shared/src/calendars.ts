@@ -13,6 +13,8 @@ export const CALENDAR_LINK_MAX_LENGTH = 2048;
  * does not.
  */
 export const DAYS_SEARCH_MIN_EVENT_HOURS = 6;
+/** How long the server keeps a calendar's contents in memory before it reads the calendar again. */
+export const CALENDAR_CACHE_MINUTES = 15;
 /** The preview of one's own busy times covers this many days from today. */
 export const CALENDAR_PREVIEW_DAYS = 28;
 
