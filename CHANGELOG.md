@@ -5,6 +5,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-11-09
+
+Small "?" buttons next to eleven features now explain them in a short window: when a calendar counts as busy, the
+preview of your next 4 weeks, your Lückenfüller calendar, the kinds of search, buffer and time window, the "Fast alle"
+and "Nicht berücksichtigt" results, how votes are counted, fixing a date and who can vote with a poll's link. Releases
+now carry only one Android APK, the one with the version number in its name. Version 2.0.0 simply follows 1.9.0 (the
+version numbers stay below 10); nothing changes in how you install or update, and the Android app needs no new
+installation.
+
 ### Changed
 
 - Releases now carry only one APK, the one with the version number in its name. The "Android-App herunterladen" button in the browser links to the APK of the current version.
