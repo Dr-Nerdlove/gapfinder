@@ -150,6 +150,7 @@ describe("POST /api/calendars", () => {
       isDefault: true,
       status: "ok",
       createdAt: e.clock.now().toISOString(),
+      sizeBytes: expect.any(Number),
     });
     expect(e.feeds.callsFor(GOOGLE_LINK)).toBe(1);
   });

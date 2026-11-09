@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Calendar } from "@lueckenfueller/shared";
-  import { CALENDAR_NAME_MAX_LENGTH } from "@lueckenfueller/shared";
+  import { CALENDAR_LARGE_BYTES, CALENDAR_NAME_MAX_LENGTH } from "@lueckenfueller/shared";
   import * as api from "../../lib/api";
+  import { formatCalendarSize } from "../../lib/calendar-size";
   import { calendarDisplayName, looksLikeCalendarLink, providerLabel } from "../../lib/calendars";
   import { ERROR_MESSAGES, errorMessage } from "../../lib/messages";
   import { session } from "../../lib/session.svelte";
@@ -140,7 +141,15 @@
           <strong>{calendarDisplayName(calendar)}</strong>
           {#if calendar.isDefault}<span class="badge">Standard</span>{/if}
         </div>
-        <p class="provider">{providerLabel(calendar.provider)}</p>
+        <p class="provider">
+          {providerLabel(calendar.provider)}{#if typeof calendar.sizeBytes === "number"}{` · ${formatCalendarSize(calendar.sizeBytes)}`}{/if}
+        </p>
+        {#if typeof calendar.sizeBytes === "number" && calendar.sizeBytes > CALENDAR_LARGE_BYTES}
+          <p class="large">
+            Dieser Kalender ist sehr groß ({formatCalendarSize(calendar.sizeBytes)}) und belastet den Server. Wenn möglich, verknüpfe stattdessen
+            einen kleineren Kalender (z. B. einen eigenen nur für private Termine) oder lösche alte Termine.
+          </p>
+        {/if}
 
         {#if calendar.status === "broken"}
           <div class="problem" role="alert">
@@ -270,6 +279,14 @@
 
   .provider {
     margin-top: -4px;
+    font-size: 0.875rem;
+  }
+
+  .large {
+    padding: 12px 16px;
+    border-radius: 16px;
+    background: var(--md-sys-color-secondary-container);
+    color: var(--md-sys-color-on-secondary-container);
     font-size: 0.875rem;
   }
 

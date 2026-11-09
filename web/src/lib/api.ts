@@ -7,6 +7,7 @@ import type {
   AccountVoteRequest,
   ApiErrorBody,
   BackupStatus,
+  CalendarSizes,
   DoorbellStatus,
   Calendar,
   CalendarList,
@@ -242,6 +243,7 @@ export const createPasswordReset = (id: number, o: CallOptions = {}) =>
 export const getBackupStatus = (o: CallOptions = {}) => request<BackupStatus>("/api/admin/backup-status", o);
 
 /** Not on servers older than the instant ring: they answer 404. */
+export const getCalendarSizes = (o: CallOptions = {}) => request<CalendarSizes>("/api/admin/calendar-sizes", o);
 export const getDoorbellStatus = (o: CallOptions = {}) => request<DoorbellStatus>("/api/admin/doorbell-status", o);
 
 export const listInvites = (o: CallOptions = {}) => request<AdminInvite[]>("/api/admin/invites", o);

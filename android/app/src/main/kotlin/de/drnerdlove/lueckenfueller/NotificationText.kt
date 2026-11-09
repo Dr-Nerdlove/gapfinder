@@ -28,6 +28,19 @@ object NotificationTexts {
 
     private fun textOf(value: Any?): String? = if (value is String && value != "") value else null
 
+    /** A finite number of at least 0, else null (like `bytes` in notification-text.ts). */
+    private fun bytesOf(value: Any?): Double? =
+        if (value is Number && value.toDouble().isFinite() && value.toDouble() >= 0) value.toDouble() else null
+
+    /** Like `formatCalendarSize` in web/src/lib/calendar-size.ts: "unter 0,1 MB", "6,2 MB", "312 MB" (MB = 1024 * 1024 bytes). */
+    internal fun formatCalendarSize(bytes: Double): String {
+        val mb = bytes / (1024.0 * 1024.0)
+        if (mb < 0.1) return "unter 0,1 MB"
+        val tenths = Math.floor(mb * 10 + 0.5).toLong()
+        if (tenths >= 1000) return "${Math.floor(mb + 0.5).toLong()} MB"
+        return "${tenths / 10},${tenths % 10} MB"
+    }
+
     /** Makes the text of a notification from its data (a JSONObject). Never throws: anything else gives a general text. */
     fun of(data: Any?): NotificationText {
         val record = data as? JSONObject ?: JSONObject()
@@ -40,6 +53,26 @@ object NotificationTexts {
         // The one kind that belongs to no poll: it has no title and no token.
         if (kind == "account_deleted" && actor != null) {
             return NotificationText("Konto gelöscht", "$actor hat das eigene Konto gelöscht.", null, "account_deleted:$actor")
+        }
+
+        // Two more kinds for admins that belong to no poll.
+        val sizeBytes = bytesOf(record.opt("sizeBytes"))
+        if (kind == "calendar_large" && actor != null && sizeBytes != null) {
+            return NotificationText(
+                "Großer Kalender",
+                "Ein Kalender von $actor ist ${formatCalendarSize(sizeBytes)} groß. Am besten darauf ansprechen.",
+                null,
+                "calendar_large:$actor",
+            )
+        }
+        val totalBytes = bytesOf(record.opt("totalBytes"))
+        if (kind == "calendars_large_total" && totalBytes != null) {
+            return NotificationText(
+                "Kalender werden groß",
+                "Alle Kalender zusammen sind ${formatCalendarSize(totalBytes)} groß. Details in der Verwaltung.",
+                null,
+                "calendars_large_total",
+            )
         }
 
         if (pollTitle != null && actor != null) {

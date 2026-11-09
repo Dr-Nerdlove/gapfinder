@@ -35,3 +35,6 @@ Things to know:
   in `shoot.cjs`; the run stops with Playwright's error and the step's line.
 - Pictures that are not made here (search result for days, "Server off", notifications, "Meine Abstimmungen",
   Android) are older and are retaken by hand when their screen changes.
+- `calendars-large.png` (the hint under a calendar over 5 MB) was made by hand on 2026-11-09: for one run, Anna's
+  made-up calendar in `fake-server.mts` got a 6.6 MB `X-PADDING:` line (not committed), and the picture was cropped
+  to the first card.

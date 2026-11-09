@@ -5,6 +5,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- The calendar page shows how big each of your calendars is, with a hint when one is very large (over 5 MB) and
+  slows the server down.
+- Admins get a notification once when someone's calendar gets larger than 5 MB, or all calendars together larger
+  than 300 MB; the admin page shows the total and whose calendar is very large. Only the size is stored, never what is
+  in a calendar. The Android app shows these notifications with their own text from its next version; until then it
+  shows a general text.
+
 ## [2.1.1] - 2026-11-09
 
 The server needs far less memory after a search: it used to keep the whole text of every calendar it had read, now

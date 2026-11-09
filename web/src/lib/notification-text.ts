@@ -1,4 +1,5 @@
 import type { NotificationItem, Proposal } from "@lueckenfueller/shared";
+import { formatCalendarSize } from "./calendar-size";
 import { proposalLabel } from "./poll-view";
 
 // The German texts of push messages. The service worker imports this file: only pure functions, nothing
@@ -31,6 +32,30 @@ export function notificationText(data: unknown): NotificationText {
   // The one kind that belongs to no poll: it has no title and no token.
   if (kind === "account_deleted" && actor !== null) {
     return { title: "Konto gelöscht", body: `${actor} hat das eigene Konto gelöscht.`, shareToken: null, tag: `account_deleted:${actor}` };
+  }
+
+  // Two more kinds for admins that belong to no poll.
+  const bytes = (key: string): number | null => {
+    const value = record[key];
+    return typeof value === "number" && Number.isFinite(value) && value >= 0 ? value : null;
+  };
+  const sizeBytes = bytes("sizeBytes");
+  if (kind === "calendar_large" && actor !== null && sizeBytes !== null) {
+    return {
+      title: "Großer Kalender",
+      body: `Ein Kalender von ${actor} ist ${formatCalendarSize(sizeBytes)} groß. Am besten darauf ansprechen.`,
+      shareToken: null,
+      tag: `calendar_large:${actor}`,
+    };
+  }
+  const totalBytes = bytes("totalBytes");
+  if (kind === "calendars_large_total" && totalBytes !== null) {
+    return {
+      title: "Kalender werden groß",
+      body: `Alle Kalender zusammen sind ${formatCalendarSize(totalBytes)} groß. Details in der Verwaltung.`,
+      shareToken: null,
+      tag: "calendars_large_total",
+    };
   }
 
   if (pollTitle !== null && actor !== null) {

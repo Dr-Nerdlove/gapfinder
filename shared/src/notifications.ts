@@ -38,7 +38,9 @@ interface NotificationBase {
 /**
  * What happened, as data. `actorName` is the username of the account, or the name a guest gave; for
  * `all_voted` it is the last voter; for `account_deleted` it is the user who deleted their own account (this kind
- * belongs to no poll, so it has no `pollTitle` and no `shareToken`). Only ever add kinds and fields: an older app
+ * belongs to no poll, so it has no `pollTitle` and no `shareToken`); `calendar_large` (admins only, no poll) names
+ * the owner of a calendar over 5 MB and its size, `calendars_large_total` (admins only, no poll) the size of all
+ * calendars together. Only ever add kinds and fields: an older app
  * ignores kinds it does not know.
  */
 export type NotificationData =
@@ -47,7 +49,9 @@ export type NotificationData =
   | (NotificationBase & { kind: "all_voted"; actorName: string })
   | (NotificationBase & { kind: "date_fixed"; actorName: string; proposal: Proposal })
   | (NotificationBase & { kind: "reminder"; actorName: string })
-  | { kind: "account_deleted"; actorName: string };
+  | { kind: "account_deleted"; actorName: string }
+  | { kind: "calendar_large"; actorName: string; sizeBytes: number }
+  | { kind: "calendars_large_total"; totalBytes: number };
 
 export type NotificationKind = NotificationData["kind"];
 

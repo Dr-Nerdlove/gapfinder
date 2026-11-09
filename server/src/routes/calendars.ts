@@ -17,6 +17,7 @@ import {
   rememberContents,
   requireCalendarKey,
 } from "../calendars/service.js";
+import { recordCalendarSize } from "../calendars/size.js";
 import {
   countCalendars,
   deleteCalendar,
@@ -94,6 +95,7 @@ export function registerCalendarRoutes(app: FastifyInstance, ctx: AppContext): v
         });
       });
       rememberContents(ctx, id, checked.linkEncrypted, checked.parsed);
+      recordCalendarSize(ctx, id, checked.linkEncrypted, checked.sizeBytes);
       return reply.status(201).send(toCalendar(findCalendar(ctx.db, user.id, id)!));
     },
   );
@@ -124,6 +126,7 @@ export function registerCalendarRoutes(app: FastifyInstance, ctx: AppContext): v
       if (checked) {
         ctx.calendarCache.drop(id);
         rememberContents(ctx, id, checked.linkEncrypted, checked.parsed);
+        recordCalendarSize(ctx, id, checked.linkEncrypted, checked.sizeBytes);
       }
       return toCalendar(findCalendar(ctx.db, user.id, id)!);
     },
