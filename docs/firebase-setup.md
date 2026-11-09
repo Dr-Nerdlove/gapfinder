@@ -59,6 +59,11 @@ The API key inside `google-services.json` is public, so limit what it may do.
 Builds signed with another key (debug or test builds) will then get no ring; that is fine, the 15-minute check
 still works for them.
 
+GitHub's secret scanning reports this key as a "Google API Key" (alert #1, 2026-11-09). That is expected: the key is
+public by design. The owner checked that the restriction above was in place and closed the alert as **Won't fix**
+(2026-11-09). Do not revoke or rotate the key: a new key would be just as public (it is in every APK), and until
+every phone has an APK with the new key, instant notifications would stop working.
+
 ## 5. Check that it works
 
 1. Install the new APK and open the app once. A phone that already had notifications on then sends its token to
