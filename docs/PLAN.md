@@ -623,8 +623,14 @@ Order of work:
   | Others' requests waited at most            | 0.5 s                          | 1.8 s                       |
   | Three groups of 17 at once: waited at most | 1.3 s                          | 7 s (RSS 506 MB)            |
 
-  Not measured: the VM itself (its CPU, how much of the 1 GB Debian, Docker and Tailscale leave), and how fast the real
-  calendar services answer (the first search's duration is mostly waiting for them, 8 calendars at a time).
+  The VM, read by the owner on 2026-11-09: 901 MB of memory, 436 MB available with the server running (`free -m`),
+  547 MB swap; the idle server uses 64 MB (`docker stats`); Node's heap limit there is 499 MB, so the test's 512 MB
+  matched. A realistic search needs about 125 MB more than the idle server, the heavy case about 330 MB: both fit.
+  Not measured: the VM's CPU, and how fast the real calendar services answer (the first search's duration is mostly
+  waiting for them, 8 calendars at a time).
+  **Decided** (recommended by the assistant, 2026-11-09): nothing else changes for now (no worker thread, no more
+  parallel reads, the 10 MB limit and the VM's memory stay). Rerun the load test when calendars or the circle grow
+  a lot, or after changes to reading, caching or the search.
 
 **Release:** 9a–9e are merged and the documentation and screenshots are updated (2026-11-08); the owner wants to release
 **1.9.0** (decided 2026-11-07). 9f is a measurement;

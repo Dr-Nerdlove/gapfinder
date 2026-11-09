@@ -15,7 +15,7 @@ node scripts/load-test/run.mjs heavy          # about 6 minutes, every calendar 
 Needs Node 22.13+. Everything lives in `$LOAD_DIR` (default `$TMPDIR/lueckenfueller-load`, deleted at the start of every
 run, logs in it). The server runs with a heap limit of 512 MB (`LOAD_HEAP_MB`), what Node should pick by itself on a
 machine with 1 GB of memory like the VM (V8's rule: a quarter of the memory, times two on 64-bit, at most 2 GB; on the
-16 GB cloud machine it gave 2 GB, on the VM it is not checked). Ports 8080, 8090 and 8091 must be free.
+16 GB cloud machine it gave 2 GB, on the VM 499 MB, read on 2026-11-09). Ports 8080, 8090 and 8091 must be free.
 
 | File                | What it does                                                                                              |
 | ------------------- | --------------------------------------------------------------------------------------------------------- |
