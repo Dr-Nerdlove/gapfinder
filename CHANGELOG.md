@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- When a date is fixed, the button for your default calendar (Google or Outlook) now comes first.
+
 ## [2.2.0] - 2026-11-09
 
 The calendar page now shows how big each of your calendars is, with a tip when one is very large and slows the server

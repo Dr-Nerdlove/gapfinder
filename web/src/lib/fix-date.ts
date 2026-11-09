@@ -1,4 +1,4 @@
-import type { FixCheck, PollPerson, PollView, Proposal } from "@lueckenfueller/shared";
+import type { Calendar, CalendarProvider, FixCheck, PollPerson, PollView, Proposal } from "@lueckenfueller/shared";
 import type { ApiResult } from "./api";
 import { addDays } from "./gap-search";
 import { errorMessage } from "./messages";
@@ -126,4 +126,20 @@ export function warningLines(check: FixCheck): string[] {
 /** The proposal the choice starts on: the fixed one, else the best one, else the first. */
 export function startChoice(poll: Pick<PollView, "proposals"> & FixedFields, bestIds: readonly number[]): number | null {
   return fixedIdOf(poll) ?? bestIds[0] ?? poll.proposals[0]?.id ?? null;
+}
+
+// ---------- order of the "add to calendar" buttons ----------
+
+export type CalendarButton = "ics" | "google" | "outlook";
+
+/** The buttons in the order to show them: the default calendar's provider first. Apple, other and unknown keep the .ics first (it opens Apple's calendar). */
+export function calendarButtonOrder(provider: CalendarProvider | null): CalendarButton[] {
+  if (provider === "google") return ["google", "ics", "outlook"];
+  if (provider === "outlook") return ["outlook", "ics", "google"];
+  return ["ics", "google", "outlook"];
+}
+
+/** The provider of the calendar marked as default, or null when there is none. */
+export function defaultProvider(calendars: Pick<Calendar, "provider" | "isDefault">[]): CalendarProvider | null {
+  return calendars.find((c) => c.isDefault)?.provider ?? null;
 }

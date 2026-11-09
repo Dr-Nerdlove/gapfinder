@@ -214,7 +214,7 @@
     </Card>
 
     {#if fixed}
-      <FixedDate {poll} proposal={fixed} {locked} />
+      <FixedDate {poll} proposal={fixed} {locked} {loggedIn} />
     {/if}
 
     <PollResults {poll} busy={busy || locked} onremove={poll.canManage ? (id, name) => (removing = { id, name }) : undefined} />
