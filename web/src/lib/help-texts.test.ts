@@ -6,7 +6,7 @@ import {
   SEARCH_MAX_BUFFER_MINUTES,
 } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
-import { HELP_TEXTS, helpSegments, type HelpTopic } from "./help-texts";
+import { HELP_TEXTS, helpSegments, splitLastWord, type HelpTopic } from "./help-texts";
 
 const topics = Object.keys(HELP_TEXTS) as HelpTopic[];
 const all = (topic: HelpTopic) => HELP_TEXTS[topic].paragraphs.join(" ");
@@ -75,5 +75,21 @@ describe("helpSegments", () => {
       { text: "a", strong: true },
       { text: " b ** c", strong: false },
     ]);
+  });
+});
+
+describe("splitLastWord", () => {
+  it("cuts before the last word and keeps the space in head", () => {
+    expect(splitLastWord("Mein Lückenfüller-Kalender")).toEqual({ head: "Mein ", last: "Lückenfüller-Kalender" });
+    expect(splitLastWord("Was suchst du?")).toEqual({ head: "Was suchst ", last: "du?" });
+  });
+
+  it("puts a single word into last", () => {
+    expect(splitLastWord("Ergebnis")).toEqual({ head: "", last: "Ergebnis" });
+  });
+
+  it("ignores trailing spaces and copes with an empty title", () => {
+    expect(splitLastWord("Fast alle ")).toEqual({ head: "Fast ", last: "alle" });
+    expect(splitLastWord("")).toEqual({ head: "", last: "" });
   });
 });
