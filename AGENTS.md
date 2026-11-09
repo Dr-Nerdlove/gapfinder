@@ -299,7 +299,8 @@ missing, with a recommendation, and let the people choose.
     `slice`, ical.js values) are slices that keep the whole feed text alive in V8. Whatever stays in the calendar
     cache must be copied (`ownCopy` in `server/src/calendars/ics.ts`); a new kept field needs it too, and
     `calendar-ics-memory.test.ts` must stay in its own file (in a worker that ran other tests the heap is no measure).
-    Rerun the load test after changes to reading, caching or the search.
+    Rerun the load test (with Node 24, as in the image) after changes to reading, caching or the search. Node 24
+    still holds a parsed feed for a moment after the parse: the test measures on a later turn.
   - Database migrations must be additive: the VM rolls back to the previous image when a new one is not
     healthy, and that older server then runs on the already migrated database.
   - Health workflow (`health.yml`, `scripts/health-watch.sh`, phase 9d): GitHub e-mails a failed scheduled run to the user

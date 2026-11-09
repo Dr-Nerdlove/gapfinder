@@ -9,14 +9,18 @@ const WIDE = { start: new Date("2025-01-01T00:00:00Z"), end: new Date("2029-01-0
 const cal = (body: string): string => `BEGIN:VCALENDAR\nVERSION:2.0\nPRODID:-//test//EN\n${body}\nEND:VCALENDAR\n`;
 
 describe("memory", () => {
-  it("keeps no part of the feed text alive through the parsed calendar (it stays in the cache)", () => {
+  it("keeps no part of the feed text alive through the parsed calendar (it stays in the cache)", async () => {
     // `gc` is only there with --expose-gc; a new context made after setting the flag has it.
     v8.setFlagsFromString("--expose-gc");
     const gc = runInNewContext("gc") as () => void;
-    const heapUsed = (): number => {
+    const heapUsed = async (): Promise<number> => {
       // The last string a regular expression ran on stays reachable (RegExp.input); point it at a short one.
       /x/.exec("x");
-      for (let i = 0; i < 4; i++) gc();
+      // Node 24 still holds the feed for a moment right after the parse: measure on a later turn, twice.
+      for (let round = 0; round < 2; round++) {
+        await new Promise((resolve) => setTimeout(resolve, 10));
+        for (let i = 0; i < 4; i++) gc();
+      }
       return process.memoryUsage().heapUsed;
     };
     const parse = (): ReturnType<typeof parseCalendar> => {
@@ -27,9 +31,9 @@ describe("memory", () => {
       }).join("\n");
       return parseCalendar(cal(body), WIDE);
     };
-    const before = heapUsed();
+    const before = await heapUsed();
     const parsed = parse();
-    const kept = heapUsed() - before;
+    const kept = (await heapUsed()) - before;
 
     expect(parsed?.events).toHaveLength(300);
     expect(parsed?.events[0]?.title).toBe("Ein ziemlich langer Titel Nummer 0");

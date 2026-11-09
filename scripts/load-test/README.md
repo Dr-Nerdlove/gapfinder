@@ -12,7 +12,7 @@ node scripts/load-test/run.mjs realistic      # about 3 minutes
 node scripts/load-test/run.mjs heavy          # about 6 minutes, every calendar near the 10 MB limit
 ```
 
-Needs Node 22.13+. Everything lives in `$LOAD_DIR` (default `$TMPDIR/lueckenfueller-load`, deleted at the start of every
+Needs Node 22.13+; use Node 24 like the Docker image (`.nvmrc`), it needs clearly more memory than Node 22. Everything lives in `$LOAD_DIR` (default `$TMPDIR/lueckenfueller-load`, deleted at the start of every
 run, logs in it). The server runs with a heap limit of 512 MB (`LOAD_HEAP_MB`), what Node should pick by itself on a
 machine with 1 GB of memory like the VM (V8's rule: a quarter of the memory, times two on 64-bit, at most 2 GB; on the
 16 GB cloud machine it gave 2 GB, on the VM 499 MB, read on 2026-11-09). Ports 8080, 8090 and 8091 must be free.
