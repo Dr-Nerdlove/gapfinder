@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- Releases now carry only one APK, the one with the version number in its name. The "Android-App herunterladen" button in the browser links to the APK of the current version.
+
 ### Added
 
 - Small „?“ buttons next to eleven features (calendar settings, preview and calendar feed, search options, search results, poll results, fixing a date and sharing a poll) explain the feature in a short window.
