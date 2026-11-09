@@ -133,3 +133,13 @@ export function helpSegments(paragraph: string): HelpSegment[] {
   }
   return segments;
 }
+
+/**
+ * A title cut before its last word (`head` keeps the space), so the "?" button can stay on the line of that word:
+ * "Mein Lückenfüller-Kalender" -> { head: "Mein ", last: "Lückenfüller-Kalender" }.
+ */
+export function splitLastWord(title: string): { head: string; last: string } {
+  const trimmed = title.trimEnd();
+  const cut = trimmed.lastIndexOf(" ") + 1;
+  return { head: trimmed.slice(0, cut), last: trimmed.slice(cut) };
+}

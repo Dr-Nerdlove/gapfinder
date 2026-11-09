@@ -86,6 +86,8 @@
     font-size: 1rem;
     font-weight: 400;
     text-align: left;
+    /* The button may sit in a no-wrap title (Card); the window's text must wrap. */
+    white-space: normal;
   }
 
   dialog::backdrop {

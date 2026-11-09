@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import type { HelpTopic } from "../lib/help-texts";
+  import { splitLastWord, type HelpTopic } from "../lib/help-texts";
   import HelpHint from "./HelpHint.svelte";
 
   interface Props {
@@ -12,10 +12,14 @@
   }
 
   let { title, help, tone = "plain", children }: Props = $props();
+  const parts = $derived(splitLastWord(title ?? ""));
 </script>
 
 <section class="card" class:notice={tone === "notice"}>
-  {#if title}<h2>{title}{#if help} <HelpHint topic={help} />{/if}</h2>{/if}
+  {#if title}
+    <!-- The "?" stays on the line of the title's last word instead of wrapping onto a line of its own. -->
+    <h2>{#if help}{parts.head}<span class="keep">{parts.last}&nbsp;<HelpHint topic={help} /></span>{:else}{title}{/if}</h2>
+  {/if}
   {@render children()}
 </section>
 
@@ -39,6 +43,10 @@
     font-size: 1.25rem;
     line-height: 1.4;
     font-weight: 600;
+  }
+
+  .keep {
+    white-space: nowrap;
   }
 
   /* Fields inside a card sit on the card's colour, so they get the plain surface as background. */
