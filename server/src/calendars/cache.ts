@@ -1,9 +1,9 @@
 // Calendar contents live here and nowhere else: in memory, for 15 minutes, never on disk. Concurrent reads of
 // the same calendar share one fetch.
-import type { CalendarReadProblem } from "@lueckenfueller/shared";
+import { CALENDAR_CACHE_MINUTES, type CalendarReadProblem } from "@lueckenfueller/shared";
 import type { ParsedCalendar } from "./ics.js";
 
-export const CALENDAR_CACHE_MS = 15 * 60 * 1000;
+export const CALENDAR_CACHE_MS = CALENDAR_CACHE_MINUTES * 60 * 1000;
 
 export type CalendarRead = { ok: true; calendar: ParsedCalendar } | { ok: false; problem: CalendarReadProblem };
 

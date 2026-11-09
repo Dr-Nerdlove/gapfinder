@@ -8,6 +8,7 @@
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
   import ConfirmDialog from "../ConfirmDialog.svelte";
+  import HelpHint from "../HelpHint.svelte";
   import Message from "../Message.svelte";
   import TextField from "../TextField.svelte";
 
@@ -149,7 +150,10 @@
         {/if}
 
         <div class="busy" role="group" aria-labelledby="busy-label-{calendar.id}">
-          <span class="busy-title" id="busy-label-{calendar.id}">Zählt als belegt für:</span>
+          <div class="busy-head">
+            <span class="busy-title" id="busy-label-{calendar.id}">Zählt als belegt für:</span>
+            <HelpHint topic="calendarBusy" />
+          </div>
           <div class="switches">
             <label class="switch">
               <input type="checkbox" role="switch" checked={calendar.countsAsBusy} {disabled} onchange={(e) => toggleBusy(e, calendar, "hours")} />
@@ -284,6 +288,11 @@
   .busy {
     display: flex;
     flex-direction: column;
+  }
+
+  .busy-head {
+    display: flex;
+    align-items: center;
   }
 
   .busy-title {

@@ -99,7 +99,7 @@
     {/if}
   </Card>
 
-  <Card title="Was suchst du?">
+  <Card title="Was suchst du?" help="searchKind">
     <div class="chips" role="group" aria-label="Art der Suche">
       <Chip label="Stunden" selected={settings.kind === "hours"} onclick={() => (settings.kind = "hours")} />
       <Chip label="Ganze Tage" selected={settings.kind === "days"} onclick={() => (settings.kind = "days")} />
@@ -122,12 +122,13 @@
         />
         <SelectField
           label="Puffer vor und nach Terminen"
+          help="searchBuffer"
           options={buffers}
           bind:value={() => String(settings.bufferMinutes), (v) => (settings.bufferMinutes = Number(v))}
         />
       </div>
       <div class="selects">
-        <SelectField label="Zeitfenster von" options={clocks} bind:value={settings.windowStart} />
+        <SelectField label="Zeitfenster von" help="searchWindow" options={clocks} bind:value={settings.windowStart} />
         <SelectField label="bis" options={clocks} bind:value={settings.windowEnd} />
       </div>
       <p class="note">

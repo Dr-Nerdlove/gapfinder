@@ -1,17 +1,21 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import type { HelpTopic } from "../lib/help-texts";
+  import HelpHint from "./HelpHint.svelte";
 
   interface Props {
     title?: string;
+    /** A "?" button after the title that explains the feature. */
+    help?: HelpTopic;
     tone?: "plain" | "notice";
     children: Snippet;
   }
 
-  let { title, tone = "plain", children }: Props = $props();
+  let { title, help, tone = "plain", children }: Props = $props();
 </script>
 
 <section class="card" class:notice={tone === "notice"}>
-  {#if title}<h2>{title}</h2>{/if}
+  {#if title}<h2>{title}{#if help} <HelpHint topic={help} />{/if}</h2>{/if}
   {@render children()}
 </section>
 

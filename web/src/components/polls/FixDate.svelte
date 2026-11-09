@@ -69,7 +69,7 @@
   }
 </script>
 
-<Card title={fixedId === null ? "Termin festlegen" : "Termin ändern"}>
+<Card title={fixedId === null ? "Termin festlegen" : "Termin ändern"} help="pollFix">
   <p class="note">
     {#if fixedId === null}
       Wähle den Termin, der gelten soll. Vorher prüft die App noch einmal die Kalender. Danach können alle nicht mehr abstimmen.

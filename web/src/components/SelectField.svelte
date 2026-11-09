@@ -1,20 +1,24 @@
 <script lang="ts">
+  import type { HelpTopic } from "../lib/help-texts";
+  import HelpHint from "./HelpHint.svelte";
+
   interface Props {
     label: string;
     value: string;
     options: { value: string; label: string }[];
     disabled?: boolean;
     hint?: string;
+    help?: HelpTopic;
     onchange?: () => void;
   }
 
-  let { label, value = $bindable(), options, disabled = false, hint, onchange }: Props = $props();
+  let { label, value = $bindable(), options, disabled = false, hint, help, onchange }: Props = $props();
 
   const id = $props.id();
 </script>
 
 <div class="field">
-  <label for={id}>{label}</label>
+  <div class="head"><label for={id}>{label}</label>{#if help}<HelpHint topic={help} />{/if}</div>
   <select {id} {disabled} bind:value {onchange} aria-describedby={hint ? `${id}-note` : undefined}>
     {#each options as option (option.value)}
       <option value={option.value}>{option.label}</option>
@@ -31,8 +35,13 @@
     flex: 1 1 8rem;
   }
 
-  label {
+  .head {
+    display: flex;
+    align-items: center;
     margin-block: auto;
+  }
+
+  label {
     font-size: 0.875rem;
     font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);

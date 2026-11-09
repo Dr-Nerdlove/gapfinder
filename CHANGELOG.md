@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- Small „?“ buttons next to eleven features (calendar settings, preview and calendar feed, search options, search results, poll results, fixing a date and sharing a poll) explain the feature in a short window.
+
 ## [1.9.0] - 2026-11-08
 
 Lückenfüller is ready for a bigger circle of friends. On the search page you can find people with a search field and

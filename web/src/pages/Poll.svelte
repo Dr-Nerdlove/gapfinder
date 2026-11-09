@@ -252,7 +252,7 @@
       <FixDate {poll} {busy} {locked} problem={fixProblem} oncheck={check} onfix={fix} onunfix={unfix} />
     {/if}
 
-    <Card title="Link weitergeben">
+    <Card title="Link weitergeben" help="pollShare">
       <LinkBox
         label="Link zur Abstimmung"
         link={buildPollLink(poll.shareToken)}
