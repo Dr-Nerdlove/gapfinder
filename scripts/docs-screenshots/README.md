@@ -1,6 +1,6 @@
 # Documentation screenshots
 
-Takes the pictures in `docs/screenshots` that show the whole app (login, invite, start page, profile, admin area,
+Takes the pictures in `docs/screenshots` that show the whole app (login, invite, start page, profile, calendars, admin area,
 search with groups and "Fast alle", the poll's calendar check, fixing the date) in one run, with made-up people and
 calendars on a throw-away server. Nothing here is part of the app, the server image or CI.
 
@@ -33,5 +33,5 @@ Things to know:
 - The start picture is cropped above the version line, which changes with every release.
 - A text or button that changes in the app can break a script step (they find things by their German text): fix the step
   in `shoot.cjs`; the run stops with Playwright's error and the step's line.
-- Pictures that are not made here (search result for days, "Server off", notifications, "Meine Abstimmungen", calendars,
+- Pictures that are not made here (search result for days, "Server off", notifications, "Meine Abstimmungen",
   Android) are older and are retaken by hand when their screen changes.
