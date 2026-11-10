@@ -277,8 +277,8 @@
         {/if}
       {:else if device === "ios-home-screen"}
         <p>
-          Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: In Safari auf „Teilen“ tippen, dann „Zum
-          Home-Bildschirm“. Öffne Lückenfüller danach von dort und schalte sie hier ein.
+          Auf dem iPhone kommen Benachrichtigungen nur in der App auf dem Home-Bildschirm: Im Browser auf „Teilen“ tippen (in Safari
+          unten, in Chrome oben rechts), dann „Zum Home-Bildschirm“. Öffne Lückenfüller danach von dort und schalte sie hier ein.
         </p>
       {:else if device === "ios-too-old"}
         <p>Dafür braucht dein iPhone mindestens iOS 16.4.</p>

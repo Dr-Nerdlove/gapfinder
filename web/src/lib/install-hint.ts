@@ -9,7 +9,7 @@ export type InstallHint = "ios" | "android" | null;
 export const INSTALL_HINT_TITLE = "Lückenfüller als App";
 
 export const INSTALL_HINT_IOS_TEXT =
-  "Leg Lückenfüller auf deinen Home-Bildschirm: Dann öffnet es sich wie eine App, und du kannst Benachrichtigungen bekommen. Tippe dafür in Safari auf „Teilen“ (das Viereck mit dem Pfeil nach oben) und dann auf „Zum Home-Bildschirm“.";
+  "Leg Lückenfüller auf deinen Home-Bildschirm: Dann öffnet es sich wie eine App, und du kannst Benachrichtigungen bekommen. Tippe dafür im Browser auf „Teilen“ (das Viereck mit dem Pfeil nach oben, in Safari unten, in Chrome oben rechts) und dann auf „Zum Home-Bildschirm“.";
 
 export const INSTALL_HINT_ANDROID_TEXT = `Lückenfüller gibt es für Android als App. Damit kommen Benachrichtigungen sofort, auch wenn das Handy gesperrt ist. ${ANDROID_APP_STEPS_TEXT}`;
 
