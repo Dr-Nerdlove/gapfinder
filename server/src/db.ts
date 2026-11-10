@@ -293,6 +293,19 @@ export const migrations: readonly Migration[] = [
     // other than the fixed one, so that case stays rare and harmless.
     sql: `ALTER TABLE polls ADD COLUMN removed_at TEXT;`,
   },
+  {
+    id: 14,
+    name: "calendar_feed_fetches",
+    // Additive only: one new table. Per person and kind of calendar app (google, apple, microsoft, other) only the
+    // time of the last fetch of the personal feed is stored: no user agent string, no address. Rows go with the
+    // feed (cascade), and renewing the link clears them. An older server (after a rollback) ignores the table.
+    sql: `CREATE TABLE calendar_feed_fetches (
+      user_id INTEGER NOT NULL REFERENCES calendar_feeds (user_id) ON DELETE CASCADE,
+      app TEXT NOT NULL,
+      fetched_at TEXT NOT NULL,
+      PRIMARY KEY (user_id, app)
+    ) STRICT;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

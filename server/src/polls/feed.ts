@@ -1,5 +1,6 @@
 // Fixed dates as calendar events: the event of one poll, and the personal calendar feed.
 import type { DatabaseSync } from "node:sqlite";
+import type { CalendarFeedFetch, FeedApp } from "@lueckenfueller/shared";
 import type { FixedEvent } from "../calendars/ics-write.js";
 import { generateShareToken, proposalRowsOf, type PollRow, type ProposalRow } from "./store.js";
 
@@ -41,10 +42,29 @@ export function renewFeedToken(db: DatabaseSync, userId: number, now: Date): str
     `INSERT INTO calendar_feeds (user_id, token, created_at) VALUES (?, ?, ?)
      ON CONFLICT (user_id) DO UPDATE SET token = excluded.token, created_at = excluded.created_at`,
   ).run(userId, token, now.toISOString());
+  // A new link has not been fetched yet.
+  db.prepare("DELETE FROM calendar_feed_fetches WHERE user_id = ?").run(userId);
   return token;
 }
 
+/** Remembers that a calendar app of this kind fetched the person's feed just now (only kind and time). */
+export function recordFeedFetch(db: DatabaseSync, userId: number, app: FeedApp, now: Date): void {
+  db.prepare(
+    `INSERT INTO calendar_feed_fetches (user_id, app, fetched_at) VALUES (?, ?, ?)
+     ON CONFLICT (user_id, app) DO UPDATE SET fetched_at = excluded.fetched_at`,
+  ).run(userId, app, now.toISOString());
+}
+
+/** When each kind of calendar app last fetched the person's feed, newest first. */
+export function feedFetchesOf(db: DatabaseSync, userId: number): CalendarFeedFetch[] {
+  const rows = db
+    .prepare("SELECT app, fetched_at FROM calendar_feed_fetches WHERE user_id = ? ORDER BY fetched_at DESC, app")
+    .all(userId) as { app: FeedApp; fetched_at: string }[];
+  return rows.map((row) => ({ app: row.app, at: row.fetched_at }));
+}
+
 export function deleteFeed(db: DatabaseSync, userId: number): void {
+  // The fetch rows go with it (ON DELETE CASCADE).
   db.prepare("DELETE FROM calendar_feeds WHERE user_id = ?").run(userId);
 }
 

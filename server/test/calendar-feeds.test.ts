@@ -78,16 +78,16 @@ describe("managing the feed link", () => {
 
   it("has no feed at first, creates one with a 128-bit token and shows it again", async () => {
     const e = await setup();
-    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.me.token })).json<CalendarFeed>()).toEqual({ token: null });
+    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.me.token })).json<CalendarFeed>()).toEqual({ token: null, fetches: [] });
 
     const created = await call(e, "POST", "/api/me/calendar-feed", { token: e.me.token });
     expect(created.statusCode).toBe(200);
     const { token } = created.json<CalendarFeed>();
     expect(token).toMatch(/^[A-Za-z0-9_-]{22}$/);
     expect(e.db.prepare("SELECT user_id, token FROM calendar_feeds").all()).toEqual([{ user_id: e.me.id, token }]);
-    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.me.token })).json<CalendarFeed>()).toEqual({ token });
+    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.me.token })).json<CalendarFeed>()).toEqual({ token, fetches: [] });
     // Everybody has their own.
-    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.anna.token })).json<CalendarFeed>()).toEqual({ token: null });
+    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.anna.token })).json<CalendarFeed>()).toEqual({ token: null, fetches: [] });
   });
 
   it("renews the token: the new link works at once and the old one is dead", async () => {
@@ -109,7 +109,7 @@ describe("managing the feed link", () => {
     const off = await call(e, "DELETE", "/api/me/calendar-feed", { token: e.me.token });
     expect(off.statusCode).toBe(204);
     expect(off.body).toBe("");
-    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.me.token })).json<CalendarFeed>()).toEqual({ token: null });
+    expect((await call(e, "GET", "/api/me/calendar-feed", { token: e.me.token })).json<CalendarFeed>()).toEqual({ token: null, fetches: [] });
     expect((await feed(e, token)).statusCode).toBe(404);
     expect((await call(e, "DELETE", "/api/me/calendar-feed", { token: e.me.token })).statusCode).toBe(204);
   });
@@ -259,5 +259,77 @@ describe("reading the feed", () => {
     for (let i = 0; i < TOKEN_FAILURES_PER_IP; i++) await call(e, "GET", `/api/invites/wrong-${i}`);
     expect((await call(e, "GET", "/api/invites/wrong")).statusCode).toBe(429);
     expect((await feed(e, token)).statusCode).toBe(200);
+  });
+});
+
+describe("when the feed was last fetched", () => {
+  const GOOGLE = { "user-agent": "Google-Calendar-Importer" };
+  const APPLE = { "user-agent": "iOS/17.5 (21F79) dataaccessd/1.0" };
+  const read = async (e: Setup) => (await call(e, "GET", "/api/me/calendar-feed", { token: e.me.token })).json<CalendarFeed>();
+  const fetchAs = (e: Setup, token: string, headers: Record<string, string>) =>
+    call(e, "GET", `/api/calendar-feeds/${token}`, { headers });
+
+  it("starts empty, and the answer to switching on has an empty list", async () => {
+    const e = await setup();
+    expect((await read(e)).fetches).toEqual([]);
+    const created = await call(e, "POST", "/api/me/calendar-feed", { token: e.me.token });
+    expect(created.json<CalendarFeed>().fetches).toEqual([]);
+    expect((await read(e)).fetches).toEqual([]);
+  });
+
+  it("remembers the kind of app and the time, newest first, one row per kind", async () => {
+    const e = await setup();
+    const token = await feedToken(e, e.me.token);
+    expect((await fetchAs(e, token, GOOGLE)).statusCode).toBe(200);
+    expect((await read(e)).fetches).toEqual([{ app: "google", at: "2026-11-01T10:00:00.000Z" }]);
+
+    e.clock.advanceMinutes(30);
+    await fetchAs(e, token, APPLE);
+    expect((await read(e)).fetches).toEqual([
+      { app: "apple", at: "2026-11-01T10:30:00.000Z" },
+      { app: "google", at: "2026-11-01T10:00:00.000Z" },
+    ]);
+
+    e.clock.advanceMinutes(30);
+    await fetchAs(e, token, GOOGLE);
+    expect((await read(e)).fetches).toEqual([
+      { app: "google", at: "2026-11-01T11:00:00.000Z" },
+      { app: "apple", at: "2026-11-01T10:30:00.000Z" },
+    ]);
+    // Only kind and time are stored.
+    expect(Object.keys(e.db.prepare("SELECT * FROM calendar_feed_fetches").get() as object).sort()).toEqual(["app", "fetched_at", "user_id"]);
+  });
+
+  it("files a request without a known app as 'other'", async () => {
+    const e = await setup();
+    const token = await feedToken(e, e.me.token);
+    await feed(e, token);
+    expect((await read(e)).fetches).toEqual([{ app: "other", at: "2026-11-01T10:00:00.000Z" }]);
+  });
+
+  it("records nothing for a wrong token", async () => {
+    const e = await setup();
+    await feedToken(e, e.me.token);
+    expect((await fetchAs(e, "x".repeat(22), GOOGLE)).statusCode).toBe(404);
+    expect(e.db.prepare("SELECT COUNT(*) AS n FROM calendar_feed_fetches").get()).toEqual({ n: 0 });
+  });
+
+  it("clears them when the link is renewed", async () => {
+    const e = await setup();
+    const token = await feedToken(e, e.me.token);
+    await fetchAs(e, token, GOOGLE);
+    expect((await read(e)).fetches).toHaveLength(1);
+    await feedToken(e, e.me.token);
+    expect((await read(e)).fetches).toEqual([]);
+  });
+
+  it("starts empty again after switching off and on", async () => {
+    const e = await setup();
+    const token = await feedToken(e, e.me.token);
+    await fetchAs(e, token, GOOGLE);
+    await call(e, "DELETE", "/api/me/calendar-feed", { token: e.me.token });
+    expect(e.db.prepare("SELECT COUNT(*) AS n FROM calendar_feed_fetches").get()).toEqual({ n: 0 });
+    await feedToken(e, e.me.token);
+    expect((await read(e)).fetches).toEqual([]);
   });
 });

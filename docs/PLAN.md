@@ -321,6 +321,10 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
     the calendar file writer is `server/src/calendars/ics-write.ts`, the shared calendar reading
     `server/src/calendars/busy.ts`, the feed contents `server/src/polls/feed.ts`. A wrong feed token is not
     counted in the per-address bucket (calendar services share addresses; the token cannot be guessed).
+  - Decided 2026-11-10: the profile shows, per kind of calendar app (Google, Apple, Outlook, other), when the feed was
+    last fetched. Only the app kind (told from the `User-Agent`, `server/src/calendars/feed-app.ts`) and the time are
+    stored, in table `calendar_feed_fetches`; renewing the link or switching the feed off clears them. Reason: Google
+    refreshes subscribed calendars only every few hours or less, and users could not tell whether their feed arrives.
 - Settled with the owner before building 5b (preview mock-up, all recommendations taken except Outlook): the
   creator or admin picks the date in an own card "Termin festlegen" (a list of the proposals, the best one
   preselected), the button "Kalender prüfen und festlegen" always shows a confirmation, with the warning when

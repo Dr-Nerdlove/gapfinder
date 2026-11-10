@@ -258,7 +258,8 @@ export interface PollCalendarCheck {
  *
  * Personal calendar feed, for subscribing from a calendar app. The link contains a secret token and is shown in
  * the profile, so it is stored as is, like the share token:
- * - `GET /api/me/calendar-feed` (login) → `CalendarFeed`: the current token, or null when the feed is off.
+ * - `GET /api/me/calendar-feed` (login) → `CalendarFeed`: the current token, or null when the feed is off, and
+ *   when each kind of calendar app last fetched it (`fetches`).
  * - `POST /api/me/calendar-feed` (login) → `CalendarFeed`: switches the feed on, or renews the token (the old link
  *   stops working).
  * - `DELETE /api/me/calendar-feed` (login) → 204: switches the feed off.
@@ -270,6 +271,20 @@ export interface PollCalendarCheck {
  */
 export interface CalendarFeed {
   token: string | null;
+  /**
+   * When each kind of calendar app last fetched the feed, newest first (empty while the feed is off or not yet
+   * fetched). Optional because the frontend is deployed before the server is updated: an older server omits it.
+   */
+  fetches?: CalendarFeedFetch[];
+}
+
+/** The kind of calendar app, told from its `User-Agent` (only the kind is stored, never the header). */
+export type FeedApp = "google" | "apple" | "microsoft" | "other";
+
+export interface CalendarFeedFetch {
+  app: FeedApp;
+  /** ISO time of the last fetch by this kind of app. */
+  at: string;
 }
 
 // Further routes, all → `PollView`:

@@ -55,6 +55,7 @@ export const HELP_TEXTS: Record<HelpTopic, HelpText> = {
     paragraphs: [
       "Diesen Kalender abonnierst du einmal in deiner Kalender-App. Danach erscheinen dort alle festgelegten Termine deiner Abstimmungen von selbst (außer denen, zu denen du „Nein“ gesagt hast).",
       "Google Kalender aktualisiert abonnierte Kalender nur alle paar Stunden – ein neuer Termin kann dort also etwas später auftauchen.",
+      "Unter dem Link siehst du, wann deine Kalender-Apps ihn zuletzt abgerufen haben. Kurz nach dem Einrichten steht dort oft noch nichts – das ist normal.",
       "Gib den Link nicht weiter: Wer ihn hat, sieht deine festgelegten Termine. Mit „Neuer Link“ machst du den alten ungültig.",
     ],
   },

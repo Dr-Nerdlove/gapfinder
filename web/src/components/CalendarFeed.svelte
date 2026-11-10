@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from "svelte";
   import * as api from "../lib/api";
-  import { FEED_UNAVAILABLE_TEXT, feedScreenOf, type FeedScreen } from "../lib/calendar-feed";
+  import { FEED_NEVER_FETCHED_TEXT, FEED_UNAVAILABLE_TEXT, feedFetchLines, feedScreenOf, type FeedScreen } from "../lib/calendar-feed";
   import { buildFeedLink } from "../lib/links";
   import { errorMessage } from "../lib/messages";
   import { session, sessionState } from "../lib/session.svelte";
@@ -80,6 +80,21 @@
         shareText=""
         shareable={false}
       />
+      {@const lines = feedFetchLines(screen.fetches)}
+      {#if lines !== null}
+        <div class="fetches">
+          {#if lines.length === 0}
+            <p>{FEED_NEVER_FETCHED_TEXT}</p>
+          {:else}
+            <p><strong>Zuletzt abgerufen</strong></p>
+            <ul>
+              {#each lines as line (line)}
+                <li>{line}</li>
+              {/each}
+            </ul>
+          {/if}
+        </div>
+      {/if}
       <div class="actions">
         <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "renew")}>Neuer Link</Button>
         <Button variant="outlined" disabled={busy || locked} onclick={() => (confirming = "off")}>Abschalten</Button>
@@ -137,6 +152,15 @@
 <style>
   .note {
     font-size: 0.875rem;
+  }
+
+  .fetches {
+    font-size: 0.875rem;
+  }
+
+  .fetches ul {
+    margin: 4px 0 0;
+    padding-left: 20px;
   }
 
   .actions {
