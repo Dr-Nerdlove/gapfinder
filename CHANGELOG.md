@@ -5,6 +5,14 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.3.0] - 2026-11-10
+
+The profile card "Mein Lückenfüller-Kalender" now shows when Google, Apple, Outlook and other calendar apps last
+fetched your calendar link, so you can see whether your app has picked it up. A poll whose date is already fixed can
+now be deleted while the date stays in the Lückenfüller calendar ("Termin behalten"), and when a date is fixed the
+button for your default calendar now comes first. The server updates itself within about an hour; until then the new
+card and "Termin behalten" are not available. The Android app needs no new installation.
+
 ### Added
 
 - The profile card "Mein Lückenfüller-Kalender" now shows when each kind of calendar app (Google, Apple, Outlook, other) last fetched your calendar link, so you can see whether your app has picked it up. Only the kind of app and the time are stored. The server must be updated for this; with an older server the card shows nothing new.
