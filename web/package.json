@@ -1,7 +1,7 @@
 {
   "name": "@lueckenfueller/web",
   "private": true,
-  "version": "2.2.0",
+  "version": "2.3.0",
   "type": "module",
   "scripts": {
     "predev": "npm run build -w shared",
