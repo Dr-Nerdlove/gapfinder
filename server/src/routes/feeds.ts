@@ -4,7 +4,8 @@ import { authOf, createGuards } from "../auth/guards.js";
 import { writeCalendar } from "../calendars/ics-write.js";
 import type { AppContext } from "../context.js";
 import { notFound } from "../errors.js";
-import { deleteFeed, feedEventsOf, findFeedOwner, findFeedToken, renewFeedToken } from "../polls/feed.js";
+import { classifyFeedApp } from "../calendars/feed-app.js";
+import { deleteFeed, feedEventsOf, feedFetchesOf, findFeedOwner, findFeedToken, recordFeedFetch, renewFeedToken } from "../polls/feed.js";
 
 /** The personal calendar feed: the owner manages the link, calendar apps read it (see `CalendarFeed`). */
 export function registerFeedRoutes(app: FastifyInstance, ctx: AppContext): void {
@@ -13,7 +14,11 @@ export function registerFeedRoutes(app: FastifyInstance, ctx: AppContext): void 
   app.get(
     "/api/me/calendar-feed",
     { onRequest: requireUser },
-    async (request): Promise<CalendarFeed> => ({ token: findFeedToken(ctx.db, authOf(request).user.id) }),
+    async (request): Promise<CalendarFeed> => {
+      const userId = authOf(request).user.id;
+      const token = findFeedToken(ctx.db, userId);
+      return { token, fetches: token === null ? [] : feedFetchesOf(ctx.db, userId) };
+    },
   );
 
   app.post(
@@ -21,6 +26,7 @@ export function registerFeedRoutes(app: FastifyInstance, ctx: AppContext): void 
     { onRequest: requireUser },
     async (request): Promise<CalendarFeed> => ({
       token: renewFeedToken(ctx.db, authOf(request).user.id, ctx.now()),
+      fetches: [],
     }),
   );
 
@@ -38,6 +44,8 @@ export function registerFeedRoutes(app: FastifyInstance, ctx: AppContext): void 
     // old, renewed link would otherwise lock everybody's feed out through that address. A 128-bit token cannot
     // be guessed, so the count would protect nothing.
     if (userId === undefined) throw notFound();
+    // Only the kind of app and the time are kept; the user agent itself is neither stored nor logged.
+    recordFeedFetch(ctx.db, userId, classifyFeedApp(request.headers["user-agent"]), ctx.now());
     return reply
       .header("Content-Type", "text/calendar; charset=utf-8")
       .header("Cache-Control", "no-store")

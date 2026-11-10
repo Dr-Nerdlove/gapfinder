@@ -7,6 +7,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Added
 
+- The profile card "Mein Lückenfüller-Kalender" now shows when each kind of calendar app (Google, Apple, Outlook, other) last fetched your calendar link, so you can see whether your app has picked it up. Only the kind of app and the time are stored. The server must be updated for this; with an older server the card shows nothing new.
 - Deleting a poll whose date is already fixed now asks whether the date should stay in the Lückenfüller calendar ("Termin behalten"). The poll then disappears from the list and all votes are deleted, but the date stays in the personal calendar feed of the same people as before until it expires (30 days after the last proposal). "Alles löschen" removes the date as well. The server must be updated for this; an older server answers with a note.
 
 ### Changed
