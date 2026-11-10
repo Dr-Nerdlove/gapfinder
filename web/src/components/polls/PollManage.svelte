@@ -6,6 +6,7 @@
   import Card from "../Card.svelte";
   import ConfirmDialog from "../ConfirmDialog.svelte";
   import Message from "../Message.svelte";
+  import { manageCloseState } from "../../lib/poll-view";
 
   interface Props {
     poll: PollView;
@@ -20,6 +21,7 @@
 
   let { poll, busy, locked, problem, onupdate, onnewlink, ondelete }: Props = $props();
 
+  const close = $derived(manageCloseState(poll));
   const parts = $derived(poll.deadline ? berlinParts(poll.deadline) : { date: "", time: "" });
   let date = $state("");
   let time = $state("");
@@ -80,13 +82,15 @@
   <Message text={inputProblem} />
 
   <div class="actions">
-    <Button variant="tonal" disabled={busy || locked} onclick={() => onupdate({ closed: !poll.closed })}>
+    <Button variant="tonal" disabled={busy || locked || close.closeDisabled} onclick={() => onupdate({ closed: !poll.closed })}>
       {poll.closed ? "Wieder öffnen" : "Abstimmung schließen"}
     </Button>
     <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "link")}>Neuer Link</Button>
     <Button variant="danger" disabled={busy || locked} onclick={() => (confirming = "delete")}>Abstimmung löschen</Button>
   </div>
-  {#if poll.closed && poll.deadline && !poll.open}
+  {#if close.note}
+    <p class="note">{close.note}</p>
+  {:else if poll.closed && poll.deadline && !poll.open}
     <p class="note">Die Frist ist schon abgelaufen. Setze erst eine neue Frist, sonst bleibt die Abstimmung nach dem Öffnen beendet.</p>
   {/if}
   <Message text={problem} />

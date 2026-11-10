@@ -15,6 +15,7 @@ import {
   notVotedYet,
   proposalHeading,
   proposalLabel,
+  manageCloseState,
   statusText,
   summaryLine,
   tallies,
@@ -83,6 +84,18 @@ describe("texts", () => {
     expect(statusText({ ...poll, deadline: null })).toBe("Abstimmen ohne Frist");
     expect(statusText({ ...poll, closed: true, open: false })).toBe("Beendet (von Hand geschlossen)");
     expect(statusText({ ...poll, open: false })).toBe("Beendet (Frist am Mi 2.12., 20:00 abgelaufen)");
+  });
+
+  it("disables closing while a date stands and explains it", () => {
+    expect(manageCloseState(poll)).toEqual({ closeDisabled: false, note: null });
+    const { fixedProposalId: _omit, ...old } = poll;
+    expect(manageCloseState(old)).toEqual({ closeDisabled: false, note: null });
+    const fixed = manageCloseState({ ...poll, fixedProposalId: 1 });
+    expect(fixed.closeDisabled).toBe(true);
+    expect(fixed.note).toBe("Solange der Termin steht, kann niemand abstimmen. Nimmst du den Termin zurück, ist die Abstimmung wieder offen.");
+    const both = manageCloseState({ ...poll, fixedProposalId: 1, closed: true });
+    expect(both.closeDisabled).toBe(false);
+    expect(both.note).toContain("von Hand geschlossen");
   });
 
   it("says the date stands, never 'deadline passed', once a date is fixed", () => {
