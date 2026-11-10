@@ -6,12 +6,15 @@
     title: string;
     text: string;
     confirmLabel: string;
+    /** An optional second, safer action (shown between "Abbrechen" and the confirm button). */
+    extraLabel?: string | undefined;
+    onextra?: () => void;
     busy?: boolean;
     onconfirm: () => void;
     oncancel: () => void;
   }
 
-  let { open, title, text, confirmLabel, busy = false, onconfirm, oncancel }: Props = $props();
+  let { open, title, text, confirmLabel, extraLabel, onextra, busy = false, onconfirm, oncancel }: Props = $props();
   let dialog = $state<HTMLDialogElement>();
   const id = $props.id();
 
@@ -27,6 +30,9 @@
   <p>{text}</p>
   <div class="actions">
     <Button variant="outlined" disabled={busy} onclick={oncancel}>Abbrechen</Button>
+    {#if extraLabel && onextra}
+      <Button variant="tonal" disabled={busy} onclick={onextra}>{extraLabel}</Button>
+    {/if}
     <Button variant="danger" disabled={busy} onclick={onconfirm}>{confirmLabel}</Button>
   </div>
 </dialog>

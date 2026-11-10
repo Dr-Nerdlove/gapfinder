@@ -39,6 +39,7 @@ import {
   findPollById,
   findPollByToken,
   fixProposal,
+  removePollKeepingDate,
   guestNameInUse,
   insertGuestVote,
   insertPoll,
@@ -236,6 +237,14 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
   app.delete("/api/polls/:id", { onRequest: requireUser }, async (request, reply) => {
     const { poll } = manageablePollOrFail(request);
     deletePoll(ctx.db, poll.id);
+    return reply.status(204).send();
+  });
+
+  // A new route, not a flag on DELETE: an older server would ignore the flag and delete everything.
+  app.post("/api/polls/:id/remove-keeping-date", { onRequest: requireUser }, async (request, reply) => {
+    const { poll } = manageablePollOrFail(request);
+    if (poll.fixed_proposal_id === null) throw new ApiError(409, "poll_not_fixed");
+    removePollKeepingDate(ctx.db, poll, ctx.now());
     return reply.status(204).send();
   });
 

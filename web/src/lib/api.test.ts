@@ -353,6 +353,7 @@ describe("poll endpoints", () => {
     expect(await call((o) => api.listPolls(o))).toMatchObject({ url: "http://api.test/api/polls", method: "GET" });
     expect(await call((o) => api.updatePoll(4, { closed: true }, o))).toMatchObject({ url: "http://api.test/api/polls/4", method: "PATCH", body: '{"closed":true}' });
     expect(await call((o) => api.deletePoll(4, o))).toMatchObject({ url: "http://api.test/api/polls/4", method: "DELETE" });
+    expect(await call((o) => api.removePollKeepingDate(4, o))).toMatchObject({ url: "http://api.test/api/polls/4/remove-keeping-date", method: "POST" });
     expect(await call((o) => api.newPollShareLink(4, o))).toMatchObject({ url: "http://api.test/api/polls/4/share-link", method: "POST" });
     expect(await call((o) => api.removePollVote(4, 9, o))).toMatchObject({ url: "http://api.test/api/polls/4/votes/9", method: "DELETE" });
     expect(await call((o) => api.getPollByLink("tok", o))).toMatchObject({ url: "http://api.test/api/poll-links/tok", method: "GET" });

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import type { PollView, UpdatePollRequest } from "@lueckenfueller/shared";
+  import { POLL_KEPT_DAYS_AFTER_LAST_PROPOSAL, type PollView, type UpdatePollRequest } from "@lueckenfueller/shared";
+  import { fixedIdOf } from "../../lib/fix-date";
   import { berlinToday } from "../../lib/gap-search";
   import { DRAFT_PROBLEM_TEXTS, berlinParts, deadlineOf } from "../../lib/poll-draft";
   import Button from "../Button.svelte";
@@ -17,9 +18,11 @@
     onupdate: (changes: UpdatePollRequest) => void;
     onnewlink: () => void;
     ondelete: () => void;
+    /** Deletes the poll but keeps its fixed date in the calendar. */
+    ondeletekeepdate: () => void;
   }
 
-  let { poll, busy, locked, problem, onupdate, onnewlink, ondelete }: Props = $props();
+  let { poll, busy, locked, problem, onupdate, onnewlink, ondelete, ondeletekeepdate }: Props = $props();
 
   const close = $derived(manageCloseState(poll));
   const parts = $derived(poll.deadline ? berlinParts(poll.deadline) : { date: "", time: "" });
@@ -53,6 +56,13 @@
     confirming = null;
     if (what === "link") onnewlink();
     if (what === "delete") ondelete();
+  }
+
+  const hasFixedDate = $derived(fixedIdOf(poll) !== null);
+
+  function keepDate(): void {
+    confirming = null;
+    ondeletekeepdate();
   }
 </script>
 
@@ -108,8 +118,12 @@
 <ConfirmDialog
   open={confirming === "delete"}
   title="Abstimmung löschen?"
-  text="Die Abstimmung und alle Stimmen werden gelöscht. Das lässt sich nicht rückgängig machen."
-  confirmLabel="Löschen"
+  text={hasFixedDate
+    ? `Der Termin steht schon fest. Soll er im Lückenfüller-Kalender bleiben? Mit „Termin behalten“ verschwindet die Abstimmung aus der Liste und alle Stimmen werden gelöscht. Der Termin bleibt im Kalender, bis er ${POLL_KEPT_DAYS_AFTER_LAST_PROPOSAL} Tage vorbei ist. Mit „Alles löschen“ verschwindet auch der Termin. Das lässt sich nicht rückgängig machen.`
+    : "Die Abstimmung und alle Stimmen werden gelöscht. Das lässt sich nicht rückgängig machen."}
+  confirmLabel={hasFixedDate ? "Alles löschen" : "Löschen"}
+  extraLabel={hasFixedDate ? "Termin behalten" : undefined}
+  onextra={keepDate}
   {busy}
   onconfirm={confirm}
   oncancel={() => (confirming = null)}

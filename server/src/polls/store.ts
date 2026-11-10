@@ -8,6 +8,7 @@ import type {
 } from "@lueckenfueller/shared";
 import { randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
+import { inTransaction } from "../db.js";
 import { findUserById, toPerson, type UserRow } from "../accounts/users.js";
 
 export interface PollRow {
@@ -29,6 +30,8 @@ export interface PollRow {
   expires_at: string;
   /** When the creator last sent a reminder, or null. */
   last_reminder_at: string | null;
+  /** Set when the poll was deleted but its fixed date stays in the calendar feed until it expires; else null. */
+  removed_at: string | null;
 }
 
 /** A proposal as stored: the first two fields belong to `timed` polls, the last two to `days` polls. */
@@ -66,23 +69,23 @@ export function isOpen(poll: PollRow, now: Date): boolean {
   return poll.closed === 0 && poll.fixed_proposal_id === null && (poll.deadline === null || poll.deadline > now.toISOString());
 }
 
-// An expired poll behaves as if it did not exist, whether or not `purgeExpired` has deleted its rows yet.
+// An expired or removed (`removed_at`) poll behaves as if it did not exist, whether or not `purgeExpired` has deleted its rows yet.
 
 export function findPollById(db: DatabaseSync, id: number, now: Date): PollRow | undefined {
-  return db.prepare("SELECT * FROM polls WHERE id = ? AND expires_at > ?").get(id, now.toISOString()) as
+  return db.prepare("SELECT * FROM polls WHERE id = ? AND expires_at > ? AND removed_at IS NULL").get(id, now.toISOString()) as
     | PollRow
     | undefined;
 }
 
 export function findPollByToken(db: DatabaseSync, token: string, now: Date): PollRow | undefined {
-  return db.prepare("SELECT * FROM polls WHERE share_token = ? AND expires_at > ?").get(token, now.toISOString()) as
+  return db.prepare("SELECT * FROM polls WHERE share_token = ? AND expires_at > ? AND removed_at IS NULL").get(token, now.toISOString()) as
     | PollRow
     | undefined;
 }
 
 export function countPollsOfCreator(db: DatabaseSync, creatorId: number, now: Date): number {
   const row = db
-    .prepare("SELECT COUNT(*) AS n FROM polls WHERE creator_id = ? AND expires_at > ?")
+    .prepare("SELECT COUNT(*) AS n FROM polls WHERE creator_id = ? AND expires_at > ? AND removed_at IS NULL")
     .get(creatorId, now.toISOString()) as { n: number };
   return row.n;
 }
@@ -187,6 +190,33 @@ export function touchPoll(db: DatabaseSync, id: number, now: Date): void {
 /** Deletes the poll; proposals, participants, votes and answers go with it. */
 export function deletePoll(db: DatabaseSync, id: number): void {
   db.prepare("DELETE FROM polls WHERE id = ?").run(id);
+}
+
+/**
+ * Deletes the poll for the app but keeps its fixed date in the calendar feed until the poll expires. The feed shows a
+ * date to the creator, the participants and the account voters, except those whose own vote says "no" to it. Since
+ * the votes go, that membership is written into the participants (voters added, "no" voters removed) and the creator
+ * (cleared when the creator said "no"). Only for a poll with a fixed date; runs in one transaction.
+ */
+export function removePollKeepingDate(db: DatabaseSync, poll: PollRow, now: Date): void {
+  const fixedId = poll.fixed_proposal_id;
+  if (fixedId === null) throw new Error("Poll has no fixed date");
+  inTransaction(db, () => {
+    db.prepare(
+      "INSERT OR IGNORE INTO poll_participants (poll_id, user_id) SELECT poll_id, user_id FROM poll_votes WHERE poll_id = ? AND user_id IS NOT NULL",
+    ).run(poll.id);
+    const saidNo = `SELECT v.user_id FROM poll_votes v JOIN poll_vote_answers a ON a.vote_id = v.id
+       WHERE v.poll_id = ? AND v.user_id IS NOT NULL AND a.proposal_id = ? AND a.answer = 'no'`;
+    db.prepare(`DELETE FROM poll_participants WHERE poll_id = ? AND user_id IN (${saidNo})`).run(poll.id, poll.id, fixedId);
+    db.prepare(
+      `UPDATE polls SET creator_id = NULL WHERE id = ? AND creator_id IN (${saidNo})`,
+    ).run(poll.id, poll.id, fixedId);
+    db.prepare("DELETE FROM poll_votes WHERE poll_id = ?").run(poll.id);
+    db.prepare("DELETE FROM poll_proposals WHERE poll_id = ? AND id <> ?").run(poll.id, fixedId);
+    db.prepare("DELETE FROM notifications WHERE poll_id = ?").run(poll.id);
+    const stamp = now.toISOString();
+    db.prepare("UPDATE polls SET removed_at = ?, closed = 1, updated_at = ? WHERE id = ?").run(stamp, stamp, poll.id);
+  });
 }
 
 /** The ids of the poll's proposals, in the order the creator chose them. */
@@ -314,7 +344,7 @@ export function listPollSummaries(db: DatabaseSync, userId: number, now: Date): 
          (SELECT COUNT(*) FROM poll_votes WHERE poll_id = p.id) AS vote_count,
          EXISTS (SELECT 1 FROM poll_votes WHERE poll_id = p.id AND user_id = ?) AS voted
        FROM polls p
-       WHERE p.expires_at > ? AND (
+       WHERE p.expires_at > ? AND p.removed_at IS NULL AND (
          p.creator_id = ?
          OR EXISTS (SELECT 1 FROM poll_participants WHERE poll_id = p.id AND user_id = ?)
          OR EXISTS (SELECT 1 FROM poll_votes WHERE poll_id = p.id AND user_id = ?)

@@ -5,13 +5,17 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
-### Fixed
+### Added
 
-- While a date is fixed, the "Abstimmung schließen" button in "Verwalten" is disabled and a note explains that nobody can vote anyway and what happens when the date is taken back.
+- Deleting a poll whose date is already fixed now asks whether the date should stay in the Lückenfüller calendar ("Termin behalten"). The poll then disappears from the list and all votes are deleted, but the date stays in the personal calendar feed of the same people as before until it expires (30 days after the last proposal). "Alles löschen" removes the date as well. The server must be updated for this; an older server answers with a note.
 
 ### Changed
 
 - When a date is fixed, the button for your default calendar (Google or Outlook) now comes first.
+
+### Fixed
+
+- While a date is fixed, the "Abstimmung schließen" button in "Verwalten" is disabled and a note explains that nobody can vote anyway and what happens when the date is taken back.
 
 ## [2.2.0] - 2026-11-09
 
