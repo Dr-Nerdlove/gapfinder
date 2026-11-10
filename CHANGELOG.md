@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Fixed
+
+- While a date is fixed, the "Abstimmung schließen" button in "Verwalten" is disabled and a note explains that nobody can vote anyway and what happens when the date is taken back.
+
 ### Changed
 
 - When a date is fixed, the button for your default calendar (Google or Outlook) now comes first.
