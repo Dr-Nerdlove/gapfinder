@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- Deleting a poll whose date is already fixed now asks whether the date should stay in the Lückenfüller calendar ("Termin behalten"). The poll then disappears from the list and all votes are deleted, but the date stays in the personal calendar feed of the same people as before until it expires (30 days after the last proposal). "Alles löschen" removes the date as well. The server must be updated for this; an older server answers with a note.
+
 ### Changed
 
 - When a date is fixed, the button for your default calendar (Google or Outlook) now comes first.

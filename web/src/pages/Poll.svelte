@@ -153,6 +153,19 @@
       () => navigate("#/abstimmungen", { replace: true }),
     );
 
+  /** Deletes the poll but keeps its fixed date in the calendar. An older server does not know the route yet. */
+  async function removeKeepingDate(): Promise<void> {
+    if (busy) return;
+    busy = true;
+    manageProblem = "";
+    const result = await session.run((o) => api.removePollKeepingDate(poll!.id, o));
+    busy = false;
+    if (result.ok) navigate("#/abstimmungen", { replace: true });
+    else if (result.kind === "error" && result.status === 404 && result.code === "not_found")
+      manageProblem = "Der Server kennt „Termin behalten“ noch nicht, er wird bald aktualisiert. Versuch es später noch einmal oder lösche alles.";
+    else manageProblem = errorMessage(result);
+  }
+
   /** The check before fixing. A failed check never stops the person: the dialog then says so. */
   async function check(proposalId: number): Promise<CheckReview> {
     return reviewCheck(await session.run((o) => api.checkFix(poll!.id, { proposalId }, o)));
@@ -262,7 +275,7 @@
     </Card>
 
     {#if poll.canManage}
-      <PollManage {poll} {busy} {locked} problem={manageProblem} onupdate={update} onnewlink={newLink} ondelete={remove} />
+      <PollManage {poll} {busy} {locked} problem={manageProblem} onupdate={update} onnewlink={newLink} ondelete={remove} ondeletekeepdate={removeKeepingDate} />
     {/if}
   {/if}
 </Page>

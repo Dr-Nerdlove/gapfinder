@@ -313,6 +313,10 @@ export const updatePoll = (id: number, body: UpdatePollRequest, o: CallOptions =
 export const deletePoll = (id: number, o: CallOptions = {}) =>
   request<void>(`/api/polls/${segment(id)}`, { ...o, method: "DELETE" });
 
+/** Deletes the poll and its votes but keeps the fixed date in the calendar feed (409 `poll_not_fixed` without one). */
+export const removePollKeepingDate = (id: number, o: CallOptions = {}) =>
+  request<void>(`/api/polls/${segment(id)}/remove-keeping-date`, { ...o, method: "POST" });
+
 export const newPollShareLink = (id: number, o: CallOptions = {}) =>
   request<NewShareLink>(`/api/polls/${segment(id)}/share-link`, { ...o, method: "POST" });
 

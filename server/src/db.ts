@@ -284,6 +284,15 @@ export const migrations: readonly Migration[] = [
     sql: `ALTER TABLE calendars ADD COLUMN size_bytes INTEGER;
     ALTER TABLE calendars ADD COLUMN size_warned INTEGER NOT NULL DEFAULT 0;`,
   },
+  {
+    id: 13,
+    name: "polls_removed_at",
+    // Additive only: one nullable column. NULL = live poll. A poll deleted with "keep the date" gets a time here:
+    // it is gone for the app and only its fixed date stays in the calendar feed until `expires_at`. An older
+    // server (after a rollback) ignores the column and would show such a poll again, without votes or proposals
+    // other than the fixed one, so that case stays rare and harmless.
+    sql: `ALTER TABLE polls ADD COLUMN removed_at TEXT;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

@@ -255,6 +255,11 @@ and sends the chosen date to everyone. The interface is **German only**; the pro
   - **Managing:** the **creator and the admin** can change title, note and deadline, close and reopen the poll,
     remove single votes, make a **new share link** (the old one stops working) and delete the poll. When the
     creator's account is deleted, the poll stays and only the admin manages it.
+  - **Delete but keep the date:** for a poll with a fixed date, `POST /api/polls/:id/remove-keeping-date` (creator or admin)
+    deletes votes, other proposals and notifications and sets `polls.removed_at`; the poll is gone for the app (all
+    lookups exclude it), but its fixed date stays in the personal calendar feed, for the same people as before (voters
+    become participants, people who said "no" are removed, the creator is cleared if the creator said "no"), until
+    `expires_at`, when `purgeExpired` deletes it. A separate route, because an older server would ignore a flag on `DELETE`.
   - **Abuse limits:** only account holders create polls, at most 20 each that are not yet deleted; the share link
     is a random 128-bit secret, masked in the request log; at most 100 guest votes per poll; 30 guest vote
     writes per address in 15 minutes; wrong share links count like wrong invite links (30 per address). Guest
