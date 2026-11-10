@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- On the iPhone, the hints for putting Lückenfüller on the home screen no longer mention only Safari: they now say where the "Teilen" button is in Safari and in Chrome (Chrome, Edge and Firefox can do this since iOS 16.4).
+
 ## [2.3.0] - 2026-11-10
 
 The profile card "Mein Lückenfüller-Kalender" now shows when Google, Apple, Outlook and other calendar apps last
