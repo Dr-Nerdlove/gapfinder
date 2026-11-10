@@ -55,6 +55,29 @@ export function statusText(poll: Pick<PollView, "closed" | "open" | "deadline"> 
   return poll.deadline ? `Abstimmen möglich bis ${formatInstant(poll.deadline)}` : "Abstimmen ohne Frist";
 }
 
+/**
+ * What the creator's "Verwalten" card does with the close button while a date stands. A fixed date already
+ * stops all votes (the server's `isOpen`), so closing is pointless then; `closed` matters only after the date
+ * is taken back. "Wieder öffnen" stays usable so the creator can undo a hand-made close. An older server sends
+ * no field: not fixed.
+ */
+export function manageCloseState(poll: Pick<PollView, "closed"> & { fixedProposalId?: number | null | undefined }): {
+  closeDisabled: boolean;
+  note: string | null;
+} {
+  if (fixedIdOf(poll) === null) return { closeDisabled: false, note: null };
+  if (poll.closed) {
+    return {
+      closeDisabled: false,
+      note: "Solange der Termin steht, kann niemand abstimmen. Die Abstimmung ist außerdem von Hand geschlossen: Nimmst du den Termin zurück, bleibt sie beendet, bis du sie wieder öffnest.",
+    };
+  }
+  return {
+    closeDisabled: true,
+    note: "Solange der Termin steht, kann niemand abstimmen. Nimmst du den Termin zurück, ist die Abstimmung wieder offen.",
+  };
+}
+
 const plural = (n: number, one: string, many: string): string => (n === 1 ? `1 ${one}` : `${n} ${many}`);
 
 /** "2 Termine · 3 Stimmen · offen bis Mi 2.12., 20:00" */

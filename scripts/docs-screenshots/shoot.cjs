@@ -105,6 +105,10 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
   await shot(b.page, "fix-check.png", { fullPage: false });
   await b.page.getByRole("button", { name: /festlegen$/ }).last().click();
   await b.page.waitForTimeout(2500);
+  // The creator's view of the fixed date, scrolled so the "Verwalten" card (close button disabled) ends the picture.
+  await b.page.getByRole("button", { name: "Abstimmung löschen" }).scrollIntoViewIfNeeded();
+  await b.page.evaluate(() => window.scrollBy(0, 200));
+  await shot(b.page, "date-fixed-creator.png", { fullPage: false });
   await b.browser.close();
   b = await login(null);
   await b.page.goto(`${BASE}#/abstimmung/${state.poll.shareToken}`);
@@ -118,7 +122,8 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
       "login.png": "login.png", "invite.png": "invite.png", "start-logged-in.png": "start-logged-in.png", "profile.png": "profile.png",
       "calendars.png": "calendars.png",
       "admin.png": "admin.png", "search-form.png": "search-form.png", "search-results.png": "search-results.png",
-      "poll-calendar-check.png": "polls/7-calendar-check.png", "fix-check.png": "fix-date/2-fix-check.png", "date-fixed-guest.png": "fix-date/4-date-fixed-guest.png",
+      "poll-calendar-check.png": "polls/7-calendar-check.png", "fix-check.png": "fix-date/2-fix-check.png", "date-fixed-creator.png": "fix-date/3-date-fixed-creator.png",
+      "date-fixed-guest.png": "fix-date/4-date-fixed-guest.png",
     };
     for (const [from, to] of Object.entries(where)) fs.copyFileSync(`${out}/${from}`, `${target}/${to}`);
     console.log(`copied ${Object.keys(where).length} pictures to ${target}`);
