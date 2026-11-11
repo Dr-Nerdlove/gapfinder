@@ -698,11 +698,11 @@ the owner (choices with a recommendation, a preview mock-up where something is v
     search is a square coloured by the best count of that day (shades: all, all but one, all but two, all but three
     or four, fewer; the number or "alle" in the square), with month navigation; days outside the search are grey.
     Tapping a day shows below the grid a **day strip**: the hours of that day coloured the same way, the searched
-    window marked, tapping an hour tells who can ("11 von 12 können – ohne Tobias"), and under it that day's free
-    times as in the list, each with "Als Termin vorschlagen". Rejected: a separate week grid (with searches over
+    window marked (the hours are not tappable: the free times below already name who is missing), and under it
+    that day's free times as in the list ("11 von 12 können – ohne Tobias"), each with "Als Termin vorschlagen". Rejected: a separate week grid (with searches over
     several weeks it means much paging; the day strip shows the hours instead) and a switch between week and month.
     The legend is only the colour bar from "weniger" to "alle frei", without a line naming the steps: the squares
-    and the day strip carry the number anyway, and tapping tells who is missing.
+    and the day strip carry the number anyway, and the free times below name who is missing.
   - **Poll state:** no switch, the app decides. An open poll shows the people × proposals table with coloured
     cells (green Ja, yellow Vielleicht, grey Nein, dashed for no vote yet) and the "Ja" sums, the best proposal
     marked. A hidden poll (10b) shows the others one bar per proposal (Ja / Vielleicht / Nein, no names); its
@@ -720,9 +720,8 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   session's network settings); from search results only (unverified): kinoheld's site uses an undocumented GraphQL
   interface (an unofficial client exists), no official developer access was found, and the commercial International
   Showtimes API is the paid route. Before building on any of it: read the terms of use and robots.txt, and allow the
-  hosts for that session. Cinemas the friends use: IMAX Sinsheim, CinemaxX Heilbronn, Traumpalast Leonberg (IMAX),
-  Kinostar Arthaus Heilbronn; sometimes Schauburg Karlsruhe, Cineplex Neckarsulm, Traumpalast Esslingen (Dolby
-  Cinema), Filmpalast am ZKM Karlsruhe (IMAX), Scala Öhringen, Prestige Künzelsau.
+  hosts for that session. The friends use about ten cinemas in their region; the owner names them in that session
+  (deliberately not recorded here: the repository is public, and the list would tell where the friends live).
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
