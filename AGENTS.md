@@ -250,7 +250,9 @@ missing, with a recommendation, and let the people choose.
     and must not get the Windows login. `smbclient ls` with no match exits 1 (`NT_STATUS_NO_SUCH_FILE`): that is an
     empty folder, not an error. Backup, restore and `update.sh` share `/opt/lueckenfueller/.maintenance.lock`.
     `deploy/vm/test/backup.test.sh` runs the real CLI (via tsx) behind its fake `docker` and needs `age`:
-    both `ci.yml` and `deploy.yml` run `npm test`, so both install it.
+    both `ci.yml` and `deploy.yml` run `npm test`, so both install it, with `scripts/install-age.sh` (a pinned
+    release from age's GitHub page, checked by SHA-256; apt failed for an hour on 2026-11-11 when the runners could not
+    resolve security.ubuntu.com). A new age version needs the new SHA-256 there.
   - Calendar key (`CALENDAR_KEY`, 32 bytes base64 in the VM's `.env`, made by `setup.sh`): the server must start
     without it or with a bad one (calendars then report "not set up"), never fail on it, or the VM rolls back
     the image before the owner can rerun `setup.sh`. The CLI's `backup` writes the key into the backup copy's
