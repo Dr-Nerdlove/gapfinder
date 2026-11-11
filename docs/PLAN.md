@@ -669,6 +669,39 @@ Left as they are for now (owner, 2026-11-07), to be raised again when the circle
 - **Who can be searched with** stays everybody with an account (phase 3). Options for later: a setting "only people
   from my groups may choose me" (builds on 9a), or saying it more clearly on the privacy page.
 
+### Learning from Timeful (phase 10)
+
+Decided with the owner on 2026-11-11, after comparing the Lückenfüller with Timeful (github.com/schej-it/timeful, an
+open source When2meet-style availability poll, read in its source on 2026-11-11). The owner keeps the Lückenfüller and
+takes over the ideas below. Each point is its own branch and pull request; points marked "to settle" are agreed with
+the owner (choices with a recommendation, a preview mock-up where something is visible) **before** building.
+
+- **10a "Nochmal planen"** (Sonnet; web app only). A button on a poll's page (creator and admin) opens `#/suche` with the
+  same people and, for an hours poll, the duration of its first proposal; title and note are carried over to
+  `#/abstimmung-neu`. Handed over in memory only, like the search choice today (a reload starts empty). The old
+  proposals are not copied: they lie in the past, and a poll is deleted 30 days after its last proposal. No server
+  change. Rejected for now: stored search templates ("Spieleabend: Samstag ab 18 Uhr, 5 Stunden"), which would need a
+  server change; to revisit if the button is not enough.
+- **10b Hidden votes** (Opus to plan, Sonnet for the steps; server and app). An option when creating a poll: everyone
+  else sees **only the sums** per proposal ("5 Ja, 2 Vielleicht"), who has not voted yet, and their own vote; the
+  **creator and the admin** see every name and answer. A hidden poll can be **revealed** later (creator or admin), never
+  hidden again. To settle when building:
+  - Backward compatibility: an older server ignores the new field and would create an open poll. The app must only
+    offer the option when the server says it supports it (and the server must refuse what it does not know rather than
+    create an open poll).
+  - The server filters the poll state per caller (never only the app); guests and other accounts get sums.
+  - The "someone voted" notification (`vote`) names the voter; for a hidden poll only the creator (and admin) may get
+    the name, the others a notification without it, or none.
+  - Migration additive (a new column with a default).
+- **10c Colour grid** ("to settle", Sonnet). The free times as a week grid, darker where more people can, next to the
+  list of search results ("Liste / Raster"), and the state of a poll as a grid as well. First a preview with made-up
+  data in two variants for the phone; the owner decides from it whether and how it is built.
+
+Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
+filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
+"I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
+export, sign-up lists, Slack/Discord bots. Direct Google/Outlook login stays in phase 8 (too much work for now).
+
 ## Security
 
 - Only the API is reachable from the internet; it runs as a non-root user in a container inside its own VM.
@@ -705,6 +738,8 @@ phase in brackets.
    the people choice, 9b deleting one's own account, 9c better results for large groups, 9d notice to the owner when
    the server is down, 9e a "So geht's" text to pass on, 9f load test of the home server (week from 2026-11-09);
    then release 1.9.0.
+10. **Learning from Timeful** (see "Learning from Timeful" above): 10a "Nochmal planen", 10b hidden votes, 10c colour
+    grid (preview first).
 
 ## Server updates
 
