@@ -25,8 +25,8 @@
   const source = pollSource.get();
   const today = berlinToday();
 
-  let title = $state("");
-  let note = $state("");
+  let title = $state(source?.title ?? "");
+  let note = $state(source?.note ?? "");
   let deadlineDate = $state("");
   let deadlineTime = $state("");
   let items = $state<Item[]>(source ? draftFromSource(source, today) : []);

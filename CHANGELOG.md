@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- A poll's management card has a new button "Nochmal planen": it opens the search with the same people (and the length of the first proposal), and the new poll starts with the old title and note. The old proposals are not copied.
+
 ### Changed
 
 - On the iPhone, the hints for putting Lückenfüller on the home screen no longer mention only Safari: they now say where the "Teilen" button is in Safari and in Chrome (Chrome, Edge and Firefox can do this since iOS 16.4).

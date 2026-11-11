@@ -91,6 +91,9 @@ export interface PollSource {
   participants: number[];
   /** One line that says what was searched. */
   summary: string;
+  /** "Nochmal planen": title and note of the old poll, for the form of the new one. */
+  title?: string;
+  note?: string;
 }
 
 let handedOver: PollSource | null = null;

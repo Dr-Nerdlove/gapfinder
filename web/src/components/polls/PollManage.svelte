@@ -20,9 +20,11 @@
     ondelete: () => void;
     /** Deletes the poll but keeps its fixed date in the calendar. */
     ondeletekeepdate: () => void;
+    /** Starts a new search with the same people ("Nochmal planen"). */
+    onreplan: () => void;
   }
 
-  let { poll, busy, locked, problem, onupdate, onnewlink, ondelete, ondeletekeepdate }: Props = $props();
+  let { poll, busy, locked, problem, onupdate, onnewlink, ondelete, ondeletekeepdate, onreplan }: Props = $props();
 
   const close = $derived(manageCloseState(poll));
   const parts = $derived(poll.deadline ? berlinParts(poll.deadline) : { date: "", time: "" });
@@ -95,6 +97,7 @@
     <Button variant="tonal" disabled={busy || locked || close.closeDisabled} onclick={() => onupdate({ closed: !poll.closed })}>
       {poll.closed ? "Wieder öffnen" : "Abstimmung schließen"}
     </Button>
+    <Button variant="tonal" disabled={busy || locked} onclick={onreplan}>Nochmal planen</Button>
     <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "link")}>Neuer Link</Button>
     <Button variant="danger" disabled={busy || locked} onclick={() => (confirming = "delete")}>Abstimmung löschen</Button>
   </div>

@@ -12,6 +12,7 @@
   import { submitVote, withdrawVote } from "../lib/poll-actions";
   import { nextScreen, statusText, updatedText, type AnswerMap, type PollScreen } from "../lib/poll-view";
   import { startPolling } from "../lib/polling";
+  import { replanFromPoll, replanHandover } from "../lib/replan";
   import { navigate } from "../lib/router";
   import { pollWaitingText } from "../lib/sleep-notice";
   import { session, sessionState } from "../lib/session.svelte";
@@ -125,6 +126,14 @@
     busy = false;
     if (outcome.kind === "done") show(outcome.poll);
     else voteProblem = outcome.kind === "problem" ? outcome.text : errorMessage(outcome.failure);
+  }
+
+  /** "Nochmal planen": a new search with the same people; title and note come along. */
+  function replan(): void {
+    const me = sessionState.user;
+    if (!poll || !me) return;
+    replanHandover.set(replanFromPoll(poll, me.id));
+    navigate("#/suche");
   }
 
   /** Runs a management call; the answer is the new poll. */
@@ -275,7 +284,7 @@
     </Card>
 
     {#if poll.canManage}
-      <PollManage {poll} {busy} {locked} problem={manageProblem} onupdate={update} onnewlink={newLink} ondelete={remove} ondeletekeepdate={removeKeepingDate} />
+      <PollManage {poll} {busy} {locked} problem={manageProblem} onupdate={update} onnewlink={newLink} ondelete={remove} ondeletekeepdate={removeKeepingDate} onreplan={replan} />
     {/if}
   {/if}
 </Page>

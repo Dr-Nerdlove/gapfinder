@@ -676,7 +676,7 @@ open source When2meet-style availability poll, read in its source on 2026-11-11)
 takes over the ideas below. Each point is its own branch and pull request; points marked "to settle" are agreed with
 the owner (choices with a recommendation, a preview mock-up where something is visible) **before** building.
 
-- **10a "Nochmal planen"** (Sonnet; web app only). A button on a poll's page (creator and admin) opens `#/suche` with the
+- **10a "Nochmal planen"** (done; Sonnet; web app only). A button on a poll's page (creator and admin) opens `#/suche` with the
   same people and, for an hours poll, the duration of its first proposal; title and note are carried over to
   `#/abstimmung-neu`. Handed over in memory only, like the search choice today (a reload starts empty). The old
   proposals are not copied: they lie in the past, and a poll is deleted 30 days after its last proposal. No server

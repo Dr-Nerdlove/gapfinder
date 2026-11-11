@@ -18,6 +18,7 @@
   } from "../lib/gap-search";
   import { errorMessage } from "../lib/messages";
   import { MAX_PICKS, pollSource, selectionLabel, togglePick } from "../lib/poll-draft";
+  import { applyReplan, replanHandover } from "../lib/replan";
   import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
   import Button from "../components/Button.svelte";
@@ -32,7 +33,9 @@
   const locked = $derived(sessionState.offline);
   const today = berlinToday();
 
-  let settings = $state(loadSettings(today));
+  // "Nochmal planen" leaves the people of an old poll here (once); title and note travel on to the new poll.
+  const replan = replanHandover.take();
+  let settings = $state(replan ? applyReplan(loadSettings(today), replan) : loadSettings(today));
   let everyone = $state<Person[]>([]);
   let loadingPeople = $state(true);
   let peopleLoaded = $state(false);
@@ -129,7 +132,12 @@
 
   function makePoll(): void {
     if (!answer || selected.length === 0) return;
-    pollSource.set({ picks: [...selected], summary: answer.summary, ...answer.source });
+    pollSource.set({
+      picks: [...selected],
+      summary: answer.summary,
+      ...answer.source,
+      ...(replan ? { title: replan.title, note: replan.note } : {}),
+    });
     navigate("#/abstimmung-neu");
   }
 </script>
