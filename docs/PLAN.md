@@ -693,7 +693,7 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   - The "someone voted" notification (`vote`) names the voter; for a hidden poll only the creator (and admin) may get
     the name, the others a notification without it, or none.
   - Migration additive (a new column with a default).
-- **10c Colour grid** (done; Sonnet; web app only; the bars for hidden polls wait for 10b). Decided with the owner on 2026-11-11 from two preview mock-ups:
+- **10c Colour grid** (done; Sonnet; web app only; the bars for hidden polls wait for 10b). Decided with the owner on 2026-11-11 from two preview mock-ups (`docs/mockups/10c-search-grid.jpg`, `docs/mockups/10c-poll-table.jpg`; the poll picture also shows the bars for 10b, variant B):
   - **Search results:** a switch "Liste / Raster" above the results. "Raster" is a **month grid**: each day of the
     search is a square coloured by the best count of that day (shades: all, all but one, all but two, all but three
     or four, fewer; the number or "alle" in the square), with month navigation; days outside the search are grey.
