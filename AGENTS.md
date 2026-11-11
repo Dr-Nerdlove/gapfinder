@@ -353,7 +353,7 @@ missing, with a recommendation, and let the people choose.
   which is why the workflow does it. If a run fails, repeat it under Actions, "Release",
   "Run workflow".
 - **Repository:** public (checked Nov 2026); `main` is protected by the ruleset "protect main branch" (no force
-  pushes, no deletion; status checks not required, as of Nov 2026); licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
+  pushes, no deletion; the checks `test`, `docker`, `vm-scripts` and `android` must pass, Nov 2026); licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
   CI: `.github/workflows/ci.yml` (checks), `deploy.yml` (Pages + server image), `release.yml` (tag + GitHub
   release after a green deploy of a new version) and `health.yml` (hourly check of the server).
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
