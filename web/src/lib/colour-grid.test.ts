@@ -1,7 +1,7 @@
 import type { SearchResult } from "@lueckenfueller/shared";
 import { describe, expect, it } from "vitest";
-import { cellText, dayCounts, dayStrip, monthGrid, rowsOfDay, searchMonths, shadeOf } from "./colour-grid";
-import type { Row } from "./gap-search";
+import { cellText, dayCounts, dayStrip, hourText, monthGrid, rowsOfDay, searchMonths, shadeOf, windowLine } from "./colour-grid";
+import { monthLabelShort, type Row } from "./gap-search";
 
 const slot = (start: string, end: string) => ({ start, end });
 // December 2026 is winter time: Berlin = UTC + 1.
@@ -104,5 +104,38 @@ describe("rowsOfDay", () => {
 
   it("finds the stretches that cover a day", () => {
     expect(rowsOfDay([stretch("2026-12-01", "2026-12-03"), stretch("2026-12-05", "2026-12-06")], "2026-12-02")).toHaveLength(1);
+  });
+});
+
+describe("hourText", () => {
+  it("is empty for everybody and for nobody", () => {
+    expect([hourText(5, 5), hourText(4, 5), hourText(null, 5)]).toEqual(["", "4", ""]);
+  });
+});
+
+describe("windowLine", () => {
+  const strip = dayStrip(hoursResult, "2026-12-12", 5, { start: "18:00", end: "23:00" }); // hours 17..23
+  it("spans exactly the hours of the window", () => {
+    expect(strip.map((h) => h.hour)).toEqual([17, 18, 19, 20, 21, 22, 23]);
+    expect(windowLine(strip, { start: "18:00", end: "23:00" })).toEqual({ start: 2, end: 7, text: "gesucht: 18–23 Uhr" });
+  });
+
+  it("names a window past midnight and runs to the end of the strip", () => {
+    const night = dayStrip(hoursResult, "2026-12-12", 5, { start: "18:00", end: "02:00" });
+    expect(windowLine(night, { start: "18:00", end: "02:00" })).toEqual({ start: 2, end: night.length + 1, text: "gesucht: 18–2 Uhr" });
+  });
+
+  it("keeps half hours in the text", () => {
+    expect(windowLine(strip, { start: "18:30", end: "23:00" })!.text).toBe("gesucht: 18:30–23 Uhr");
+  });
+
+  it("is null for an empty strip", () => {
+    expect(windowLine([], { start: "18:00", end: "23:00" })).toBeNull();
+  });
+});
+
+describe("monthLabelShort", () => {
+  it("is short", () => {
+    expect(["2026-11", "2027-05", "2027-06"].map(monthLabelShort)).toEqual(["Nov. 2026", "Mai 2027", "Juni 2027"]);
   });
 });

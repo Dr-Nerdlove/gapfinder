@@ -50,6 +50,15 @@
 <div class="results" class:stale aria-live="polite">
   <Card title="Ergebnis">
     <p class="summary">{summary}</p>
+    {#if grid}
+      <div class="views" role="group" aria-label="Ansicht der Ergebnisse">
+        <Chip label="Liste" selected={view === "list"} onclick={() => (view = "list")} />
+        <Chip label="Raster" selected={view === "grid"} onclick={() => (view = "grid")} />
+      </div>
+    {/if}
+    {#if grid && view === "grid"}
+      <ColourGrid {...grid} {everyone} {nearMisses} {chosen} {ontoggle} />
+    {/if}
   </Card>
 
   {#if notices.length > 0}
@@ -62,18 +71,7 @@
 
   <p class="hint">Tippe auf Zeiten, die du als Termine zur Abstimmung vorschlagen willst.</p>
 
-  {#if grid}
-    <div class="views" role="group" aria-label="Ansicht der Ergebnisse">
-      <Chip label="Liste" selected={view === "list"} onclick={() => (view = "list")} />
-      <Chip label="Raster" selected={view === "grid"} onclick={() => (view = "grid")} />
-    </div>
-  {/if}
-
-  {#if grid && view === "grid"}
-    <Card title="Raster">
-      <ColourGrid {...grid} {everyone} {nearMisses} {chosen} {ontoggle} />
-    </Card>
-  {:else}
+  {#if !(grid && view === "grid")}
   <Card title="Alle frei">
     {#if everyone.length === 0}
       <p>Keine Lücke gefunden, in der alle Zeit haben.</p>
@@ -143,6 +141,7 @@
   .views {
     display: flex;
     gap: 8px;
+    margin: 12px 0;
   }
 
   .hint {

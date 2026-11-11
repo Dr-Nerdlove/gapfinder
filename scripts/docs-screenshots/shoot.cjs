@@ -83,7 +83,7 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
   await page.waitForTimeout(400);
   await page.locator("table[aria-label='Monatsraster der Suche'] button.cell:not(.empty)").first().click();
   await page.waitForTimeout(400);
-  const gridTop = await cardTop(page, "Raster");
+  const gridTop = await cardTop(page, "Ergebnis");
   const gridHeight = await page.evaluate(() => document.documentElement.scrollHeight);
   await shot(page, "search-grid.png", { clip: { x: 0, y: gridTop - 12, width: 390, height: gridHeight - gridTop } });
   await b.browser.close();

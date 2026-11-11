@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { SearchResult } from "@lueckenfueller/shared";
-  import { cellText, dayCounts, dayStrip, monthGrid, rowsOfDay, searchMonths, type SearchedDays } from "../../lib/colour-grid";
-  import { formatDay, monthLabel, type PollPick, type Row } from "../../lib/gap-search";
+  import { cellText, dayCounts, dayStrip, hourText, monthGrid, rowsOfDay, searchMonths, windowLine, type SearchedDays } from "../../lib/colour-grid";
+  import { formatDay, monthLabelShort, type PollPick, type Row } from "../../lib/gap-search";
   import Chip from "../Chip.svelte";
 
   interface Props {
@@ -33,6 +33,7 @@
   const month = $derived(months[Math.min(monthIndex, months.length - 1)] ?? searched.from.slice(0, 7));
   const weeks = $derived(monthGrid(month, searched, counts, readable));
   const strip = $derived(day ? dayStrip(result, day, readable, window) : []);
+  const line = $derived(windowLine(strip, window));
   const everyoneOfDay = $derived(day ? rowsOfDay(everyone, day) : []);
   const nearOfDay = $derived(day ? rowsOfDay(nearMisses, day) : []);
   const WEEKDAYS = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -49,7 +50,7 @@
 <div class="grid">
   <div class="nav">
     <button type="button" aria-label="Vorheriger Monat" disabled={monthIndex === 0} onclick={() => (monthIndex -= 1)}>‹</button>
-    <strong aria-live="polite">{monthLabel(month)}</strong>
+    <strong aria-live="polite">{monthLabelShort(month)}</strong>
     <button type="button" aria-label="Nächster Monat" disabled={monthIndex >= months.length - 1} onclick={() => (monthIndex += 1)}>›</button>
   </div>
 
@@ -89,7 +90,7 @@
 
   <div class="legend" aria-hidden="true">
     <span>weniger</span>
-    <span class="bar"></span>
+    {#each [0, 1, 2, 3, 4] as step (step)}<span class="step shade{step}"></span>{/each}
     <span>alle frei</span>
   </div>
 
@@ -97,13 +98,15 @@
     <section class="day" aria-label={`Details für ${formatDay(day)}`}>
       <h3>{formatDay(day)}</h3>
       {#if strip.length > 0}
-        <ol class="strip" aria-hidden="true">
+        <div class="strip" aria-hidden="true" style:--cols={strip.length}>
           {#each strip as hour (hour.hour)}
-            <li class="shade{hour.shade}" class:empty={hour.count === null} class:inwin={hour.inWindow}>
-              <span>{hour.hour}</span>
-            </li>
+            <span class="hl">{hour.hour}</span>
           {/each}
-        </ol>
+          {#each strip as hour (hour.hour)}
+            <span class="hc shade{hour.shade}" class:empty={hour.count === null}>{hourText(hour.count, readable)}</span>
+          {/each}
+          {#if line}<span class="win" style:grid-column="{line.start} / {line.end}">{line.text}</span>{/if}
+        </div>
       {/if}
       {#if everyoneOfDay.length === 0 && nearOfDay.length === 0}
         <p>An diesem Tag gibt es keine Lücke, die für viele passt.</p>
@@ -111,13 +114,15 @@
       <ul class="lines">
         {#each everyoneOfDay as row (row.key)}
           <li>
-            <span><strong>{row.picks[0]?.kind === "timed" ? row.detail : row.heading}</strong> – alle können</span>
+            <strong>{row.picks[0]?.kind === "timed" ? row.detail : row.heading}</strong>
+            <span class="who">alle können</span>
             {@render picks(row)}
           </li>
         {/each}
         {#each nearOfDay as row (row.key)}
           <li>
-            <span><strong>{row.picks[0]?.kind === "timed" ? row.detail : row.heading}</strong> – {row.count} – {row.missing}</span>
+            <strong>{row.picks[0]?.kind === "timed" ? row.detail : row.heading}</strong>
+            <span class="who">{row.count}{row.missing ? ` – ${row.missing}` : ""}</span>
             {@render picks(row)}
           </li>
         {/each}
@@ -130,7 +135,7 @@
   .grid {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
   }
 
   .nav {
@@ -139,14 +144,20 @@
     justify-content: space-between;
   }
 
+  .nav strong {
+    font-size: 1rem;
+  }
+
   .nav button {
-    min-width: 48px;
-    min-height: 48px;
-    border: 0;
-    border-radius: 24px;
-    background: var(--md-sys-color-secondary-container);
-    color: var(--md-sys-color-on-secondary-container);
-    font-size: 1.5rem;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: 1px solid var(--md-sys-color-outline-variant);
+    border-radius: 50%;
+    background: transparent;
+    color: var(--md-sys-color-on-surface);
+    font-size: 1.25rem;
+    line-height: 1;
     cursor: pointer;
   }
 
@@ -164,7 +175,7 @@
 
   th {
     font-size: 0.75rem;
-    font-weight: 600;
+    font-weight: 500;
     color: var(--md-sys-color-on-surface-variant);
   }
 
@@ -172,30 +183,46 @@
     padding: 0;
   }
 
-  /* Shades step from the surface up to the full primary colour; the number or "alle" is the other sign. */
+  /* Shades are the primary colour with growing opacity over the card, so they look right in light and dark and with any seed colour.
+     The number (or the missing number in the strip) is the other sign; the darkest shade means everybody. */
   .shade4 {
     --fill: var(--md-sys-color-primary);
     --ink: var(--md-sys-color-on-primary);
   }
 
   .shade3 {
-    --fill: color-mix(in srgb, var(--md-sys-color-primary) 70%, var(--md-sys-color-surface));
+    --fill: color-mix(in srgb, var(--md-sys-color-primary) 75%, transparent);
     --ink: var(--md-sys-color-on-primary);
   }
 
   .shade2 {
-    --fill: color-mix(in srgb, var(--md-sys-color-primary) 45%, var(--md-sys-color-surface));
+    --fill: color-mix(in srgb, var(--md-sys-color-primary) 55%, transparent);
     --ink: var(--md-sys-color-on-surface);
   }
 
   .shade1 {
-    --fill: color-mix(in srgb, var(--md-sys-color-primary) 22%, var(--md-sys-color-surface));
+    --fill: color-mix(in srgb, var(--md-sys-color-primary) 35%, transparent);
     --ink: var(--md-sys-color-on-surface);
   }
 
   .shade0 {
-    --fill: color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface));
-    --ink: var(--md-sys-color-on-surface-variant);
+    --fill: color-mix(in srgb, var(--md-sys-color-primary) 18%, transparent);
+    --ink: var(--md-sys-color-on-surface);
+  }
+
+  /* In dark mode the primary colour is light: the middle shades stay darker so the light numbers keep their contrast. */
+  @media (prefers-color-scheme: dark) {
+    .shade2 {
+      --fill: color-mix(in srgb, var(--md-sys-color-primary) 36%, transparent);
+    }
+
+    .shade1 {
+      --fill: color-mix(in srgb, var(--md-sys-color-primary) 24%, transparent);
+    }
+
+    .shade0 {
+      --fill: color-mix(in srgb, var(--md-sys-color-primary) 14%, transparent);
+    }
   }
 
   .cell {
@@ -205,14 +232,22 @@
     justify-content: center;
     width: 100%;
     aspect-ratio: 1;
-    min-height: 44px;
+    min-height: 36px;
     padding: 0;
-    border: 2px solid transparent;
-    border-radius: 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
     background: var(--fill);
     color: var(--ink);
     font: inherit;
     line-height: 1.1;
+  }
+
+  /* Searched but nothing found: no fill, only an outline. */
+  .cell.empty,
+  .hc.empty {
+    --fill: transparent;
+    --ink: var(--md-sys-color-on-surface-variant);
+    border-color: var(--md-sys-color-outline-variant);
   }
 
   button.cell {
@@ -220,44 +255,52 @@
   }
 
   button.cell.open {
-    border-color: var(--md-sys-color-on-surface);
+    box-shadow: 0 0 0 2px var(--md-sys-color-on-surface);
   }
 
+  /* Outside the search: no background, only the faint day number. */
   .cell.off {
-    background: var(--md-sys-color-surface-variant, #e7e0ec);
-    opacity: 0.45;
+    background: none;
+    color: var(--md-sys-color-on-surface-variant);
+    opacity: 0.55;
   }
 
   .n {
     font-size: 0.8125rem;
+    font-weight: 500;
   }
 
   .c {
-    font-size: 0.75rem;
-    font-weight: 700;
+    font-size: 0.6875rem;
+    font-weight: 600;
   }
 
   .legend {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 6px;
     font-size: 0.75rem;
     color: var(--md-sys-color-on-surface-variant);
   }
 
-  .bar {
-    flex: 1;
-    height: 10px;
-    border-radius: 5px;
-    background: linear-gradient(to right, color-mix(in srgb, var(--md-sys-color-primary) 8%, var(--md-sys-color-surface)), var(--md-sys-color-primary));
+  .step {
+    width: 14px;
+    height: 14px;
+    border-radius: 4px;
+    background: var(--fill);
+  }
+
+  .step:first-of-type {
+    margin-left: 2px;
   }
 
   .day {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding-top: 8px;
-    border-top: 1px solid var(--md-sys-color-outline-variant);
+    gap: 10px;
+    padding: 12px;
+    border-radius: 16px;
+    background: var(--md-sys-color-surface);
   }
 
   h3 {
@@ -265,27 +308,41 @@
     font-size: 1rem;
   }
 
+  /* One grid for the hour numbers, the squares and the window line, so all three share the columns. */
   .strip {
-    display: flex;
-    gap: 2px;
-    margin: 0;
-    padding: 0;
-    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(var(--cols), minmax(0, 1fr));
+    column-gap: 2px;
+    row-gap: 3px;
   }
 
-  .strip li {
-    flex: 1;
-    padding: 6px 0 4px;
-    border-radius: 4px;
+  .hl {
+    font-size: 0.6875rem;
+    text-align: center;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .hc {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 28px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     background: var(--fill);
     color: var(--ink);
     font-size: 0.6875rem;
-    text-align: center;
-    border-bottom: 3px solid transparent;
+    font-weight: 600;
   }
 
-  .strip li.inwin {
-    border-bottom-color: var(--md-sys-color-on-surface);
+  .win {
+    padding-top: 2px;
+    border-top: 2px solid var(--md-sys-color-on-surface-variant);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-align: center;
+    white-space: nowrap;
+    color: var(--md-sys-color-on-surface);
   }
 
   .lines {
@@ -298,21 +355,31 @@
 
   .lines li {
     display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 8px 12px;
-    padding: 8px 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+    padding: 10px 0;
     border-top: 1px solid var(--md-sys-color-outline-variant);
   }
 
   .lines li:first-child {
     border-top: 0;
+    padding-top: 0;
+  }
+
+  .lines strong {
+    font-size: 1rem;
+  }
+
+  .who {
+    font-size: 0.9375rem;
+    color: var(--md-sys-color-on-surface-variant);
   }
 
   .picks {
     display: flex;
     flex-wrap: wrap;
     gap: 8px;
+    margin-top: 6px;
   }
 </style>

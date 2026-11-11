@@ -93,7 +93,7 @@ export const HELP_TEXTS: Record<HelpTopic, HelpText> = {
   pollAnswers: {
     title: "So wird gezählt",
     paragraphs: [
-      "Hervorgehoben ist der Termin mit den meisten „Ja“; bei Gleichstand der mit den wenigsten „Nein“. „Vielleicht“ macht einen Termin nicht zum Sieger, wird aber angezeigt – und wer „Vielleicht“ sagt, bekommt den Termin trotzdem, wenn er festgelegt wird.",
+      "Mit ★ markiert ist der Termin mit den meisten „Ja“; bei Gleichstand der mit den wenigsten „Nein“. „Vielleicht“ macht einen Termin nicht zum Sieger, wird aber angezeigt – und wer „Vielleicht“ sagt, bekommt den Termin trotzdem, wenn er festgelegt wird.",
     ],
   },
   pollFix: {
