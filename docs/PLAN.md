@@ -693,9 +693,35 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   - The "someone voted" notification (`vote`) names the voter; for a hidden poll only the creator (and admin) may get
     the name, the others a notification without it, or none.
   - Migration additive (a new column with a default).
-- **10c Colour grid** ("to settle", Sonnet). The free times as a week grid, darker where more people can, next to the
-  list of search results ("Liste / Raster"), and the state of a poll as a grid as well. First a preview with made-up
-  data in two variants for the phone; the owner decides from it whether and how it is built.
+- **10c Colour grid** (Sonnet; web app only). Decided with the owner on 2026-11-11 from two preview mock-ups:
+  - **Search results:** a switch "Liste / Raster" above the results. "Raster" is a **month grid**: each day of the
+    search is a square coloured by the best count of that day (shades: all, all but one, all but two, all but three
+    or four, fewer; the number or "alle" in the square), with month navigation; days outside the search are grey.
+    Tapping a day shows below the grid a **day strip**: the hours of that day coloured the same way, the searched
+    window marked, tapping an hour tells who can ("11 von 12 können – ohne Tobias"), and under it that day's free
+    times as in the list, each with "Als Termin vorschlagen". Rejected: a separate week grid (with searches over
+    several weeks it means much paging; the day strip shows the hours instead) and a switch between week and month.
+    The legend reads from "weniger" to "alle" in the same order as its steps.
+  - **Poll state:** no switch, the app decides. An open poll shows the people × proposals table with coloured
+    cells (green Ja, yellow Vielleicht, grey Nein, dashed for no vote yet) and the "Ja" sums, the best proposal
+    marked. A hidden poll (10b) shows the others one bar per proposal (Ja / Vielleicht / Nein, no names); its
+    creator and the admin see the table.
+- **10d Cinema showtimes, semi-automatic** (Opus to plan, Sonnet for the steps; server and app). The friends often
+  plan going to the cinema, which also depends on the showtimes of several cinemas. Decided with the owner on
+  2026-11-11: the poll's creator enters, per cinema and day, the showtimes (a text field that takes pasted times such
+  as "17:30 20:15 22:45", copied from kinoheld or cineamo, and the browser's own time input for single times, which
+  is the round clock on Android), plus the film's length and a buffer for the adverts (suggested 20 minutes). The app
+  offers only the showings that fit into a free time of the search, and the poll is made from them. Server changes
+  needed (to settle when building): proposals today start and end on a quarter hour, showtimes need any minute; a
+  proposal needs an optional place (the cinema's name). Backward compatibility: the app offers the cinema mode only
+  when the server says it supports it. Later, in its own session: check whether showtimes can be read automatically.
+  A first check on 2026-11-11 could not reach kinoheld.de, cineamo.com or the cinemas' sites (blocked by the cloud
+  session's network settings); from search results only (unverified): kinoheld's site uses an undocumented GraphQL
+  interface (an unofficial client exists), no official developer access was found, and the commercial International
+  Showtimes API is the paid route. Before building on any of it: read the terms of use and robots.txt, and allow the
+  hosts for that session. Cinemas the friends use: IMAX Sinsheim, CinemaxX Heilbronn, Traumpalast Leonberg (IMAX),
+  Kinostar Arthaus Heilbronn; sometimes Schauburg Karlsruhe, Cineplex Neckarsulm, Traumpalast Esslingen (Dolby
+  Cinema), Filmpalast am ZKM Karlsruhe (IMAX), Scala Öhringen, Prestige Künzelsau.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
@@ -739,7 +765,7 @@ phase in brackets.
    the server is down, 9e a "So geht's" text to pass on, 9f load test of the home server (week from 2026-11-09);
    then release 1.9.0.
 10. **Learning from Timeful** (see "Learning from Timeful" above): 10a "Nochmal planen", 10b hidden votes, 10c colour
-    grid (preview first).
+    grid, 10d cinema showtimes (semi-automatic).
 
 ## Server updates
 
