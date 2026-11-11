@@ -116,6 +116,12 @@ export function weekdayOf(date: string): Weekday {
   return (day === 0 ? 7 : day) as Weekday;
 }
 
+/** "Dezember 2026" for "2026-12". */
+export function monthLabel(month: string): string {
+  const m = MONTH_PATTERN.exec(month);
+  return m ? `${MONTH_NAMES[Number(m[2]) - 1]} ${m[1]}` : month;
+}
+
 /** "Sa 12.12." */
 export function formatDay(date: string): string {
   const m = DATE_PATTERN.exec(date);

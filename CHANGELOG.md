@@ -8,9 +8,11 @@ versions follow `vMAJOR.MINOR.PATCH`.
 ### Added
 
 - A poll's management card has a new button "Nochmal planen": it opens the search with the same people (and the length of the first proposal), and the new poll starts with the old title and note. The old proposals are not copied.
+- The search results have a switch "Liste / Raster". "Raster" shows a month grid in which every day of the search is coloured by how many people can (with the number or "alle"); tapping a day shows its hours as a coloured strip and that day's free times with "Als Termin vorschlagen".
 
 ### Changed
 
+- The table "Stand der Abstimmung" now colours its cells: green for Ja, yellow for Vielleicht, grey for Nein and a dashed cell for no vote yet.
 - On the iPhone, the hints for putting Lückenfüller on the home screen no longer mention only Safari: they now say where the "Teilen" button is in Safari and in Chrome (Chrome, Edge and Firefox can do this since iOS 16.4).
 
 ## [2.3.0] - 2026-11-10

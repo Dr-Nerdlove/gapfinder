@@ -78,6 +78,14 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
   const resultTop = await cardTop(page, "Ergebnis");
   const height = await page.evaluate(() => document.documentElement.scrollHeight);
   await shot(page, "search-results.png", { clip: { x: 0, y: resultTop - 12, width: 390, height: height - resultTop - 0 } });
+  // The same answer as a colour grid, the first day with a number opened.
+  await page.getByRole("button", { name: "Raster", exact: true }).click();
+  await page.waitForTimeout(400);
+  await page.locator("table[aria-label='Monatsraster der Suche'] button.cell:not(.empty)").first().click();
+  await page.waitForTimeout(400);
+  const gridTop = await cardTop(page, "Raster");
+  const gridHeight = await page.evaluate(() => document.documentElement.scrollHeight);
+  await shot(page, "search-grid.png", { clip: { x: 0, y: gridTop - 12, width: 390, height: gridHeight - gridTop } });
   await b.browser.close();
 
   // Poll page of Sophie: "Nicht berücksichtigt" and the hints from her own calendar (busy on one proposal, "Ja" chosen).
@@ -121,7 +129,7 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
     const where = {
       "login.png": "login.png", "invite.png": "invite.png", "start-logged-in.png": "start-logged-in.png", "profile.png": "profile.png",
       "calendars.png": "calendars.png",
-      "admin.png": "admin.png", "search-form.png": "search-form.png", "search-results.png": "search-results.png",
+      "admin.png": "admin.png", "search-form.png": "search-form.png", "search-results.png": "search-results.png", "search-grid.png": "search-grid.png",
       "poll-calendar-check.png": "polls/7-calendar-check.png", "fix-check.png": "fix-date/2-fix-check.png", "date-fixed-creator.png": "fix-date/3-date-fixed-creator.png",
       "date-fixed-guest.png": "fix-date/4-date-fixed-guest.png",
     };

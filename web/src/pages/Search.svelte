@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { NEAR_MISS_MIN_PEOPLE, type Group, type Person, type SearchRequest, type SkippedPerson } from "@lueckenfueller/shared";
+  import { NEAR_MISS_MIN_PEOPLE, SEARCH_DEFAULT_WINDOW, type Group, type Person, type SearchRequest, type SearchResult, type SkippedPerson } from "@lueckenfueller/shared";
   import { tick, untrack } from "svelte";
   import * as api from "../lib/api";
   import {
@@ -16,6 +16,7 @@
     skippedNotices,
     type ResultView,
   } from "../lib/gap-search";
+  import { searchedDays, type SearchedDays } from "../lib/colour-grid";
   import { errorMessage } from "../lib/messages";
   import { MAX_PICKS, pollSource, selectionLabel, togglePick } from "../lib/poll-draft";
   import { applyReplan, replanHandover } from "../lib/replan";
@@ -51,6 +52,8 @@
     notices: string[];
     view: ResultView;
     nearMissesPossible: boolean;
+    /** What the colour grid draws from. */
+    grid: { result: SearchResult; readable: number; searched: SearchedDays; window: { start: string; end: string } };
     /** What a poll made from this answer needs to know about the search. */
     source: { durationMinutes: number; periodDays: number; participants: number[] };
   }
@@ -111,6 +114,12 @@
         notices: skippedNotices(skipped, everyone, user.id),
         view: resultView(result.data, everyone, user.id, readable),
         nearMissesPossible: readable >= NEAR_MISS_MIN_PEOPLE,
+        grid: {
+          result: result.data,
+          readable,
+          searched: searchedDays(request),
+          window: (request.mode === "hours" ? request.window : undefined) ?? SEARCH_DEFAULT_WINDOW,
+        },
         source: {
           durationMinutes: request.mode === "hours" ? request.durationMinutes : 0,
           periodDays: request.mode === "days" ? request.days : 1,
@@ -171,6 +180,7 @@
           stale={searching}
           chosen={selected.map((p) => p.id)}
           ontoggle={toggle}
+          grid={answer.grid}
         />
       </div>
     {/if}

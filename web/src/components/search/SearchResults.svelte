@@ -4,6 +4,9 @@
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
   import Chip from "../Chip.svelte";
+  import ColourGrid from "./ColourGrid.svelte";
+  import type { SearchResult } from "@lueckenfueller/shared";
+  import type { SearchedDays } from "../../lib/colour-grid";
 
   interface Props {
     summary: string;
@@ -20,13 +23,16 @@
     /** The ids of the free times chosen for a poll. */
     chosen: string[];
     ontoggle: (pick: PollPick) => void;
+    /** What the colour grid needs; without it only the list is offered. */
+    grid?: { result: SearchResult; readable: number; searched: SearchedDays; window: { start: string; end: string } } | undefined;
   }
 
-  let { summary, notices, everyone, nearMisses, nearMissesPossible, maxMissing, stale, chosen, ontoggle }: Props = $props();
+  let { summary, notices, everyone, nearMisses, nearMissesPossible, maxMissing, stale, chosen, ontoggle, grid }: Props = $props();
 
   const STEP = 10;
   let everyoneShown = $state(STEP);
   let nearShown = $state(STEP);
+  let view = $state<"list" | "grid">("list");
 </script>
 
 {#snippet picks(row: Row)}
@@ -56,6 +62,18 @@
 
   <p class="hint">Tippe auf Zeiten, die du als Termine zur Abstimmung vorschlagen willst.</p>
 
+  {#if grid}
+    <div class="views" role="group" aria-label="Ansicht der Ergebnisse">
+      <Chip label="Liste" selected={view === "list"} onclick={() => (view = "list")} />
+      <Chip label="Raster" selected={view === "grid"} onclick={() => (view = "grid")} />
+    </div>
+  {/if}
+
+  {#if grid && view === "grid"}
+    <Card title="Raster">
+      <ColourGrid {...grid} {everyone} {nearMisses} {chosen} {ontoggle} />
+    </Card>
+  {:else}
   <Card title="Alle frei">
     {#if everyone.length === 0}
       <p>Keine Lücke gefunden, in der alle Zeit haben.</p>
@@ -108,6 +126,7 @@
       {/if}
     {/if}
   </Card>
+  {/if}
 </div>
 
 <style>
@@ -119,6 +138,11 @@
 
   .results.stale {
     opacity: 0.5;
+  }
+
+  .views {
+    display: flex;
+    gap: 8px;
   }
 
   .hint {
