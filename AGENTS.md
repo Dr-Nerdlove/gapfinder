@@ -208,6 +208,11 @@ missing, with a recommendation, and let the people choose.
   to run while files under `android/` are uncommitted (its stale-sync check). CI's `vm-scripts` job runs
   `shellcheck deploy/vm/*.sh deploy/vm/test/*.sh scripts/*.sh`; a cloud session has no shellcheck, but
   `pip install --target <scratchpad>/sc shellcheck-py` gives one in `<scratchpad>/sc/bin`.
+- **Mock-ups:** a preview picture the owner approved while planning goes into `docs/mockups/` (named after the
+  point, e.g. `10c-search-grid.jpg`, metadata removed) and is named in `docs/PLAN.md`, so the session that builds it
+  works from the picture, not only from the text. 10c was first built from the text alone and missed much of the
+  approved look. Visible changes are checked in light and dark mode and with a seed colour other than the default
+  (the app takes each user's colour), not only in the default light purple.
 - **Screenshots for the docs** (`docs/screenshots`, used by the README): `bash scripts/docs-screenshots/run.sh --install`
   takes the pictures of the whole app on a throw-away server with made-up people and calendars (details, the traps
   found and what it does not cover: `scripts/docs-screenshots/README.md`). Retake the pictures of every screen that a

@@ -146,3 +146,28 @@ export function rowsOfDay(rows: readonly Row[], date: string): Row[] {
     return row.key.slice(0, 10) === date;
   });
 }
+
+/** What an hour square says: the number of people, nothing when everybody can (the darkest shade says "alle") or nobody was found. */
+export function hourText(count: number | null, readable: number): string {
+  return count === null || count >= readable ? "" : String(count);
+}
+
+/** "18" for "18:00", "18:30" for "18:30": the hour as the line under the strip says it. */
+function clockHours(clock: string): string {
+  const minutes = clockToMinutes(clock);
+  const h = Math.floor(minutes / 60) % 24;
+  const m = minutes % 60;
+  return m === 0 ? String(h) : `${h}:${String(m).padStart(2, "0")}`;
+}
+
+/**
+ * The line under the hour strip that spans the searched window: the CSS grid lines it starts and ends at
+ * (1-based, `grid-column: start / end`) and its text, e.g. "gesucht: 18–23 Uhr". Null when no hour of the strip is in the window.
+ */
+export function windowLine(strip: readonly HourCell[], window: { start: string; end: string }): { start: number; end: number; text: string } | null {
+  const first = strip.findIndex((h) => h.inWindow);
+  if (first < 0) return null;
+  let last = first;
+  while (strip[last + 1]?.inWindow) last++;
+  return { start: first + 1, end: last + 2, text: `gesucht: ${clockHours(window.start)}–${clockHours(window.end)} Uhr` };
+}

@@ -122,6 +122,12 @@ export function monthLabel(month: string): string {
   return m ? `${MONTH_NAMES[Number(m[2]) - 1]} ${m[1]}` : month;
 }
 
+/** "Nov. 2026" for "2026-11" (short, for the month buttons of the colour grid). */
+export function monthLabelShort(month: string): string {
+  const m = MONTH_PATTERN.exec(month);
+  return m ? `${MONTH_SHORT[Number(m[2]) - 1]} ${m[1]}` : month;
+}
+
 /** "Sa 12.12." */
 export function formatDay(date: string): string {
   const m = DATE_PATTERN.exec(date);
