@@ -701,7 +701,8 @@ the owner (choices with a recommendation, a preview mock-up where something is v
     window marked, tapping an hour tells who can ("11 von 12 können – ohne Tobias"), and under it that day's free
     times as in the list, each with "Als Termin vorschlagen". Rejected: a separate week grid (with searches over
     several weeks it means much paging; the day strip shows the hours instead) and a switch between week and month.
-    The legend reads from "weniger" to "alle" in the same order as its steps.
+    The legend is only the colour bar from "weniger" to "alle frei", without a line naming the steps: the squares
+    and the day strip carry the number anyway, and tapping tells who is missing.
   - **Poll state:** no switch, the app decides. An open poll shows the people × proposals table with coloured
     cells (green Ja, yellow Vielleicht, grey Nein, dashed for no vote yet) and the "Ja" sums, the best proposal
     marked. A hidden poll (10b) shows the others one bar per proposal (Ja / Vielleicht / Nein, no names); its
