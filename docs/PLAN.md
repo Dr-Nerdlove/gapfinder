@@ -669,6 +669,65 @@ Left as they are for now (owner, 2026-11-07), to be raised again when the circle
 - **Who can be searched with** stays everybody with an account (phase 3). Options for later: a setting "only people
   from my groups may choose me" (builds on 9a), or saying it more clearly on the privacy page.
 
+### Learning from Timeful (phase 10)
+
+Decided with the owner on 2026-11-11, after comparing the Lückenfüller with Timeful (github.com/schej-it/timeful, an
+open source When2meet-style availability poll, read in its source on 2026-11-11). The owner keeps the Lückenfüller and
+takes over the ideas below. Each point is its own branch and pull request; points marked "to settle" are agreed with
+the owner (choices with a recommendation, a preview mock-up where something is visible) **before** building.
+
+- **10a "Nochmal planen"** (Sonnet; web app only). A button on a poll's page (creator and admin) opens `#/suche` with the
+  same people and, for an hours poll, the duration of its first proposal; title and note are carried over to
+  `#/abstimmung-neu`. Handed over in memory only, like the search choice today (a reload starts empty). The old
+  proposals are not copied: they lie in the past, and a poll is deleted 30 days after its last proposal. No server
+  change. Rejected for now: stored search templates ("Spieleabend: Samstag ab 18 Uhr, 5 Stunden"), which would need a
+  server change; to revisit if the button is not enough.
+- **10b Hidden votes** (Opus to plan, Sonnet for the steps; server and app). An option when creating a poll: everyone
+  else sees **only the sums** per proposal ("5 Ja, 2 Vielleicht"), who has not voted yet, and their own vote; the
+  **creator and the admin** see every name and answer. A hidden poll can be **revealed** later (creator or admin), never
+  hidden again. To settle when building:
+  - Backward compatibility: an older server ignores the new field and would create an open poll. The app must only
+    offer the option when the server says it supports it (and the server must refuse what it does not know rather than
+    create an open poll).
+  - The server filters the poll state per caller (never only the app); guests and other accounts get sums.
+  - The "someone voted" notification (`vote`) names the voter; for a hidden poll only the creator (and admin) may get
+    the name, the others a notification without it, or none.
+  - Migration additive (a new column with a default).
+- **10c Colour grid** (Sonnet; web app only). Decided with the owner on 2026-11-11 from two preview mock-ups:
+  - **Search results:** a switch "Liste / Raster" above the results. "Raster" is a **month grid**: each day of the
+    search is a square coloured by the best count of that day (shades: all, all but one, all but two, all but three
+    or four, fewer; the number or "alle" in the square), with month navigation; days outside the search are grey.
+    Tapping a day shows below the grid a **day strip**: the hours of that day coloured the same way, the searched
+    window marked (the hours are not tappable: the free times below already name who is missing), and under it
+    that day's free times as in the list ("11 von 12 können – ohne Tobias"), each with "Als Termin vorschlagen". Rejected: a separate week grid (with searches over
+    several weeks it means much paging; the day strip shows the hours instead) and a switch between week and month.
+    The legend is only the colour bar from "weniger" to "alle frei", without a line naming the steps: the squares
+    and the day strip carry the number anyway, and the free times below name who is missing.
+  - **Poll state:** no switch, the app decides. An open poll shows the people × proposals table with coloured
+    cells (green Ja, yellow Vielleicht, grey Nein, dashed for no vote yet) and the "Ja" sums, the best proposal
+    marked. A hidden poll (10b) shows the others one bar per proposal (Ja / Vielleicht / Nein, no names); its
+    creator and the admin see the table.
+- **10d Cinema showtimes, semi-automatic** (Opus to plan, Sonnet for the steps; server and app). The friends often
+  plan going to the cinema, which also depends on the showtimes of several cinemas. Decided with the owner on
+  2026-11-11: the poll's creator enters, per cinema and day, the showtimes (a text field that takes pasted times such
+  as "17:30 20:15 22:45", copied from kinoheld or cineamo, and the browser's own time input for single times, which
+  is the round clock on Android), plus the film's length and a buffer for the adverts (suggested 20 minutes). The app
+  offers only the showings that fit into a free time of the search, and the poll is made from them. Server changes
+  needed (to settle when building): proposals today start and end on a quarter hour, showtimes need any minute; a
+  proposal needs an optional place (the cinema's name). Backward compatibility: the app offers the cinema mode only
+  when the server says it supports it. Later, in its own session: check whether showtimes can be read automatically.
+  A first check on 2026-11-11 could not reach kinoheld.de, cineamo.com or the cinemas' sites (blocked by the cloud
+  session's network settings); from search results only (unverified): kinoheld's site uses an undocumented GraphQL
+  interface (an unofficial client exists), no official developer access was found, and the commercial International
+  Showtimes API is the paid route. Before building on any of it: read the terms of use and robots.txt, and allow the
+  hosts for that session. The friends use about ten cinemas in their region; the owner names them in that session
+  (deliberately not recorded here: the repository is public, and the list would tell where the friends live).
+
+Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
+filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
+"I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
+export, sign-up lists, Slack/Discord bots. Direct Google/Outlook login stays in phase 8 (too much work for now).
+
 ## Security
 
 - Only the API is reachable from the internet; it runs as a non-root user in a container inside its own VM.
@@ -705,6 +764,8 @@ phase in brackets.
    the people choice, 9b deleting one's own account, 9c better results for large groups, 9d notice to the owner when
    the server is down, 9e a "So geht's" text to pass on, 9f load test of the home server (week from 2026-11-09);
    then release 1.9.0.
+10. **Learning from Timeful** (see "Learning from Timeful" above): 10a "Nochmal planen", 10b hidden votes, 10c colour
+    grid, 10d cinema showtimes (semi-automatic).
 
 ## Server updates
 
