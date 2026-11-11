@@ -54,6 +54,10 @@ admin sees a warning on the start page when a backup is missing or the monthly t
 | ------------------------------------------------ | ------------------------------------------------ | ------------------------------------------------------ |
 | ![Search settings](docs/screenshots/search-form.png) | ![Search result](docs/screenshots/search-results.png) | ![Result, days](docs/screenshots/search-results-days.png) |
 
+| Result as a colour grid: month, tapped day with hours |
+| ---------------------------------------------------- |
+| ![Colour grid](docs/screenshots/search-grid.png)     |
+
 | Poll: state and voting                              | Poll: left-out people and own calendar              | Fixing the date: choose, then check                       |
 | --------------------------------------------------- | --------------------------------------------------- | --------------------------------------------------------- |
 | ![Poll state](docs/screenshots/polls/3-state.png) | ![Poll calendar check](docs/screenshots/polls/7-calendar-check.png) | ![Fixing the date](docs/screenshots/fix-date/2-fix-check.png) |

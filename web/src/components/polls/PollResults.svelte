@@ -134,22 +134,25 @@
   }
 
   /* Colour is never the only sign: every cell also says Ja, Vielleicht or Nein. */
-  .yes {
-    color: var(--md-sys-color-primary);
+  td.yes {
+    background: color-mix(in srgb, #2e9d4f 32%, var(--md-sys-color-surface));
     font-weight: 700;
   }
 
-  .maybe {
+  td.maybe {
+    background: color-mix(in srgb, #e0a800 34%, var(--md-sys-color-surface));
     font-weight: 600;
   }
 
-  .no {
-    color: var(--md-sys-color-error);
-    font-weight: 600;
+  td.no {
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, var(--md-sys-color-surface));
   }
 
-  .none {
-    opacity: 0.5;
+  /* No vote yet: an empty, dashed cell. */
+  td.none {
+    outline: 1px dashed var(--md-sys-color-outline);
+    outline-offset: -4px;
+    color: var(--md-sys-color-on-surface-variant);
   }
 
   .check {
