@@ -760,6 +760,17 @@ the owner (choices with a recommendation, a preview mock-up where something is v
     others allow reading. Booking runs through different systems (the chain's own, kinoheld, a ticket service, a
     museum shop): one data source per cinema would mean up to ten different readers.
 
+  Other providers, checked the same day for a source usable without asking first (none found):
+  - *International Showtimes* (Cinepass, Berlin): the only official, documented showtimes API with German cinemas
+    (REST/JSON, API key, filters by country); the key comes from a free trial sign-up (seen in their docs). Price
+    and trial length not published (a 2024 article names 7 days and about 149 EUR a month: guessed, maybe outdated);
+    no terms page found; whether the friends' cinemas are in it cannot be checked without signing up.
+  - *kino.de*: no API; robots.txt blocks `/api/` and reserves text and data mining (§ 44b UrhG). *filmstarts.de,
+    kinoprogramm.com, programmkino.de*: no API or feed. *moviepilot.de*: terms allow private, non-commercial use, but
+    robots.txt blocks its programme pages. *MovieGlu, Gracenote*: business contracts on request only.
+  - The cinemas' ticket systems publish no public programme feed (one ticket page looked at: plain HTML). No open data
+    for showtimes; Google has no showtimes API.
+
   Guessed, not seen: the cineamo interface is meant only for their own pages and can change without notice;
   cineamo would probably answer a polite request; kinoheld would grant access only as a business partner.
 
@@ -771,7 +782,9 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   `server/src/calendars/fetch.ts`-style guarded requests) and fills the entry field, which stays editable; the cinema
   ids go into the server's settings, not the repository. Without a yes, a button "open on cineamo" next to the entry
   field makes copying quicker. Effort for (3), guessed: about a day's work; it breaks when cineamo changes its
-  interface, and the entry by hand stays as the fallback.
+  interface, and the entry by hand stays as the fallback. The paid alternative, if cineamo says no: a trial of
+  International Showtimes, first to see whether the cinemas are covered, then the owner decides about the price.
+  The request to cineamo was drafted on 2026-11-12 and is sent by the owner (not kept here: it names the cinemas).
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
