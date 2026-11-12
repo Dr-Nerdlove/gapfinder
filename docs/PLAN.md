@@ -797,6 +797,19 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   cineamo, the app shows a visible credit "Spielzeiten: Cineamo" (decided with the owner on 2026-11-12, also offered
   to cineamo in the request); times entered by hand get no credit.
 
+  **10d must not change today's use** (owner's requirement, 2026-11-12). Besides the usual rules (additive
+  migrations, cinema mode offered only when `HealthResponse.features` lists it), two points to keep when building:
+  - *Any minute only for cinema proposals.* The quarter-hour rule (`server/src/polls/validation.ts`) stays for every
+    other proposal, with its existing tests; only a proposal marked as a showing may start at any minute. Everything
+    that shows proposals must cope with such times and with the place (cinema name): the poll table, the colour grid
+    (10c), the calendar feed (place as `LOCATION`), the notification texts in `notification-text.ts` and
+    `NotificationText.kt` (an older Android shell must still show a sensible text), and polls without a place must
+    look exactly as before. Each gets a test where it can be tested automatically.
+  - *The automatic fetch (only with cineamo's yes) is optional.* If cineamo is unreachable, slow or answers with
+    something unexpected, the entry field simply stays empty for typing by hand; nothing else waits for it or fails
+    (no effect on search, polls, health check or start-up). One fetch per cinema a day, outside the hours the home PC
+    is off, with a time limit and a size limit; the load test (9f) is rerun once it exists.
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
