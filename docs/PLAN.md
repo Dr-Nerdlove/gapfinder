@@ -735,32 +735,43 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   hosts for that session. The friends use about ten cinemas in their region; the owner names them in that session
   (deliberately not recorded here: the repository is public, and the list would tell where the friends live).
 
-  **Automatic reading, checked on 2026-11-12 (nothing built).** Seen myself (a few polite requests, no login):
-  - *kinoheld*: its robots.txt blocks AI crawlers completely and lets other bots read the public pages; its terms
+  **Automatic reading, checked on 2026-11-12 (nothing built; checked twice, the second time more carefully).**
+  Seen (a few polite requests, no login):
+  - *kinoheld*: its robots.txt blocks AI crawlers completely and lets other bots read most public pages; its terms
     (AGB, point 4.8) forbid robot or spider software and any automated monitoring, copying or processing of the site.
-    The site's own script uses a GraphQL server, but that is for its own pages, there is no public developer access.
-    The city pages are built in the browser (no times in the plain page). Not usable without permission.
-  - *cineamo*: robots.txt allows everything; no terms of use were found on the site (only imprint and data protection),
-    so the terms question is open. The cinema pages contain the showtimes as plain text per day (for example
-    "16:30 · 17:00 · 20:30"), and the site has an undocumented JSON interface at `api.cineamo.com` (cinema data seen,
-    no showtime route found, its own robots.txt answers 403). There is a business site (`b2b.cineamo.com`) for
-    cinemas and partners, with no public data access. All the friends' cinemas are listed there. The booking
-    system it names per cinema is kinoheld for one, a cinema software for one, and a "showtime collector" for the
-    rest (what that is: unknown).
-  - *kinoheld* lists most of the region's cinemas, but not every one could be confirmed.
-  - *Cinema sites*: the sites of the bigger chains have no feed (no RSS, ICS or JSON-LD events found on the pages
-    looked at); one chain's robots.txt blocks its showtime paths and its API paths, one answered 403 to a plain request.
-    The small cinemas' own addresses could not be found by search; only portals list them.
+    The site's own script uses a GraphQL server (`next-live.kinoheld.de`) for its own pages; no public developer
+    access exists. A cinema's page is `www.kinoheld.de/kino/<city>/<slug>`. Six of the ten cinemas have their own
+    page there (checked by that address, not by a name on a city page, which also lists neighbouring towns); one more
+    is probably there (slug seen, not opened); for two towns kinoheld has no city page at all. Not usable without
+    kinoheld's permission.
+  - *cineamo*: lists all ten cinemas. robots.txt allows everything. There are no terms of use (no AGB page, footer
+    links only imprint and data protection); the imprint has the usual copyright clause: using content beyond what
+    copyright allows, "in particular storing or processing it in databases", needs written consent. Nothing about
+    automated access. The cinema pages show the times as text per day. The site reads from an undocumented JSON
+    interface: `GET api.cineamo.com/showings?cinemaId=<id>` returned 200 with every showing of a cinema (film name,
+    `startDatetime` in UTC, room, language, 3D/OV flags, booking link), 10 per page (one cinema: 353 showings, 36
+    pages); `api.cineamo.com/cinemas/<id>` names each cinema's showtime source. No ICS, RSS or JSON-LD screening
+    events. Its business site (`b2b.cineamo.com`) offers cinemas a showtimes widget for their own site, nothing for
+    third parties.
+  - *Where cineamo gets the times*: for one cinema from kinoheld, for one from the cinema's own ticket software, for
+    the other eight from "showtime_collector" (cineamo's own collecting; what exactly: not seen).
+  - *Cinema sites* (seven of ten found): none has RSS, ICS or JSON-LD screening events on the pages looked at. One
+    chain's robots.txt forbids its programme and API paths; one museum site blocks AI crawlers in robots.txt; the
+    others allow reading. Booking runs through different systems (the chain's own, kinoheld, a ticket service, a
+    museum shop): one data source per cinema would mean up to ten different readers.
 
-  Guessed, not seen: kinoheld would probably cooperate (or sell access) if asked; the "showtime collector" is probably
-  an aggregator that also feeds other portals; reading cineamo's pages would work technically but may break whenever
-  the pages change.
+  Guessed, not seen: the cineamo interface is meant only for their own pages and can change without notice;
+  cineamo would probably answer a polite request; kinoheld would grant access only as a business partner.
 
-  Result and recommendation: **no clean automatic route.** The one with a free hand (cineamo) has no official
-  interface and no stated terms; kinoheld forbids it. Options: (1) keep the semi-automatic entry as decided, build
-  it first; (2) ask cineamo in writing (their business contact) whether reading the cinema pages for a private
-  friends' app is fine; (3) a button "open the cinema's page" next to the entry field so copying is quick. Do not
-  build a crawler before (2) is answered.
+  Result and recommendation: **technically possible through cineamo, legally not settled; reading each cinema's
+  site is too much work and too fragile.** Order: (1) build the semi-automatic entry as decided; (2) the owner asks
+  cineamo in writing (contact on `b2b.cineamo.com`) whether a private friends' app may read the showtimes of about
+  ten cinemas through `api.cineamo.com`, a few requests a day, with a link back to cineamo for booking; (3) only with
+  a yes: the server fetches once a day per cinema (cached in memory like the calendars, via
+  `server/src/calendars/fetch.ts`-style guarded requests) and fills the entry field, which stays editable; the cinema
+  ids go into the server's settings, not the repository. Without a yes, a button "open on cineamo" next to the entry
+  field makes copying quicker. Effort for (3), guessed: about a day's work; it breaks when cineamo changes its
+  interface, and the entry by hand stays as the fallback.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
