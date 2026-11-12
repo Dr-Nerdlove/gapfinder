@@ -39,7 +39,7 @@
           {#each poll.proposals as proposal (proposal.id)}
             {@const heading = proposalHeading(proposal)}
             <th scope="col" class:best={best.has(proposal.id)}>
-              {#if best.has(proposal.id)}<span aria-hidden="true">★ </span>{/if}{heading.top}{#if heading.bottom}<br /><small>{heading.bottom}</small>{/if}
+              {#if best.has(proposal.id)}<span class="star-mark" aria-hidden="true">★</span>{/if}{heading.top}{#if heading.bottom}<br /><small>{heading.bottom}</small>{/if}
               {#if best.has(proposal.id)}<span class="visually-hidden">{fixed ? " (festgelegter Termin)" : " (meiste Ja)"}</span>{/if}
             </th>
           {/each}
@@ -50,7 +50,7 @@
           <tr>
             <th scope="row" class="name">
               <span class="who">
-                <span>{vote.name}{#if vote.personId !== null}<span class="check" title="Mit Konto abgestimmt" aria-label="mit Konto">✓</span>{/if}</span>
+                <span>{vote.name}{#if vote.personId === null}{" "}<span class="guest">Gast</span>{/if}</span>
                 {#if onremove}
                   <button type="button" class="remove" disabled={busy} aria-label={`Stimme von ${vote.name} löschen`} onclick={() => onremove(vote.id, vote.name)}>✕</button>
                 {/if}
@@ -182,9 +182,16 @@
     border: 1.5px dashed var(--md-sys-color-outline);
   }
 
-  .check {
-    margin-left: 4px;
-    color: var(--md-sys-color-primary);
+  /* Guests (voted through the share link) are the exception, so they are the ones marked. */
+  .guest {
+    margin-left: 6px;
+    font-size: 0.75rem;
+    font-weight: 400;
+    color: var(--md-sys-color-on-surface-variant);
+  }
+
+  .star-mark {
+    margin-right: 0.25em;
   }
 
   .remove {

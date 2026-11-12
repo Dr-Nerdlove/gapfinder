@@ -12,7 +12,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
-- The table "Stand der Abstimmung" is more compact and shows each answer as a small coloured square: green with ✓ for Ja, yellow with ? for Vielleicht, grey for Nein and a dashed square for no vote yet. Below each proposal is its number of "Ja"; the best (or fixed) proposal is marked with ★ instead of a coloured column, and a small legend explains the signs. Creator and admin delete a vote with the ✕ next to the name.
+- The table "Stand der Abstimmung" is more compact and shows each answer as a small coloured square: green with ✓ for Ja, yellow with ? for Vielleicht, grey for Nein and a dashed square for no vote yet. Below each proposal is its number of "Ja"; the best (or fixed) proposal is marked with ★ instead of a coloured column, and a small legend explains the signs. Creator and admin delete a vote with the ✕ next to the name. Votes from guests (through the share link) are marked "Gast" next to the name; the check mark that used to mark votes with an account is gone, so it is no longer confused with the ✓ for Ja.
 - On the iPhone, the hints for putting Lückenfüller on the home screen no longer mention only Safari: they now say where the "Teilen" button is in Safari and in Chrome (Chrome, Edge and Firefox can do this since iOS 16.4).
 
 ## [2.3.0] - 2026-11-10
