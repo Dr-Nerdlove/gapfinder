@@ -9,7 +9,7 @@
   import { isServerNight } from "../lib/server-night";
   import { errorMessage } from "../lib/messages";
   import { hintFor, pollSkippedNotices } from "../lib/poll-calendar";
-  import { submitVote, withdrawVote } from "../lib/poll-actions";
+  import { loadPoll, submitVote, withdrawVote } from "../lib/poll-actions";
   import { nextScreen, statusText, updatedText, type AnswerMap, type PollScreen } from "../lib/poll-view";
   import { startPolling } from "../lib/polling";
   import { replanFromPoll, replanHandover } from "../lib/replan";
@@ -23,6 +23,7 @@
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
   import FixDate from "../components/polls/FixDate.svelte";
+  import HiddenChip from "../components/polls/HiddenChip.svelte";
   import FixedDate from "../components/polls/FixedDate.svelte";
   import PollManage from "../components/polls/PollManage.svelte";
   import Reminder from "../components/polls/Reminder.svelte";
@@ -60,7 +61,7 @@
   /** Asks the server and shows the answer. Answers that were overtaken by a newer one are ignored. */
   async function refresh(): Promise<void> {
     const mine = ++newest;
-    const result = await session.run((o) => api.getPollByLink(token, o));
+    const result = await loadPoll(token, deps);
     if (mine < applied) return;
     applied = mine;
     screen = nextScreen(screen, result, new Date());
@@ -222,7 +223,9 @@
     </Card>
   {:else if poll}
     <Card>
-      {#if poll.creator}<p>Von {poll.creator.username}</p>{/if}
+      {#if poll.creator || poll.hidden}
+        <p class="by">{#if poll.creator}Von {poll.creator.username}{/if}{#if poll.hidden}{#if poll.creator}{" "}{/if}<HiddenChip />{/if}</p>
+      {/if}
       {#if poll.note}<p class="note">{poll.note}</p>{/if}
       <p class="status" class:closed={!poll.open && !fixed}>{statusText(poll)}</p>
       <p class="updated" aria-live="polite">
@@ -284,7 +287,7 @@
     </Card>
 
     {#if poll.canManage}
-      <PollManage {poll} {busy} {locked} problem={manageProblem} onupdate={update} onnewlink={newLink} ondelete={remove} ondeletekeepdate={removeKeepingDate} onreplan={replan} />
+      <PollManage {poll} {busy} {locked} problem={manageProblem} onupdate={update} onnewlink={newLink} ondelete={remove} ondeletekeepdate={removeKeepingDate} onreplan={replan} onreveal={() => update({ hidden: false })} />
     {/if}
   {/if}
 </Page>
@@ -302,6 +305,13 @@
 <style>
   .note {
     white-space: pre-wrap;
+  }
+
+  .by {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
   }
 
   .status {

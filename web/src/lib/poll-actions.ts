@@ -1,7 +1,7 @@
 import type { GuestVoteCreated, PollView } from "@lueckenfueller/shared";
 import * as realApi from "./api";
 import type { ApiFailure, ApiResult, CallOptions } from "./api";
-import { forgetGuestVote, liveGuestVote, rememberGuestVote, type StoredGuestVote } from "./guest-votes";
+import { forgetGuestVote, guestVoteFor, liveGuestVote, rememberGuestVote, type StoredGuestVote } from "./guest-votes";
 import { NAME_PROBLEM_TEXTS, checkGuestName, answersInput, type AnswerMap } from "./poll-view";
 import { defaultStorage } from "./session-storage";
 
@@ -29,6 +29,17 @@ export interface VoteInput {
   answers: AnswerMap;
   /** The key this device kept for the poll, if any. */
   stored: StoredGuestVote | null;
+}
+
+/**
+ * Loads the poll for its link. A device that keeps a guest vote for it sends the key (`X-Vote-Key`), so a poll with
+ * hidden votes still shows the guest their own vote. Also used by the live refresh.
+ */
+export async function loadPoll(shareToken: string, deps: Pick<VoteDeps, "run" | "storage"> & { api?: Pick<typeof realApi, "getPollByLink"> }): Promise<ApiResult<PollView>> {
+  const api = deps.api ?? realApi;
+  const storage = deps.storage === undefined ? defaultStorage() : deps.storage;
+  const key = guestVoteFor(shareToken, storage)?.voteKey;
+  return deps.run((o) => api.getPollByLink(shareToken, key ? { ...o, voteKey: key } : o));
 }
 
 export const INCOMPLETE_ANSWERS_TEXT = "Bitte beantworte jeden Termin mit Ja, Vielleicht oder Nein.";

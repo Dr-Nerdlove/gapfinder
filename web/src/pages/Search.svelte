@@ -145,7 +145,7 @@
       picks: [...selected],
       summary: answer.summary,
       ...answer.source,
-      ...(replan ? { title: replan.title, note: replan.note } : {}),
+      ...(replan ? { title: replan.title, note: replan.note, hidden: replan.hidden } : {}),
     });
     navigate("#/abstimmung-neu");
   }

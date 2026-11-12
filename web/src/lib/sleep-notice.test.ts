@@ -9,7 +9,7 @@ describe("showSleepCard", () => {
 
   it("shows nothing while loading or when online", () => {
     expect(showSleepCard({ kind: "loading" }, false)).toBe(false);
-    expect(showSleepCard({ kind: "online", version: "sha-abc1234" }, false)).toBe(false);
+    expect(showSleepCard({ kind: "online", version: "sha-abc1234", features: [] }, false)).toBe(false);
   });
 });
 

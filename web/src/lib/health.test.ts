@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { checkHealth, serverFreshness } from "./health";
+import { checkHealth, hasFeature, parseFeatures, serverFreshness } from "./health";
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -13,7 +13,7 @@ describe("checkHealth", () => {
   it("reports the server as online with its version", async () => {
     const fetchImpl = vi.fn(async () => jsonResponse({ status: "ok", version: "sha-abc1234", time: "2026-10-31T10:00:00Z" }));
     const result = await checkHealth("http://api.test/", { fetchImpl: fetchImpl as unknown as typeof fetch });
-    expect(result).toEqual({ kind: "online", version: "sha-abc1234" });
+    expect(result).toEqual({ kind: "online", version: "sha-abc1234", features: [] });
     expect(fetchImpl).toHaveBeenCalledWith("http://api.test/api/health", expect.anything());
   });
 
@@ -73,5 +73,29 @@ describe("serverFreshness", () => {
     expect(serverFreshness("dev", "sha-abc1234")).toBe("unknown");
     expect(serverFreshness("sha-abc1234", "dev")).toBe("unknown");
     expect(serverFreshness("", "")).toBe("unknown");
+  });
+});
+
+describe("server features", () => {
+  const ask = async (body: unknown) =>
+    checkHealth("http://api.test", { fetchImpl: (vi.fn(async () => jsonResponse(body))) as unknown as typeof fetch });
+
+  it("reads the listed features", async () => {
+    const result = await ask({ status: "ok", version: "v", time: "t", features: ["hidden_votes"] });
+    expect(result).toEqual({ kind: "online", version: "v", features: ["hidden_votes"] });
+  });
+
+  it("treats a missing or malformed list as none", async () => {
+    expect(parseFeatures(undefined)).toEqual([]);
+    expect(parseFeatures("hidden_votes")).toEqual([]);
+    expect(parseFeatures({ 0: "hidden_votes" })).toEqual([]);
+    expect(parseFeatures(["hidden_votes", 3, null])).toEqual(["hidden_votes"]);
+    const result = await ask({ status: "ok", version: "v", time: "t" });
+    expect(result.kind === "online" && result.features).toEqual([]);
+  });
+
+  it("offers a feature only when it is listed", () => {
+    expect(hasFeature(["hidden_votes"], "hidden_votes")).toBe(true);
+    expect(hasFeature([], "hidden_votes")).toBe(false);
   });
 });

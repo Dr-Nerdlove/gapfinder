@@ -2,7 +2,7 @@ import type { PollView } from "@lueckenfueller/shared";
 import { describe, expect, it, vi } from "vitest";
 import type { ApiResult, CallOptions } from "./api";
 import { guestVoteFor, rememberGuestVote } from "./guest-votes";
-import { INCOMPLETE_ANSWERS_TEXT, submitVote, withdrawVote, type VoteDeps } from "./poll-actions";
+import { INCOMPLETE_ANSWERS_TEXT, loadPoll, submitVote, withdrawVote, type VoteDeps } from "./poll-actions";
 import { MemoryStorage } from "./test-storage";
 
 const poll = {
@@ -160,5 +160,23 @@ describe("withdrawVote", () => {
     const d = deps();
     expect(await withdrawVote(poll, { loggedIn: false, stored: null }, d.deps)).toEqual({ kind: "done", poll });
     expect(d.api.withdrawGuestVote).not.toHaveBeenCalled();
+  });
+});
+
+describe("loadPoll", () => {
+  it("sends the key of the stored guest vote with the GET", async () => {
+    const storage = new MemoryStorage();
+    rememberGuestVote("tok", { voteId: 5, voteKey: "KEY", name: "Tobi" }, storage);
+    const getPollByLink = vi.fn(async () => ok(poll));
+    await loadPoll("tok", { run: (call) => call({} as CallOptions), storage, api: { getPollByLink } });
+    expect(getPollByLink).toHaveBeenCalledWith("tok", expect.objectContaining({ voteKey: "KEY" }));
+  });
+
+  it("sends no key when the device has none for this poll", async () => {
+    const storage = new MemoryStorage();
+    rememberGuestVote("other", { voteId: 5, voteKey: "KEY", name: "Tobi" }, storage);
+    const getPollByLink = vi.fn(async (_token: string, _options?: CallOptions) => ok(poll));
+    await loadPoll("tok", { run: (call) => call({} as CallOptions), storage, api: { getPollByLink } });
+    expect(getPollByLink.mock.calls[0]![1]).not.toHaveProperty("voteKey");
   });
 });

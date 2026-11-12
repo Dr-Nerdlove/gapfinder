@@ -11,6 +11,7 @@
   import Message from "../components/Message.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
+  import HiddenChip from "../components/polls/HiddenChip.svelte";
 
   const user = $derived(sessionState.user);
   let polls = $state<PollSummary[] | null>(null);
@@ -56,7 +57,7 @@
     {#each polls as poll (poll.id)}
       <a class="poll" href="#/abstimmung/{encodeURIComponent(poll.shareToken)}">
         <Card>
-          <strong>{poll.title}</strong>
+          <strong>{poll.title}{#if poll.hidden}{" "}<HiddenChip />{/if}</strong>
           <span class="line">{summaryLine(poll)}</span>
           {#if poll.creator}<span class="line">Von {poll.creator.username}</span>{/if}
           {#if fixedIdOf(poll) !== null}<span class="tag fixed">{fixedTag(poll)}</span>{:else if needsVote(poll)}<span class="tag">Du hast noch nicht abgestimmt</span>{:else if poll.voted}<span class="tag done">Abgestimmt ✓</span>{/if}

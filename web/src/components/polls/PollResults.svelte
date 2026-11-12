@@ -4,10 +4,13 @@
     ANSWER_LABELS,
     answerOf,
     highlightedProposalIds,
+    isFilteredView,
     notVotedYet,
     proposalHeading,
+    proposalLabel,
     tallies,
     tallyText,
+    voteCount,
   } from "../../lib/poll-view";
   import Card from "../Card.svelte";
 
@@ -24,11 +27,50 @@
   const best = $derived(new Set(highlightedProposalIds(poll)));
   const fixed = $derived(poll.fixedProposalId != null);
   const missing = $derived(notVotedYet(poll));
+  // A hidden poll for someone who is not the creator or an admin: sums and bars instead of the table.
+  const filtered = $derived(isFilteredView(poll));
+  const count = $derived(voteCount(poll));
+  const secretKeeper = $derived(poll.creator ? poll.creator.username : "Die Person, die die Abstimmung angelegt hat,");
 </script>
 
 <Card title="Stand der Abstimmung" help="pollAnswers">
-  {#if poll.votes.length === 0}
+  {#if count === 0}
     <p>Noch niemand hat abgestimmt.</p>
+  {/if}
+  {#if filtered}
+    <ul class="bars" aria-label="Summen pro Termin">
+      {#each poll.proposals as proposal, index (proposal.id)}
+        {@const sum = sums[index]!}
+        <li>
+          <span class="when" class:best={best.has(proposal.id)}>
+            {#if best.has(proposal.id)}<span aria-hidden="true">★ </span>{/if}{proposalLabel(proposal)}
+            {#if best.has(proposal.id)}<span class="visually-hidden">{fixed ? " (festgelegter Termin)" : " (meiste Ja)"}</span>{/if}
+          </span>
+          <span class="bar" role="img" aria-label={tallyText(sum)}>
+            {#if sum.yes > 0}<span class="seg yes" style:flex-grow={sum.yes}></span>{/if}
+            {#if sum.maybe > 0}<span class="seg maybe" style:flex-grow={sum.maybe}></span>{/if}
+            {#if sum.no > 0}<span class="seg no" style:flex-grow={sum.no}></span>{/if}
+          </span>
+          <span class="nums">
+            <span>{sum.yes} Ja</span>
+            {#if sum.maybe > 0}<span>{sum.maybe} Vielleicht</span>{/if}
+          </span>
+        </li>
+      {/each}
+    </ul>
+    <ul class="legend" aria-label="Zeichenerklärung">
+      <li><span class="mark yes" aria-hidden="true"></span> Ja</li>
+      <li><span class="mark maybe" aria-hidden="true"></span> Vielleicht</li>
+      <li><span class="mark no" aria-hidden="true"></span> Nein</li>
+      {#if best.size > 0}<li><span class="star" aria-hidden="true">★</span> {fixed ? "festgelegter Termin" : "meiste Ja"}</li>{/if}
+    </ul>
+    {#if missing.length > 0}
+      <p>Noch nicht abgestimmt: {missing.map((p) => p.username).join(", ")}</p>
+    {/if}
+    <p class="hidden-note">{secretKeeper} sieht, wer was gewählt hat. Du siehst nur die Summen und deine eigene Stimme.</p>
+  {:else}
+  {#if poll.hidden && poll.canManage}
+    <p class="hidden-note">Die Stimmen sind verdeckt: Die anderen sehen nur die Summen und wer noch nicht abgestimmt hat. Du siehst alles.</p>
   {/if}
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
   <div class="scroll" tabindex="0" role="region" aria-label="Tabelle der Stimmen">
@@ -90,9 +132,10 @@
     <li><span class="mark none" aria-hidden="true"></span> noch offen</li>
     {#if best.size > 0}<li><span class="star" aria-hidden="true">★</span> {fixed ? "festgelegter Termin" : "meiste Ja"}</li>{/if}
   </ul>
+  {/if}
 </Card>
 
-{#if missing.length > 0}
+{#if missing.length > 0 && !filtered}
   <Card title="Noch nicht abgestimmt">
     <ul class="people">
       {#each missing as person (person.id)}<li>{person.username}</li>{/each}
@@ -210,6 +253,68 @@
   .remove:disabled {
     opacity: 0.4;
     cursor: default;
+  }
+
+  .bars {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .bars li {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: "when nums" "bar bar";
+    align-items: baseline;
+    gap: 4px 12px;
+  }
+
+  .when {
+    grid-area: when;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  .bar {
+    grid-area: bar;
+    display: flex;
+    height: 16px;
+    overflow: hidden;
+    border-radius: 8px;
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
+  }
+
+  .seg {
+    flex-basis: 0;
+    min-width: 0;
+  }
+
+  .seg.yes {
+    background: #2e9d4f;
+  }
+
+  .seg.maybe {
+    background: #f2b705;
+  }
+
+  .seg.no {
+    background: color-mix(in srgb, var(--md-sys-color-on-surface) 22%, transparent);
+  }
+
+  .nums {
+    grid-area: nums;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    font-size: 0.8125rem;
+    white-space: nowrap;
+  }
+
+  .hidden-note {
+    font-size: 0.875rem;
   }
 
   .people {

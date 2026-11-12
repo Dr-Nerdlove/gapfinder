@@ -10,6 +10,7 @@ import {
   fixedTag,
   formatInstant,
   highlightedProposalIds,
+  isFilteredView,
   needsVote,
   nextScreen,
   notVotedYet,
@@ -22,6 +23,7 @@ import {
   tallyText,
   unanswered,
   updatedText,
+  voteCount,
   type PollScreen,
 } from "./poll-view";
 
@@ -261,5 +263,54 @@ describe("fixedTag", () => {
   it("keeps the short text when there is no date or the server sends no field", () => {
     expect(fixedTag({ fixedProposal: null })).toBe("Termin steht ✓");
     expect(fixedTag({})).toBe("Termin steht ✓");
+  });
+});
+
+describe("hidden votes (filtered view)", () => {
+  // The caller sees only their own vote; the sums and the voters come from the server.
+  const filtered: PollView = {
+    ...poll,
+    hidden: true,
+    votes: [vote(10, "Anna", 2, "yes", "maybe")],
+    myVoteId: 10,
+    tally: [
+      { proposalId: 1, yes: 1, maybe: 3, no: 0 },
+      { proposalId: 2, yes: 5, maybe: 0, no: 2 },
+    ],
+    votedParticipantIds: [2, 3],
+  };
+
+  it("is filtered only for a hidden poll the person cannot manage", () => {
+    expect(isFilteredView(filtered)).toBe(true);
+    expect(isFilteredView({ ...filtered, canManage: true })).toBe(false);
+    expect(isFilteredView({ ...poll })).toBe(false);
+    expect(isFilteredView({ ...poll, hidden: false })).toBe(false);
+  });
+
+  it("takes the sums from the tally, not from the one vote", () => {
+    expect(tallies(filtered)).toEqual([
+      { proposalId: 1, yes: 1, maybe: 3, no: 0 },
+      { proposalId: 2, yes: 5, maybe: 0, no: 2 },
+    ]);
+    expect(voteCount(filtered)).toBe(4);
+  });
+
+  it("finds the best proposal from the tally", () => {
+    expect(bestProposalIds(filtered)).toEqual([2]);
+  });
+
+  it("takes who has not voted from votedParticipantIds", () => {
+    expect(notVotedYet(filtered).map((p) => p.username)).toEqual(["Vincent"]);
+    expect(notVotedYet({ ...filtered, votedParticipantIds: [1, 2, 3] })).toEqual([]);
+  });
+
+  it("counts the votes themselves for the creator of a hidden poll", () => {
+    const creator = { ...poll, hidden: true, canManage: true };
+    expect(tallies(creator)[0]).toEqual({ proposalId: 1, yes: 2, maybe: 0, no: 1 });
+    expect(voteCount(creator)).toBe(3);
+  });
+
+  it("falls back to the votes when a filtered view has no tally", () => {
+    expect(tallies({ ...poll, hidden: true }).map((t) => t.yes)).toEqual([2, 0]);
   });
 });

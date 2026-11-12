@@ -94,6 +94,8 @@ export interface PollSource {
   /** "Nochmal planen": title and note of the old poll, for the form of the new one. */
   title?: string;
   note?: string;
+  /** "Nochmal planen": the old poll hid the votes, so the new form starts with the switch on. */
+  hidden?: boolean;
 }
 
 let handedOver: PollSource | null = null;
@@ -234,6 +236,8 @@ export interface PollDraft {
   deadlineTime: string;
   items: DraftItem[];
   participants: number[];
+  /** "Stimmen verdecken"; only sent when true. The screen sets it only when the server offers the feature. */
+  hidden?: boolean;
 }
 
 const length = (text: string): number => [...text].length;
@@ -292,7 +296,13 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
 
   const deadline = deadlineOf(draft.deadlineDate, draft.deadlineTime, now);
   if (!deadline.ok) return { ok: false, problem: deadline.problem };
-  const base = { title, ...(note !== "" ? { note } : {}), participants: [...draft.participants], deadline: deadline.value };
+  const base = {
+    title,
+    ...(note !== "" ? { note } : {}),
+    participants: [...draft.participants],
+    deadline: deadline.value,
+    ...(draft.hidden === true ? { hidden: true } : {}),
+  };
   return days.length > 0
     ? { ok: true, request: { ...base, kind: "days", proposals: days } }
     : { ok: true, request: { ...base, kind: "timed", proposals: timed } };

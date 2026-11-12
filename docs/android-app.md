@@ -82,7 +82,7 @@ browser version, and it adds what a web page cannot do on Android: notifications
   WebView history to the nearest earlier app page (`BackNavigation.kt`, tested in `BackNavigationTest.kt`; other
   pages such as `offline.html` are skipped) and lets Android leave the app only when there is none. The web app's
   hash routes are history entries, so this is the same as the browser's Back button.
-- `SHELL_VERSION` was raised to 2 for the doorbell (3 since the self-update, 4 since Back goes to the previous page). The Firebase BoM version is
+- `SHELL_VERSION` was raised to 2 for the doorbell (3 since the self-update, 4 since Back goes to the previous page, 5 since the texts for hidden votes). The Firebase BoM version is
   `firebaseBomVersion` in `android/variables.gradle`.
 
 ## Self-update (phase 7c)

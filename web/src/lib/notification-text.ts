@@ -58,6 +58,13 @@ export function notificationText(data: unknown): NotificationText {
     };
   }
 
+  // A poll with hidden votes (phase 10b): only the creator and admins get the name of the voter. Everybody else
+  // gets these two kinds without it.
+  if (pollTitle !== null && actor === null) {
+    if (kind === "vote") return { title: pollTitle, body: "Jemand hat abgestimmt.", shareToken, tag };
+    if (kind === "all_voted") return { title: `Alle haben abgestimmt: ${pollTitle}`, body: "Schau dir das Ergebnis an.", shareToken, tag };
+  }
+
   if (pollTitle !== null && actor !== null) {
     switch (kind) {
       case "poll_created":

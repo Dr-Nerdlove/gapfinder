@@ -17,12 +17,14 @@ export interface Replan {
   durationMinutes: number | null;
   /** Days poll: the length of its first proposal in days. */
   days: number | null;
+  /** The old poll hid the votes (and still does): the new one starts with the same setting. */
+  hidden: boolean;
 }
 
 /** What a poll gives to the next search. `selfId` is the person who plans again (the search never lists them). */
 export function replanFromPoll(poll: PollView, selfId: number): Replan {
   const first = poll.proposals[0];
-  const base = { title: poll.title, note: poll.note, people: poll.participants.map((p) => p.id).filter((id) => id !== selfId) };
+  const base = { title: poll.title, note: poll.note, people: poll.participants.map((p) => p.id).filter((id) => id !== selfId), hidden: poll.hidden === true };
   if (first && "first" in first) {
     const days = Math.round((Date.parse(`${first.last}T00:00:00Z`) - Date.parse(`${first.first}T00:00:00Z`)) / DAY_MS) + 1;
     return { ...base, kind: "days", durationMinutes: null, days: Math.min(Math.max(days, 1), Math.min(POLL_MAX_DAYS, SEARCH_MAX_PERIOD_DAYS)) };

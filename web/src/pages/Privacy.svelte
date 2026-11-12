@@ -10,11 +10,16 @@
     <ul>
       <li>Nur, ob du zu einer Zeit frei oder belegt bist. Nie, was du vorhast: keine Titel, keine Orte, keine Notizen.</li>
       <li>Kann dein Kalender gerade nicht gelesen werden, sehen sie „Kalender nicht lesbar“, aber nicht, warum.</li>
+      <li>
+        In einer Abstimmung sehen alle, die den Link haben, wer was gewählt hat. Wenn der Ersteller „Stimmen verdecken“ einschaltet, sehen
+        sie nur, wie viele Ja, Vielleicht und Nein es pro Termin gibt und wer noch nicht abgestimmt hat. Deine eigene Stimme siehst du immer.
+      </li>
     </ul>
   </Card>
 
   <Card title="Was der Admin in der App sieht">
     <ul>
+      <li>Bei einer Abstimmung mit verdeckten Stimmen sieht der Admin, wer was gewählt hat, genau wie der Ersteller. Alle anderen sehen nur die Summen.</li>
       <li>Die Benutzernamen und wie viele Kalender gerade ein Problem haben. Keine Termine und keine Kalender-Links.</li>
       <li>
         Wenn einer deiner Kalender sehr groß ist (über 5 MB): deinen Namen und die Größe, damit dich der Admin darauf ansprechen kann.
