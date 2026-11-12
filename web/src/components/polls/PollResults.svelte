@@ -43,17 +43,13 @@
         {@const sum = sums[index]!}
         <li>
           <span class="when" class:best={best.has(proposal.id)}>
-            {#if best.has(proposal.id)}<span aria-hidden="true">★ </span>{/if}{proposalLabel(proposal)}
+            {#if best.has(proposal.id)}<span class="star-gap" aria-hidden="true">★</span>{/if}{proposalLabel(proposal)}
             {#if best.has(proposal.id)}<span class="visually-hidden">{fixed ? " (festgelegter Termin)" : " (meiste Ja)"}</span>{/if}
           </span>
           <span class="bar" role="img" aria-label={tallyText(sum)}>
-            {#if sum.yes > 0}<span class="seg yes" style:flex-grow={sum.yes}></span>{/if}
-            {#if sum.maybe > 0}<span class="seg maybe" style:flex-grow={sum.maybe}></span>{/if}
+            {#if sum.yes > 0}<span class="seg yes" style:flex-grow={sum.yes} aria-hidden="true">{sum.yes}</span>{/if}
+            {#if sum.maybe > 0}<span class="seg maybe" style:flex-grow={sum.maybe} aria-hidden="true">{sum.maybe}</span>{/if}
             {#if sum.no > 0}<span class="seg no" style:flex-grow={sum.no}></span>{/if}
-          </span>
-          <span class="nums">
-            <span>{sum.yes} Ja</span>
-            {#if sum.maybe > 0}<span>{sum.maybe} Vielleicht</span>{/if}
           </span>
         </li>
       {/each}
@@ -266,51 +262,50 @@
 
   .bars li {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-areas: "when nums" "bar bar";
-    align-items: baseline;
-    gap: 4px 12px;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 4px;
+  }
+
+  .star-gap {
+    margin-inline-end: 0.35em;
   }
 
   .when {
-    grid-area: when;
     font-weight: 600;
     overflow-wrap: anywhere;
   }
 
   .bar {
-    grid-area: bar;
     display: flex;
-    height: 16px;
+    height: 22px;
     overflow: hidden;
-    border-radius: 8px;
+    border-radius: 11px;
     background: color-mix(in srgb, var(--md-sys-color-on-surface) 12%, transparent);
   }
 
   .seg {
     flex-basis: 0;
     min-width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-align: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 22px;
   }
 
   .seg.yes {
     background: #2e9d4f;
+    color: #fff;
   }
 
   .seg.maybe {
     background: #f2b705;
+    color: #1d1b20;
   }
 
   .seg.no {
     background: color-mix(in srgb, var(--md-sys-color-on-surface) 22%, transparent);
-  }
-
-  .nums {
-    grid-area: nums;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    font-size: 0.8125rem;
-    white-space: nowrap;
   }
 
   .hidden-note {
