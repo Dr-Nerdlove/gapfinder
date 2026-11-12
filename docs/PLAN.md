@@ -725,9 +725,9 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   as "17:30 20:15 22:45", copied from kinoheld or cineamo, and the browser's own time input for single times, which
   is the round clock on Android), plus the film's length and a buffer for the adverts (suggested 20 minutes). The app
   offers only the showings that fit into a free time of the search, and the poll is made from them. Server changes
-  needed (to settle when building): proposals today start and end on a quarter hour, showtimes need any minute; a
-  proposal needs an optional place (the cinema's name). Backward compatibility: the app offers the cinema mode only
-  when the server says it supports it. Later, in its own session: check whether showtimes can be read automatically.
+  (decided 2026-11-12, see "10d must not change today's use" below): any minute for every proposal, and an optional
+  place for every proposal. Backward compatibility: the app offers the cinema mode, the place and minute times only
+  when the server says it supports them. Later, in its own session: check whether showtimes can be read automatically.
   A first check on 2026-11-11 could not reach kinoheld.de, cineamo.com or the cinemas' sites (blocked by the cloud
   session's network settings); from search results only (unverified): kinoheld's site uses an undocumented GraphQL
   interface (an unofficial client exists), no official developer access was found, and the commercial International
@@ -798,13 +798,21 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   to cineamo in the request); times entered by hand get no credit.
 
   **10d must not change today's use** (owner's requirement, 2026-11-12). Besides the usual rules (additive
-  migrations, cinema mode offered only when `HealthResponse.features` lists it), two points to keep when building:
-  - *Any minute only for cinema proposals.* The quarter-hour rule (`server/src/polls/validation.ts`) stays for every
-    other proposal, with its existing tests; only a proposal marked as a showing may start at any minute. Everything
-    that shows proposals must cope with such times and with the place (cinema name): the poll table, the colour grid
-    (10c), the calendar feed (place as `LOCATION`), the notification texts in `notification-text.ts` and
-    `NotificationText.kt` (an older Android shell must still show a sensible text), and polls without a place must
-    look exactly as before. Each gets a test where it can be tested automatically.
+  migrations, new things offered only when `HealthResponse.features` lists them), points to keep when building.
+  Chosen with the owner on 2026-11-12 as general improvements instead of cinema-only exceptions (simpler, fewer
+  special cases):
+  - *A place for every proposal.* Every proposal gets an optional "Ort" (a cinema, a restaurant, "bei Tom"), shown in
+    the poll, at the chosen date and in the calendar feed (`LOCATION`). Without a place everything looks exactly as
+    today.
+  - *The server takes any minute; the app keeps quarter hours.* The quarter-hour check in
+    `server/src/polls/validation.ts` becomes a whole-minute check for all proposals (no flag "this is a showing").
+    The app keeps offering quarter hours for normal proposals, so the choice stays short; only the cinema entry and
+    typed times allow any minute. To check when building (not checked yet): that the previous server image, after a
+    rollback, still reads and shows polls whose proposals are not on a quarter hour (it probably checks only new
+    proposals).
+  - *Everything that shows proposals copes with minute times and the place*: the poll table, the colour grid (10c),
+    the calendar feed, the notification texts in `notification-text.ts` and `NotificationText.kt` (an older Android
+    shell must still show a sensible text). Each gets a test where it can be tested automatically.
   - *The automatic fetch (only with cineamo's yes) is optional.* If cineamo is unreachable, slow or answers with
     something unexpected, the entry field simply stays empty for typing by hand; nothing else waits for it or fails
     (no effect on search, polls, health check or start-up). One fetch per cinema a day, outside the hours the home PC
