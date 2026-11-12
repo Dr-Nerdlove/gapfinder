@@ -1,8 +1,17 @@
 name: CI
 
+# Pull requests and pushes to main only. A push to a branch with an open pull request would run
+# every check twice (once per trigger); pull requests cover those branches.
 on:
   push:
+    branches: [main]
   pull_request:
+
+# A newer push to a pull request cancels the older run of the same pull request. Runs on main
+# are never cancelled, so every commit there keeps its own result.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -24,8 +33,9 @@ jobs:
       - run: npm run build
 
   android:
-    # Tests and debug build always; a signed test APK on pushes once the signing secrets exist
-    # (docs/android-app.md). Pull requests never build a signed APK.
+    # Tests and debug build always; a signed test APK on pull requests and on pushes to main once
+    # the signing secrets exist (docs/android-app.md). Pull requests from forks get no secrets,
+    # so they never build a signed APK.
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
@@ -37,17 +47,17 @@ jobs:
       - name: Decide whether a signed test APK is built
         id: signing
         env:
+          # On pull requests GITHUB_SHA is the merge commit; the label names the branch's own commit.
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
           KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           set -eu
-          echo "label=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          if [ "$GITHUB_EVENT_NAME" != "push" ]; then
+          sha="${PR_HEAD_SHA:-$GITHUB_SHA}"
+          echo "label=sha-${sha::7}" >> "$GITHUB_OUTPUT"
+          if [ -z "$KEYSTORE" ] || [ -z "$PASSWORD" ]; then
             echo "sign=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No signed test APK was built: only pushes build one (this is a $GITHUB_EVENT_NAME run). Tests and debug build still run."
-          elif [ -z "$KEYSTORE" ] || [ -z "$PASSWORD" ]; then
-            echo "sign=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No signed test APK was built: the secrets ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD are not set (docs/android-app.md). Tests and debug build still run."
+            echo "::notice::No signed test APK was built: the secrets ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD are not available (not set, or a pull request from a fork; docs/android-app.md). Tests and debug build still run."
           else
             echo "sign=true" >> "$GITHUB_OUTPUT"
           fi
