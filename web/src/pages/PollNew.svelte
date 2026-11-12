@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Person } from "@lueckenfueller/shared";
   import { POLL_NOTE_MAX_LENGTH, POLL_TITLE_MAX_LENGTH } from "@lueckenfueller/shared";
-  import { untrack } from "svelte";
+  import { onMount, untrack } from "svelte";
   import * as api from "../lib/api";
   import { berlinToday } from "../lib/gap-search";
   import { errorMessage } from "../lib/messages";
@@ -12,6 +12,8 @@
     pollSource,
     type DraftItem as Item,
   } from "../lib/poll-draft";
+  import { API_URL } from "../lib/config";
+  import { checkHealth, hasFeature } from "../lib/health";
   import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
   import Button from "../components/Button.svelte";
@@ -20,6 +22,7 @@
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
   import DraftItem from "../components/polls/DraftItem.svelte";
+  import Switch from "../components/Switch.svelte";
   import TextField from "../components/TextField.svelte";
 
   const source = pollSource.get();
@@ -34,6 +37,15 @@
   let problemItem = $state("");
   let busy = $state(false);
   let people = $state<Person[]>([]);
+  let hidden = $state(source?.hidden === true);
+  // The switch is offered only when the server says it knows hidden votes (an older server would ignore the field).
+  let canHide = $state(false);
+
+  onMount(() => {
+    void checkHealth(API_URL).then((result) => {
+      canHide = result.kind === "online" && hasFeature(result.features, "hidden_votes");
+    });
+  });
 
   // Names of the invited people, as far as the server is awake; otherwise only their number is shown.
   $effect(() => {
@@ -62,6 +74,7 @@
       deadlineTime,
       items: $state.snapshot(items),
       participants: source.participants,
+      hidden: canHide && hidden,
     });
     if (!check.ok) {
       problem = DRAFT_PROBLEM_TEXTS[check.problem];
@@ -109,6 +122,14 @@
             </div>
           </div>
         </fieldset>
+        {#if canHide}
+          <div class="hide">
+            <Switch label="Stimmen verdecken" checked={hidden} onchange={(value) => (hidden = value)} />
+            <p class="hint">
+              Die anderen sehen nur, wie viele Ja, Vielleicht und Nein es pro Termin gibt und wer noch nicht abgestimmt hat. Wer was gewählt hat, siehst nur du.
+            </p>
+          </div>
+        {/if}
       </Card>
 
       <Card title="Termine">

@@ -2,7 +2,7 @@
 //
 // Two kinds of routes:
 // - `/api/polls…` need a login (`Authorization: Bearer <token>`): create, list, and manage a poll by its id
-//   (only its creator or an admin).
+//   (its creator or an admin).
 // - `/api/poll-links/:shareToken…` need only the share link. Everyone with the link sees the poll and can vote:
 //   a logged-in account votes as itself (one vote per account, from any device), a guest votes with a name and
 //   gets a secret vote key that only their device keeps; the key is sent as the `X-Vote-Key` header to change
@@ -64,6 +64,14 @@ interface CreatePollBase {
   participants: number[];
   /** After this instant nobody can vote. In the future, at most `POLL_MAX_DAYS_AHEAD` days ahead; null = none. */
   deadline?: string | null;
+  /**
+   * Hidden votes (phase 10b): only the creator sees who voted what (an admin does not); everybody else gets the sums per
+   * proposal (`PollView.tally`), which participants have voted (`PollView.votedParticipantIds`) and their own vote.
+   * Default false. Send it only when the server lists `hidden_votes` in `HealthResponse.features`: an older server
+   * ignores the field and would create an open poll. A server that knows it refuses unknown fields of this request
+   * (`validation`, field = the unknown name) instead of ignoring them.
+   */
+  hidden?: boolean;
 }
 
 /**
@@ -82,6 +90,12 @@ export interface UpdatePollRequest {
   deadline?: string | null;
   /** Closed by hand: nobody can vote until it is opened again. */
   closed?: boolean;
+  /**
+   * `false` reveals the votes of a hidden poll to everyone; this cannot be undone. Only the creator may do it (an admin
+   * gets `forbidden`). `true` is accepted only for a
+   * poll that is already hidden (no change); for an open poll it fails with `validation`, field `hidden`.
+   */
+  hidden?: boolean;
 }
 
 /** `POST /api/polls/:id/share-link` (creator or admin): a new share token; the old link stops working. */
@@ -98,6 +112,14 @@ export interface PollPerson {
   seedColor: string | null;
 }
 
+/** The sums of one proposal: how many votes answered yes, maybe and no (every vote answers every proposal). */
+export interface ProposalTally {
+  proposalId: number;
+  yes: number;
+  maybe: number;
+  no: number;
+}
+
 export interface VoteView {
   id: number;
   /** The guest's name, or the account's current username. */
@@ -111,7 +133,8 @@ export interface VoteView {
 
 /**
  * `GET /api/poll-links/:shareToken` → `PollView`, for everyone with the link. Sends the login token too, when
- * there is one: then `myVoteId` and `canManage` are filled in.
+ * there is one: then `myVoteId` and `canManage` are filled in. A guest sends their vote key (`X-Vote-Key`) when
+ * the device has one for this poll, so a hidden poll still shows them their own vote; an unknown key is ignored.
  */
 export interface PollView {
   id: number;
@@ -126,8 +149,25 @@ export interface PollView {
   creator: PollPerson | null;
   /** The people of the search, the creator included, sorted by username without regard to case. */
   participants: PollPerson[];
-  /** Account votes first (sorted by username), then guest votes in the order they were cast. */
+  /**
+   * Account votes first (sorted by username), then guest votes in the order they were cast. When the votes are
+   * hidden from this caller (`hidden` and the caller is not the creator; an admin who is not the creator is
+   * filtered too, although `canManage` is true), only the caller's own vote (account vote, or the guest
+   * vote whose key came in `X-Vote-Key`), or none.
+   */
   votes: VoteView[];
+  /**
+   * Hidden votes (phase 10b, `CreatePollRequest.hidden`). Added later: an older server does not send it (= false).
+   */
+  hidden?: boolean;
+  /**
+   * The sums per proposal, in the order of `proposals`. The server sends `tally` and `votedParticipantIds` exactly
+   * when it filtered the votes for this caller (hidden poll, caller is not the creator), so their presence is the
+   * sign to show sums instead of a table. Never judge it by `canManage`: an admin manages but is filtered.
+   */
+  tally?: ProposalTally[];
+  /** Sent together with `tally`, only when the votes are filtered: the participants (account ids) who have voted. */
+  votedParticipantIds?: number[];
   deadline: string | null;
   /** Closed by hand (`UpdatePollRequest.closed`). */
   closed: boolean;
@@ -173,6 +213,8 @@ export interface PollSummary {
   expiresAt: string;
   /** The caller has an account vote in it. */
   voted: boolean;
+  /** Hidden votes (phase 10b). Added later: an older server does not send it (= false). */
+  hidden?: boolean;
 }
 
 /** `GET /api/polls`: newest first. */
@@ -290,7 +332,8 @@ export interface CalendarFeedFetch {
 // Further routes, all → `PollView`:
 // - `DELETE /api/poll-links/:shareToken/my-vote` (login): withdraws the account's vote.
 // - `DELETE /api/poll-links/:shareToken/votes/:voteId` with `X-Vote-Key`: a guest withdraws their vote.
-// - `DELETE /api/polls/:id/votes/:voteId` (creator or admin): removes any vote (e.g. nonsense from a stranger).
+// - `DELETE /api/polls/:id/votes/:voteId` (creator or admin): removes any vote (e.g. nonsense from a stranger). In a
+//   hidden poll only the creator may (an admin gets `forbidden`).
 // - `DELETE /api/polls/:id` (creator or admin) → 204: deletes the poll with all votes.
 //
 // Errors: an unknown or replaced share link → `poll_invalid` (404, counts against the address like a wrong invite

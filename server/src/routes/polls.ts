@@ -101,8 +101,12 @@ const createBody = {
     // The creator may be in the list too.
     participants: { type: "array", maxItems: POLL_MAX_PARTICIPANTS + 1, items: { type: "integer" } },
     deadline: { type: ["string", "null"], maxLength: 40 },
+    hidden: { type: "boolean" },
   },
 } as const;
+
+/** The top-level fields of a new poll. `additionalProperties: false` would make Fastify's ajv strip unknown ones silently, so `POST /api/polls` checks the keys itself. */
+const CREATE_FIELDS: ReadonlySet<string> = new Set(Object.keys(createBody.properties));
 
 const updateBody = {
   type: "object",
@@ -111,6 +115,7 @@ const updateBody = {
     note: { type: "string", maxLength: 5000 },
     deadline: { type: ["string", "null"], maxLength: 40 },
     closed: { type: "boolean" },
+    hidden: { type: "boolean" },
   },
 } as const;
 
@@ -170,6 +175,9 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
     async (request, reply): Promise<PollView> => {
       const { user } = authOf(request);
       const now = ctx.now();
+      // An unknown field is refused, not ignored: an older client must not think a setting took effect.
+      const unknown = Object.keys(request.body).find((key) => !CREATE_FIELDS.has(key));
+      if (unknown !== undefined) throw validation(unknown);
       const checked = checkedPoll(request.body as unknown as RawCreatePoll, now);
       // Unknown accounts (e.g. deleted since the search) are ignored; the creator is always a participant.
       const others = checked.participantIds.filter((id) => id !== user.id && findUserById(ctx.db, id) !== undefined);
@@ -185,6 +193,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
           deadline: checked.deadline,
           proposals: checked.proposals,
           participantIds: [user.id, ...others],
+          hidden: checked.hidden,
           createdAt: now.toISOString(),
           expiresAt: checked.expiresAt.toISOString(),
         });
@@ -213,6 +222,10 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       const { poll, user } = manageablePollOrFail(request);
       const { body } = request;
       const now = ctx.now();
+      // `false` reveals (cannot be undone); `true` only repeats what a hidden poll already is.
+      if (body.hidden === true && poll.hidden !== 1) throw validation("hidden");
+      // Only the creator may reveal: an admin must not be able to see the votes by revealing them.
+      if (body.hidden === false && poll.hidden === 1 && poll.creator_id !== user.id) throw forbidden();
       updatePoll(
         ctx.db,
         poll.id,
@@ -222,6 +235,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
           deadline:
             body.deadline === undefined ? poll.deadline : body.deadline === null ? null : checkedDeadline(body.deadline, now),
           closed: body.closed === undefined ? poll.closed === 1 : body.closed,
+          hidden: poll.hidden === 1 && body.hidden !== false,
         },
         now,
       );
@@ -307,9 +321,11 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
     },
   );
 
-  // The creator or an admin removes any vote, also while the poll is closed.
+  // The creator or an admin removes any vote, also while the poll is closed (hidden poll: the creator only).
   app.delete("/api/polls/:id/votes/:voteId", { onRequest: requireUser }, async (request): Promise<PollView> => {
     const { poll, user } = manageablePollOrFail(request);
+    // In a hidden poll only the creator sees the votes, so only the creator may delete single ones.
+    if (poll.hidden === 1 && poll.creator_id !== user.id) throw forbidden();
     const voteId = numberParam(request, "voteId");
     if (voteId === null || !deleteVote(ctx.db, poll.id, voteId)) throw notFound();
     touchPoll(ctx.db, poll.id, ctx.now());
@@ -359,7 +375,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
 
   app.get("/api/poll-links/:shareToken", async (request): Promise<PollView> => {
     const poll = pollByLinkOrFail(request);
-    return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now());
+    return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now(), voteKeyHeader(request));
   });
 
   // What the calendars say right now: who is left out (for everyone with the link) and, for a logged-in caller,
@@ -480,7 +496,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       const created: GuestVoteCreated = {
         voteId,
         voteKey,
-        poll: buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now()),
+        poll: buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now(), voteKey),
       };
       return reply.status(201).send(created);
     },
@@ -507,7 +523,7 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       });
       countGuestWrite(request);
       notifyVote(ctx, poll, null, name, missingBefore);
-      return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now());
+      return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now(), voteKeyHeader(request));
     },
   );
 
@@ -517,6 +533,6 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
     assertOpen(poll);
     deleteVote(ctx.db, poll.id, vote.id);
     countGuestWrite(request);
-    return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now());
+    return buildPollView(ctx.db, poll, optionalUser(ctx, request), ctx.now(), voteKeyHeader(request));
   });
 }

@@ -1,11 +1,11 @@
-import type { HealthResponse } from "@lueckenfueller/shared";
+import type { HealthResponse, ServerFeature } from "@lueckenfueller/shared";
 
 export const HEALTH_TIMEOUT_MS = 5000;
 
 export type OfflineReason = "timeout" | "network" | "http" | "invalid";
 
 export type HealthResult =
-  | { kind: "online"; version: string }
+  | { kind: "online"; version: string; features: string[] }
   | { kind: "offline"; reason: OfflineReason };
 
 export interface HealthOptions {
@@ -20,6 +20,16 @@ function isHealthResponse(value: unknown): value is HealthResponse {
     (value as Record<string, unknown>)["status"] === "ok" &&
     typeof (value as Record<string, unknown>)["version"] === "string"
   );
+}
+
+/** The feature names of a health answer: only an array of strings counts, anything else (an older server) is none. */
+export function parseFeatures(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((f): f is string => typeof f === "string") : [];
+}
+
+/** Whether the server lists this feature. The app offers a new feature only then (the frontend is deployed first). */
+export function hasFeature(features: readonly string[], feature: ServerFeature): boolean {
+  return features.includes(feature);
 }
 
 /** Asks the server whether it is up. Never throws: every failure becomes an `offline` result. */
@@ -41,7 +51,7 @@ export async function checkHealth(apiUrl: string, options: HealthOptions = {}): 
       return { kind: "offline", reason: "http" };
     }
     const body: unknown = await response.json();
-    return isHealthResponse(body) ? { kind: "online", version: body.version } : { kind: "offline", reason: "invalid" };
+    return isHealthResponse(body) ? { kind: "online", version: body.version, features: parseFeatures((body as unknown as Record<string, unknown>)["features"]) } : { kind: "offline", reason: "invalid" };
   } catch {
     return { kind: "offline", reason: timedOut ? "timeout" : "network" };
   } finally {

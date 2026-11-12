@@ -113,8 +113,28 @@ export interface Tally {
   no: number;
 }
 
-/** The sums for each proposal, in the order of the proposals. */
-export function tallies(poll: Pick<PollView, "proposals" | "votes">): Tally[] {
+/**
+ * Whether the person sees only the sums and their own vote: a hidden poll for anyone but its creator (phase 10b),
+ * an admin included, who can manage the poll but sees what any participant sees. The server sends `tally` exactly
+ * when it filtered the votes, so that is the sign (not `canManage`). An older server sends no `hidden`, so such a
+ * poll is never filtered.
+ */
+export function isFilteredView(poll: { hidden?: boolean | undefined; tally?: unknown }): boolean {
+  return poll.hidden === true && poll.tally !== undefined;
+}
+
+/**
+ * The sums for each proposal, in the order of the proposals. A filtered view has only the caller's own vote in
+ * `votes`, so the sums come from the server's `tally` then (a proposal it lacks counts as zero).
+ */
+export function tallies(poll: Pick<PollView, "proposals" | "votes"> & Partial<Pick<PollView, "hidden" | "tally">>): Tally[] {
+  if (isFilteredView(poll) && poll.tally !== undefined) {
+    const sent = poll.tally;
+    return poll.proposals.map((proposal) => {
+      const t = sent.find((x) => x.proposalId === proposal.id);
+      return { proposalId: proposal.id, yes: t?.yes ?? 0, maybe: t?.maybe ?? 0, no: t?.no ?? 0 };
+    });
+  }
   return poll.proposals.map((proposal) => {
     const tally: Tally = { proposalId: proposal.id, yes: 0, maybe: 0, no: 0 };
     for (const vote of poll.votes) {
@@ -125,8 +145,19 @@ export function tallies(poll: Pick<PollView, "proposals" | "votes">): Tally[] {
   });
 }
 
+type Counted = Pick<PollView, "proposals" | "votes"> & Partial<Pick<PollView, "hidden" | "tally">>;
+
+/** How many votes the poll has (every vote answers every proposal, so one proposal's sums tell it). */
+export function voteCount(poll: Counted): number {
+  if (isFilteredView(poll) && poll.tally !== undefined) {
+    const first = tallies(poll)[0];
+    return first === undefined ? 0 : first.yes + first.maybe + first.no;
+  }
+  return poll.votes.length;
+}
+
 /** The proposals with the most "Ja" (ties: the fewest "Nein"); none while nobody has said yes. */
-export function bestProposalIds(poll: Pick<PollView, "proposals" | "votes">): number[] {
+export function bestProposalIds(poll: Counted): number[] {
   const all = tallies(poll);
   const best = all.reduce<Tally | null>((top, t) => (top === null || t.yes > top.yes || (t.yes === top.yes && t.no < top.no) ? t : top), null);
   if (best === null || best.yes === 0) return [];
@@ -134,7 +165,7 @@ export function bestProposalIds(poll: Pick<PollView, "proposals" | "votes">): nu
 }
 
 /** The columns to highlight: the fixed date once there is one, otherwise the best proposals. */
-export function highlightedProposalIds(poll: Pick<PollView, "proposals" | "votes"> & { fixedProposalId?: number | null | undefined }): number[] {
+export function highlightedProposalIds(poll: Counted & { fixedProposalId?: number | null | undefined }): number[] {
   const fixed = fixedIdOf(poll);
   return fixed !== null ? [fixed] : bestProposalIds(poll);
 }
@@ -155,7 +186,11 @@ export function answerOf(vote: VoteView, proposalId: number): VoteAnswer | null 
 }
 
 /** The people of the search who have no account vote yet (guests are not on the list of participants). */
-export function notVotedYet(poll: Pick<PollView, "participants" | "votes">): PollPerson[] {
+export function notVotedYet(poll: Pick<PollView, "participants" | "votes"> & Partial<Pick<PollView, "hidden" | "tally" | "votedParticipantIds">>): PollPerson[] {
+  if (isFilteredView(poll) && poll.votedParticipantIds !== undefined) {
+    const sent = new Set(poll.votedParticipantIds);
+    return poll.participants.filter((p) => !sent.has(p.id));
+  }
   const voted = new Set(poll.votes.flatMap((v) => (v.personId === null ? [] : [v.personId])));
   return poll.participants.filter((p) => !voted.has(p.id));
 }

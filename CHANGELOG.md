@@ -8,6 +8,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 ### Added
 
 - A poll's management card has a new button "Nochmal planen": it opens the search with the same people (and the length of the first proposal), and the new poll starts with the old title and note. The old proposals are not copied.
+- Hidden votes: when creating a poll, the switch "Stimmen verdecken" makes everybody but its creator (admins included) see only how many said Ja, Vielleicht and Nein to each proposal (as bars), who has not voted yet and their own vote. The creator sees every name and answer and can reveal the votes for everyone later with "Stimmen aufdecken" (this cannot be undone). Vote notifications of such a poll name the voter only for the creator. The switch appears once the server has been updated. The Android app gets a new shell version (texts for these notifications); it offers the update itself.
 - The search results have a switch "Liste / Raster". "Raster" shows a month grid in which every day of the search is coloured by how many people can (with the number or "alle"); tapping a day shows its hours as a coloured strip (with the number of people per hour and the searched time window marked) and that day's free times with "Als Termin vorschlagen". The colours follow your own colour and work in dark mode.
 
 ### Changed

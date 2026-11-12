@@ -40,13 +40,14 @@ interface NotificationBase {
  * `all_voted` it is the last voter; for `account_deleted` it is the user who deleted their own account (this kind
  * belongs to no poll, so it has no `pollTitle` and no `shareToken`); `calendar_large` (admins only, no poll) names
  * the owner of a calendar over 5 MB and its size, `calendars_large_total` (admins only, no poll) the size of all
- * calendars together. Only ever add kinds and fields: an older app
- * ignores kinds it does not know.
+ * calendars together. In a poll with hidden votes (phase 10b), `vote` and `all_voted` carry `actorName` only for
+ * the creator; everybody else gets them without it. Only ever add kinds and fields: an older app
+ * ignores kinds it does not know (and shows a general text for a `vote` or `all_voted` without a name).
  */
 export type NotificationData =
   | (NotificationBase & { kind: "poll_created"; actorName: string })
-  | (NotificationBase & { kind: "vote"; actorName: string })
-  | (NotificationBase & { kind: "all_voted"; actorName: string })
+  | (NotificationBase & { kind: "vote"; actorName?: string })
+  | (NotificationBase & { kind: "all_voted"; actorName?: string })
   | (NotificationBase & { kind: "date_fixed"; actorName: string; proposal: Proposal })
   | (NotificationBase & { kind: "reminder"; actorName: string })
   | { kind: "account_deleted"; actorName: string }

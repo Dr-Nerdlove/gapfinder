@@ -242,6 +242,15 @@ describe("buildCreateRequest", () => {
     });
   });
 
+  it("sends hidden: true only when the switch is on", () => {
+    const on = buildCreateRequest(draft({ hidden: true }), NOW);
+    expect(on.ok && on.request.hidden).toBe(true);
+    for (const extra of [{}, { hidden: false }]) {
+      const off = buildCreateRequest(draft(extra), NOW);
+      expect(off.ok && "hidden" in off.request).toBe(false);
+    }
+  });
+
   it("builds a poll of whole days", () => {
     const days: DraftItem = { kind: "days", id: "d", label: "x", gapFirst: "2026-12-01", gapLast: "2026-12-20", first: "2026-12-05", last: "2026-12-07" };
     const check = buildCreateRequest(draft({ items: [days], deadlineDate: "2026-12-02", deadlineTime: "20:00" }), NOW);

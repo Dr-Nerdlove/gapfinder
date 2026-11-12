@@ -3,6 +3,7 @@ import type { AppContext } from "../context.js";
 import { proposalRowsOf, type PollRow } from "../polls/store.js";
 import { notify, notifyUsers } from "./dispatch.js";
 import {
+  type Recipient,
   allVotedRecipients,
   dateFixedRecipients,
   participantsWithoutVote,
@@ -12,7 +13,7 @@ import {
 } from "./recipients.js";
 
 /** The poll fields a notification needs. */
-type PollInfo = Pick<PollRow, "id" | "creator_id" | "title" | "share_token" | "kind">;
+type PollInfo = Pick<PollRow, "id" | "creator_id" | "title" | "share_token" | "kind"> & Partial<Pick<PollRow, "hidden">>;
 
 const base = (poll: PollInfo) => ({ pollTitle: poll.title, shareToken: poll.share_token });
 
@@ -36,9 +37,30 @@ export function notifyVote(ctx: AppContext, poll: PollInfo, actorId: number | nu
   // The vote that closes the last gap says "all voted" and names the voter; whoever got that does not also get "vote".
   const gotAllVoted =
     missingBefore > 0 && missingVotes(ctx, poll.id) === 0
-      ? notifyUsers(ctx, poll.id, { kind: "all_voted", ...base(poll), actorName }, allVotedRecipients(ctx.db, poll, actorId))
+      ? notifyNamed(ctx, poll, "all_voted", actorName, allVotedRecipients(ctx.db, poll, actorId), new Set())
       : new Set<number>();
-  notifyUsers(ctx, poll.id, { kind: "vote", ...base(poll), actorName }, voteRecipients(ctx.db, poll, actorId), gotAllVoted);
+  notifyNamed(ctx, poll, "vote", actorName, voteRecipients(ctx.db, poll, actorId), gotAllVoted);
+}
+
+/**
+ * Sends `vote` or `all_voted`. In a poll with hidden votes only the creator gets the voter's name; the
+ * others get the same notification without `actorName`. Returns the accounts that got it.
+ */
+function notifyNamed(
+  ctx: AppContext,
+  poll: PollInfo,
+  kind: "vote" | "all_voted",
+  actorName: string,
+  recipients: Recipient[],
+  skip: ReadonlySet<number>,
+): Set<number> {
+  const named: NotificationData = { kind, ...base(poll), actorName };
+  if (poll.hidden !== 1) return notifyUsers(ctx, poll.id, named, recipients, skip);
+  const mayKnow = (r: Recipient) => r.userId === poll.creator_id;
+  const got = notifyUsers(ctx, poll.id, named, recipients.filter(mayKnow), skip);
+  const anonymous: NotificationData = { kind, ...base(poll) };
+  for (const id of notifyUsers(ctx, poll.id, anonymous, recipients.filter((r) => !mayKnow(r)), skip)) got.add(id);
+  return got;
 }
 
 /** The date was fixed or changed to `proposalId` by `actorName`. */

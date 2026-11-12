@@ -75,6 +75,14 @@ object NotificationTexts {
             )
         }
 
+        // A poll with hidden votes (phase 10b): only the creator and admins get the name of the voter.
+        if (pollTitle != null && actor == null) {
+            when (kind) {
+                "vote" -> return NotificationText(pollTitle, "Jemand hat abgestimmt.", shareToken, tag)
+                "all_voted" -> return NotificationText("Alle haben abgestimmt: $pollTitle", "Schau dir das Ergebnis an.", shareToken, tag)
+            }
+        }
+
         if (pollTitle != null && actor != null) {
             when (kind) {
                 "poll_created" -> return NotificationText("Neue Abstimmung: $pollTitle", "$actor fragt, wann du Zeit hast. Stimm jetzt ab.", shareToken, tag)

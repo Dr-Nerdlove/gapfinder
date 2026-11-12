@@ -15,7 +15,16 @@ export interface HealthResponse {
   version: string;
   /** Server time as ISO 8601 string (UTC). */
   time: string;
+  /**
+   * What this server supports beyond the first API (`ServerFeature`). Added later: an older server does not send
+   * it (= none). The app offers a feature only when its name is listed, because the frontend is deployed before the
+   * server is updated.
+   */
+  features?: ServerFeature[];
 }
+
+/** `hidden_votes`: polls with hidden votes (phase 10b). */
+export type ServerFeature = "hidden_votes";
 
 /**
  * `GET /api/admin/backup-status` (admin only): when the VM's backup script last did what, from the file it writes.

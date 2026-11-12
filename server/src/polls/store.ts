@@ -1,6 +1,7 @@
 import type {
   PollKind,
   PollSummary,
+  ProposalTally,
   PollView,
   Proposal,
   VoteAnswer,
@@ -8,6 +9,7 @@ import type {
 } from "@lueckenfueller/shared";
 import { randomBytes } from "node:crypto";
 import type { DatabaseSync } from "node:sqlite";
+import { hashToken } from "../auth/tokens.js";
 import { inTransaction } from "../db.js";
 import { findUserById, toPerson, type UserRow } from "../accounts/users.js";
 
@@ -32,6 +34,8 @@ export interface PollRow {
   last_reminder_at: string | null;
   /** Set when the poll was deleted but its fixed date stays in the calendar feed until it expires; else null. */
   removed_at: string | null;
+  /** 1 = hidden votes: only the creator sees who voted what. Only ever goes from 1 to 0. */
+  hidden: number;
 }
 
 /** A proposal as stored: the first two fields belong to `timed` polls, the last two to `days` polls. */
@@ -99,6 +103,7 @@ export interface NewPoll {
   proposals: NewProposal[];
   /** Account ids, the creator included. */
   participantIds: number[];
+  hidden?: boolean;
   createdAt: string;
   expiresAt: string;
 }
@@ -107,8 +112,8 @@ export interface NewPoll {
 export function insertPoll(db: DatabaseSync, poll: NewPoll): number {
   const result = db
     .prepare(
-      `INSERT INTO polls (share_token, creator_id, title, note, kind, deadline, closed, created_at, updated_at, expires_at)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+      `INSERT INTO polls (share_token, creator_id, title, note, kind, deadline, closed, hidden, created_at, updated_at, expires_at)
+       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, ?, ?)`,
     )
     .run(
       generateShareToken(),
@@ -117,6 +122,7 @@ export function insertPoll(db: DatabaseSync, poll: NewPoll): number {
       poll.note,
       poll.kind,
       poll.deadline,
+      poll.hidden ? 1 : 0,
       poll.createdAt,
       poll.createdAt,
       poll.expiresAt,
@@ -138,14 +144,16 @@ export interface PollChanges {
   note: string;
   deadline: string | null;
   closed: boolean;
+  hidden: boolean;
 }
 
 export function updatePoll(db: DatabaseSync, id: number, changes: PollChanges, now: Date): void {
-  db.prepare("UPDATE polls SET title = ?, note = ?, deadline = ?, closed = ?, updated_at = ? WHERE id = ?").run(
+  db.prepare("UPDATE polls SET title = ?, note = ?, deadline = ?, closed = ?, hidden = ?, updated_at = ? WHERE id = ?").run(
     changes.title,
     changes.note,
     changes.deadline,
     changes.closed ? 1 : 0,
+    changes.hidden ? 1 : 0,
     now.toISOString(),
     id,
   );
@@ -371,6 +379,7 @@ export function listPollSummaries(db: DatabaseSync, userId: number, now: Date): 
     createdAt: row.created_at,
     expiresAt: row.expires_at,
     voted: row.voted === 1,
+    hidden: row.hidden === 1,
   }));
 }
 
@@ -387,7 +396,7 @@ function proposalsOf(db: DatabaseSync, poll: PollRow): Proposal[] {
   );
 }
 
-function votesOf(db: DatabaseSync, pollId: number): VoteView[] {
+function votesOf(db: DatabaseSync, pollId: number, onlyVoteId?: number | null): VoteView[] {
   // Account votes first by username, then guests in the order they were cast.
   const votes = db
     .prepare(
@@ -417,20 +426,70 @@ function votesOf(db: DatabaseSync, pollId: number): VoteView[] {
     list.push({ proposalId: row.proposal_id, answer: row.answer });
     answers.set(row.vote_id, list);
   }
-  return votes.map((vote) => ({
-    id: vote.id,
-    name: vote.username ?? vote.guest_name ?? "",
-    personId: vote.user_id,
-    answers: answers.get(vote.id) ?? [],
-    updatedAt: vote.updated_at,
-  }));
+  return votes
+    .filter((vote) => onlyVoteId === undefined || vote.id === onlyVoteId)
+    .map((vote) => ({
+      id: vote.id,
+      name: vote.username ?? vote.guest_name ?? "",
+      personId: vote.user_id,
+      answers: answers.get(vote.id) ?? [],
+      updatedAt: vote.updated_at,
+    }));
+}
+
+/** The sums per proposal over all votes, in the order of the proposals. */
+function tallyOf(db: DatabaseSync, pollId: number): ProposalTally[] {
+  const rows = db
+    .prepare(
+      `SELECT p.id AS proposal_id,
+         COALESCE(SUM(a.answer = 'yes'), 0) AS yes,
+         COALESCE(SUM(a.answer = 'maybe'), 0) AS maybe,
+         COALESCE(SUM(a.answer = 'no'), 0) AS no
+       FROM poll_proposals p LEFT JOIN poll_vote_answers a ON a.proposal_id = p.id
+       WHERE p.poll_id = ? GROUP BY p.id ORDER BY p.position`,
+    )
+    .all(pollId) as unknown as { proposal_id: number; yes: number; maybe: number; no: number }[];
+  return rows.map((row) => ({ proposalId: row.proposal_id, yes: row.yes, maybe: row.maybe, no: row.no }));
+}
+
+/** The participants (account ids) who have a vote. */
+function votedParticipantIdsOf(db: DatabaseSync, pollId: number): number[] {
+  const rows = db
+    .prepare(
+      `SELECT pp.user_id FROM poll_participants pp
+       WHERE pp.poll_id = ? AND EXISTS (SELECT 1 FROM poll_votes v WHERE v.poll_id = pp.poll_id AND v.user_id = pp.user_id)
+       ORDER BY pp.user_id`,
+    )
+    .all(pollId) as unknown as { user_id: number }[];
+  return rows.map((row) => row.user_id);
+}
+
+/** The id of the guest vote of this poll whose key is `voteKey`, or null (an unknown key is ignored). */
+export function guestVoteIdByKey(db: DatabaseSync, pollId: number, voteKey: string | null): number | null {
+  if (voteKey === null) return null;
+  const row = db.prepare("SELECT id FROM poll_votes WHERE poll_id = ? AND user_id IS NULL AND key_hash = ?").get(
+    pollId,
+    hashToken(voteKey),
+  ) as { id: number } | undefined;
+  return row?.id ?? null;
 }
 
 /** The poll as everybody with the link sees it; `viewer` (when logged in) fills `myVoteId` and `canManage`. */
-export function buildPollView(db: DatabaseSync, poll: PollRow, viewer: UserRow | null, now: Date): PollView {
+export function buildPollView(
+  db: DatabaseSync,
+  poll: PollRow,
+  viewer: UserRow | null,
+  now: Date,
+  /** The vote key of a guest (`X-Vote-Key`); lets a guest see their own vote in a hidden poll. */
+  guestVoteKey: string | null = null,
+): PollView {
   const participants = participantsOf(db, poll.id);
   const myVote = viewer ? findAccountVote(db, poll.id, viewer.id) : undefined;
   const canManage = viewer !== null && (viewer.id === poll.creator_id || viewer.is_admin === 1);
+  // Hidden votes are filtered here, on the server, for every caller but the creator (an admin who is not the
+  // creator can still manage the poll, but sees what any participant sees).
+  const filtered = poll.hidden === 1 && (viewer === null || viewer.id !== poll.creator_id);
+  const ownVoteId = myVote?.id ?? guestVoteIdByKey(db, poll.id, guestVoteKey);
   return {
     id: poll.id,
     shareToken: poll.share_token,
@@ -440,7 +499,9 @@ export function buildPollView(db: DatabaseSync, poll: PollRow, viewer: UserRow |
     proposals: proposalsOf(db, poll),
     creator: creatorOf(db, poll),
     participants: participants.map(toPerson),
-    votes: votesOf(db, poll.id),
+    votes: votesOf(db, poll.id, filtered ? (ownVoteId ?? -1) : undefined),
+    hidden: poll.hidden === 1,
+    ...(filtered ? { tally: tallyOf(db, poll.id), votedParticipantIds: votedParticipantIdsOf(db, poll.id) } : {}),
     deadline: poll.deadline,
     closed: poll.closed === 1,
     open: isOpen(poll, now),

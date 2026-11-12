@@ -24,7 +24,8 @@ server runs on the home PC with automatic updates. The load test of the home ser
   können"; up to a fifth of the people may be missing). People without a readable calendar are named, not silently
   left out.
 - **Voting:** pick free times as proposals and share one link; everybody with it, guests too, votes with
-  Ja / Vielleicht / Nein and sees the state of the vote. A card names the people whose calendar was not considered,
+  Ja / Vielleicht / Nein and sees the state of the vote (in a poll with hidden votes only the sums; the creator sees
+  everything and can reveal the votes). A card names the people whose calendar was not considered,
   and a logged-in person sees under each proposal whether they are free or busy according to their own calendar.
   "Meine Abstimmungen" lists your polls.
 - **Fixing the date:** the creator or the admin fixes one proposal after a fresh calendar check (a warning, never

@@ -7,7 +7,7 @@
   import Card from "../Card.svelte";
   import ConfirmDialog from "../ConfirmDialog.svelte";
   import Message from "../Message.svelte";
-  import { manageCloseState } from "../../lib/poll-view";
+  import { isFilteredView, manageCloseState } from "../../lib/poll-view";
 
   interface Props {
     poll: PollView;
@@ -22,16 +22,18 @@
     ondeletekeepdate: () => void;
     /** Starts a new search with the same people ("Nochmal planen"). */
     onreplan: () => void;
+    /** Shows who voted what to everybody (hidden votes only; cannot be undone). */
+    onreveal: () => void;
   }
 
-  let { poll, busy, locked, problem, onupdate, onnewlink, ondelete, ondeletekeepdate, onreplan }: Props = $props();
+  let { poll, busy, locked, problem, onupdate, onnewlink, ondelete, ondeletekeepdate, onreplan, onreveal }: Props = $props();
 
   const close = $derived(manageCloseState(poll));
   const parts = $derived(poll.deadline ? berlinParts(poll.deadline) : { date: "", time: "" });
   let date = $state("");
   let time = $state("");
   let inputProblem = $state("");
-  let confirming = $state<"link" | "delete" | null>(null);
+  let confirming = $state<"link" | "delete" | "reveal" | null>(null);
 
   // Show the deadline the poll really has (also after a refresh), unless the person is typing a new one.
   let shown = $state<string | null | undefined>(undefined);
@@ -58,6 +60,7 @@
     confirming = null;
     if (what === "link") onnewlink();
     if (what === "delete") ondelete();
+    if (what === "reveal") onreveal();
   }
 
   const hasFixedDate = $derived(fixedIdOf(poll) !== null);
@@ -98,6 +101,9 @@
       {poll.closed ? "Wieder öffnen" : "Abstimmung schließen"}
     </Button>
     <Button variant="tonal" disabled={busy || locked} onclick={onreplan}>Nochmal planen</Button>
+    {#if poll.hidden && !isFilteredView(poll)}
+      <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "reveal")}>Stimmen aufdecken</Button>
+    {/if}
     <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "link")}>Neuer Link</Button>
     <Button variant="danger" disabled={busy || locked} onclick={() => (confirming = "delete")}>Abstimmung löschen</Button>
   </div>
@@ -108,6 +114,16 @@
   {/if}
   <Message text={problem} />
 </Card>
+
+<ConfirmDialog
+  open={confirming === "reveal"}
+  title="Stimmen für alle aufdecken?"
+  text="Danach sehen alle, wer was gewählt hat. Das lässt sich nicht rückgängig machen."
+  confirmLabel="Stimmen aufdecken"
+  {busy}
+  onconfirm={confirm}
+  oncancel={() => (confirming = null)}
+/>
 
 <ConfirmDialog
   open={confirming === "link"}

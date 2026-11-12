@@ -46,6 +46,34 @@
       }
     },
     {
+      "name": "vote without a name (hidden votes)",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "vote"
+      },
+      "expected": {
+        "title": "Grillen",
+        "body": "Jemand hat abgestimmt.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:vote"
+      }
+    },
+    {
+      "name": "all voted without a name (hidden votes)",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "all_voted"
+      },
+      "expected": {
+        "title": "Alle haben abgestimmt: Grillen",
+        "body": "Schau dir das Ergebnis an.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:all_voted"
+      }
+    },
+    {
       "name": "reminder",
       "data": {
         "pollTitle": "Grillen",

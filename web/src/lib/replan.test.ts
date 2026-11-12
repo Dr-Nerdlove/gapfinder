@@ -22,6 +22,12 @@ describe("replanFromPoll", () => {
     expect(r).toMatchObject({ title: "Spieleabend", note: "Bei Anna", people: [1, 3], kind: "hours" });
   });
 
+  it("carries the hidden setting over, and only when the old poll was hidden", () => {
+    expect(replanFromPoll(poll({ hidden: true }), 1).hidden).toBe(true);
+    expect(replanFromPoll(poll({ hidden: false }), 1).hidden).toBe(false);
+    expect(replanFromPoll(poll({}), 1).hidden).toBe(false);
+  });
+
   it("rounds the length of the first proposal up to a full hour", () => {
     expect(replanFromPoll(poll({}), 1).durationMinutes).toBe(300); // 4.5 h → 5 h
   });

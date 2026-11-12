@@ -682,17 +682,29 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   proposals are not copied: they lie in the past, and a poll is deleted 30 days after its last proposal. No server
   change. Rejected for now: stored search templates ("Spieleabend: Samstag ab 18 Uhr, 5 Stunden"), which would need a
   server change; to revisit if the button is not enough.
-- **10b Hidden votes** (Opus to plan, Sonnet for the steps; server and app). An option when creating a poll: everyone
+- **10b Hidden votes** (done; Opus to plan, Sonnet for the steps; server and app). An option when creating a poll: everyone
   else sees **only the sums** per proposal ("5 Ja, 2 Vielleicht"), who has not voted yet, and their own vote; the
-  **creator and the admin** see every name and answer. A hidden poll can be **revealed** later (creator or admin), never
+  **creator alone** sees every name and answer (admins see only the sums, like everyone else). A hidden poll can be **revealed** later (creator only), never
   hidden again. To settle when building:
   - Backward compatibility: an older server ignores the new field and would create an open poll. The app must only
     offer the option when the server says it supports it (and the server must refuse what it does not know rather than
     create an open poll).
   - The server filters the poll state per caller (never only the app); guests and other accounts get sums.
-  - The "someone voted" notification (`vote`) names the voter; for a hidden poll only the creator (and admin) may get
+  - The "someone voted" notification (`vote`) names the voter; for a hidden poll only the creator may get
     the name, the others a notification without it, or none.
   - Migration additive (a new column with a default).
+
+  Built on 2026-11-12: the switch "Stimmen verdecken" (default off) is offered only when `/api/health` lists
+  `hidden_votes` in `features`; `POST /api/polls` refuses unknown fields (`validation`), so a later option cannot be
+  silently ignored either. The server filters in `buildPollView`: every caller but the creator gets their own vote
+  only (a guest by the `X-Vote-Key` header, which the app now also sends on the poll GET), `tally` and
+  `votedParticipantIds`. Revealing is `PATCH hidden:false`; hiding an open poll is refused. Notifications (decided with
+  the owner): `vote` and `all_voted` name the voter only for the creator, the others get them without a
+  name ("Jemand hat abgestimmt."). Not hidden: whether a guest name is already taken in the poll (`vote_name_taken`).
+  Changed with the owner on 2026-11-12: admins see only the sums, like everyone else; only the creator sees names,
+  reveals and deletes single votes. An admin who is not the creator still manages the poll otherwise (close, deadline,
+  fix the date, new link, delete, replan) and gets the filtered view (`canManage` true, `tally` present); revealing or
+  deleting a single vote of a hidden poll is refused with `forbidden`, and the notifications carry no name for admins.
 - **10c Colour grid** (done; Sonnet; web app only; the bars for hidden polls wait for 10b). Decided with the owner on 2026-11-11 from two preview mock-ups (`docs/mockups/10c-search-grid.jpg`, `docs/mockups/10c-poll-table.jpg`; the poll picture also shows the bars for 10b, variant B):
   - **Search results:** a switch "Liste / Raster" above the results. "Raster" is a **month grid**: each day of the
     search is a square coloured by the best count of that day (shades: all, all but one, all but two, all but three
