@@ -10,7 +10,7 @@
   import { errorMessage } from "../lib/messages";
   import { hintFor, pollSkippedNotices } from "../lib/poll-calendar";
   import { loadPoll, submitVote, withdrawVote } from "../lib/poll-actions";
-  import { nextScreen, statusText, updatedText, type AnswerMap, type PollScreen } from "../lib/poll-view";
+  import { isFilteredView, nextScreen, statusText, updatedText, type AnswerMap, type PollScreen } from "../lib/poll-view";
   import { startPolling } from "../lib/polling";
   import { replanFromPoll, replanHandover } from "../lib/replan";
   import { navigate } from "../lib/router";
@@ -242,7 +242,7 @@
       <FixedDate {poll} proposal={fixed} {locked} {loggedIn} />
     {/if}
 
-    <PollResults {poll} busy={busy || locked} onremove={poll.canManage ? (id, name) => (removing = { id, name }) : undefined} />
+    <PollResults {poll} busy={busy || locked} onremove={poll.canManage && !isFilteredView(poll) ? (id, name) => (removing = { id, name }) : undefined} />
 
     {#if poll.open && notices.length > 0}
       <Card tone="notice" title="Nicht berücksichtigt">

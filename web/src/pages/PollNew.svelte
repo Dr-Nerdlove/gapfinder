@@ -126,7 +126,7 @@
           <div class="hide">
             <Switch label="Stimmen verdecken" checked={hidden} onchange={(value) => (hidden = value)} />
             <p class="hint">
-              Die anderen sehen nur, wie viele Ja, Vielleicht und Nein es pro Termin gibt und wer noch nicht abgestimmt hat. Wer was gewählt hat, siehst nur du (und wer die App verwaltet).
+              Die anderen sehen nur, wie viele Ja, Vielleicht und Nein es pro Termin gibt und wer noch nicht abgestimmt hat. Wer was gewählt hat, siehst nur du.
             </p>
           </div>
         {/if}

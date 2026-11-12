@@ -328,7 +328,7 @@ missing, with a recommendation, and let the people choose.
     until `expires_at`. Every new poll lookup for the app must exclude them (`removed_at IS NULL`, as in
     `findPollById`, `findPollByToken`, `countPollsOfCreator`, `listPollSummaries`); the feed query (`feedEventsOf`)
     must not.
-  - Hidden votes (phase 10b, `polls.hidden`): who voted what reaches only the creator and admins. The filter is in
+  - Hidden votes (phase 10b, `polls.hidden`): who voted what reaches only the creator (an admin who is not the creator sees only the sums, though `canManage` is true; the app tells by `tally`, not by `canManage`). The filter is in
     `buildPollView` (`server/src/polls/store.ts`); every new response or notification that carries votes, answers or a
     voter's name must apply the same rule. New server features the app depends on are announced in
     `HealthResponse.features`, and the app offers them only when listed.

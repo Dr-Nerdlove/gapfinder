@@ -114,18 +114,20 @@ export interface Tally {
 }
 
 /**
- * Whether the person sees only the sums and their own vote: a hidden poll for someone who is not the creator or an
- * admin (phase 10b). An older server sends no `hidden`, so such a poll is never filtered.
+ * Whether the person sees only the sums and their own vote: a hidden poll for anyone but its creator (phase 10b),
+ * an admin included, who can manage the poll but sees what any participant sees. The server sends `tally` exactly
+ * when it filtered the votes, so that is the sign (not `canManage`). An older server sends no `hidden`, so such a
+ * poll is never filtered.
  */
-export function isFilteredView(poll: { hidden?: boolean | undefined; canManage?: boolean | undefined }): boolean {
-  return poll.hidden === true && !poll.canManage;
+export function isFilteredView(poll: { hidden?: boolean | undefined; tally?: unknown }): boolean {
+  return poll.hidden === true && poll.tally !== undefined;
 }
 
 /**
  * The sums for each proposal, in the order of the proposals. A filtered view has only the caller's own vote in
  * `votes`, so the sums come from the server's `tally` then (a proposal it lacks counts as zero).
  */
-export function tallies(poll: Pick<PollView, "proposals" | "votes"> & Partial<Pick<PollView, "hidden" | "canManage" | "tally">>): Tally[] {
+export function tallies(poll: Pick<PollView, "proposals" | "votes"> & Partial<Pick<PollView, "hidden" | "tally">>): Tally[] {
   if (isFilteredView(poll) && poll.tally !== undefined) {
     const sent = poll.tally;
     return poll.proposals.map((proposal) => {
@@ -143,7 +145,7 @@ export function tallies(poll: Pick<PollView, "proposals" | "votes"> & Partial<Pi
   });
 }
 
-type Counted = Pick<PollView, "proposals" | "votes"> & Partial<Pick<PollView, "hidden" | "canManage" | "tally">>;
+type Counted = Pick<PollView, "proposals" | "votes"> & Partial<Pick<PollView, "hidden" | "tally">>;
 
 /** How many votes the poll has (every vote answers every proposal, so one proposal's sums tell it). */
 export function voteCount(poll: Counted): number {
@@ -184,7 +186,7 @@ export function answerOf(vote: VoteView, proposalId: number): VoteAnswer | null 
 }
 
 /** The people of the search who have no account vote yet (guests are not on the list of participants). */
-export function notVotedYet(poll: Pick<PollView, "participants" | "votes"> & Partial<Pick<PollView, "hidden" | "canManage" | "votedParticipantIds">>): PollPerson[] {
+export function notVotedYet(poll: Pick<PollView, "participants" | "votes"> & Partial<Pick<PollView, "hidden" | "tally" | "votedParticipantIds">>): PollPerson[] {
   if (isFilteredView(poll) && poll.votedParticipantIds !== undefined) {
     const sent = new Set(poll.votedParticipantIds);
     return poll.participants.filter((p) => !sent.has(p.id));

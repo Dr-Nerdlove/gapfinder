@@ -41,7 +41,7 @@ interface NotificationBase {
  * belongs to no poll, so it has no `pollTitle` and no `shareToken`); `calendar_large` (admins only, no poll) names
  * the owner of a calendar over 5 MB and its size, `calendars_large_total` (admins only, no poll) the size of all
  * calendars together. In a poll with hidden votes (phase 10b), `vote` and `all_voted` carry `actorName` only for
- * the creator and admins; everybody else gets them without it. Only ever add kinds and fields: an older app
+ * the creator; everybody else gets them without it. Only ever add kinds and fields: an older app
  * ignores kinds it does not know (and shows a general text for a `vote` or `all_voted` without a name).
  */
 export type NotificationData =

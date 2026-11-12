@@ -155,17 +155,31 @@ describe("the view of a hidden poll", () => {
     expect(updated.tally![0]).toMatchObject({ yes: 2, no: 0 });
   });
 
-  it("is unfiltered for the creator and for an admin", async () => {
+  it("is unfiltered for the creator only", async () => {
     const e = await setup();
     const { poll } = await filled(e);
-    for (const token of [e.owner.token, e.admin.token]) {
-      const v = await view(e, poll, token);
-      expect(v.hidden).toBe(true);
-      expect(v.canManage).toBe(true);
-      expect(v.votes.map((x) => x.name)).toEqual(["Anna K.", "Olga O.", "Gast G."]);
-      expect(v.tally).toBeUndefined();
-      expect(v.votedParticipantIds).toBeUndefined();
-    }
+    const v = await view(e, poll, e.owner.token);
+    expect(v.hidden).toBe(true);
+    expect(v.canManage).toBe(true);
+    expect(v.votes.map((x) => x.name)).toEqual(["Anna K.", "Olga O.", "Gast G."]);
+    expect(v.tally).toBeUndefined();
+    expect(v.votedParticipantIds).toBeUndefined();
+  });
+
+  it("filters for an admin who is not the creator, who still manages the poll", async () => {
+    const e = await setup();
+    const { poll } = await filled(e);
+    const v = await view(e, poll, e.admin.token);
+    expect(v.canManage).toBe(true);
+    expect(v.votes).toEqual([]);
+    expect(v.tally).toHaveLength(2);
+    expect(v.votedParticipantIds).toEqual([e.owner.id, e.anna.id].sort((a, b) => a - b));
+    expect(JSON.stringify(v)).not.toContain("Gast G.");
+    // The management routes answer with the same filtered view.
+    const closed = await call(e, "PATCH", `/api/polls/${poll.id}`, { token: e.admin.token, body: { closed: true } });
+    expect(closed.statusCode, closed.body).toBe(200);
+    expect(closed.json<PollView>()).toMatchObject({ canManage: true, votes: [] });
+    expect(closed.json<PollView>().tally).toBeDefined();
   });
 
   it("does not filter an open poll", async () => {
@@ -234,17 +248,59 @@ describe("revealing", () => {
     expect(field(r)).toBe("hidden");
   });
 
-  it("an update without hidden keeps it hidden; an admin may reveal", async () => {
+  it("an update without hidden keeps it hidden, also from an admin", async () => {
     const e = await setup();
     const poll = await create(e, { hidden: true });
     expect((await patch(e, poll, { closed: true })).json<PollView>().hidden).toBe(true);
-    expect((await patch(e, poll, { hidden: false }, e.admin.token)).json<PollView>().hidden).toBe(false);
+    expect((await patch(e, poll, { closed: false }, e.admin.token)).json<PollView>().hidden).toBe(true);
   });
 
-  it("only the creator or an admin may reveal", async () => {
+  it("only the creator may reveal; an admin and a participant are refused", async () => {
     const e = await setup();
     const poll = await create(e, { hidden: true });
-    expect((await patch(e, poll, { hidden: false }, e.anna.token)).statusCode).toBe(403);
+    for (const user of [e.admin, e.anna]) {
+      const r = await patch(e, poll, { hidden: false }, user.token);
+      expect(r.statusCode).toBe(403);
+      expect(code(r)).toBe("forbidden");
+    }
+    expect((await view(e, poll, e.ben.token)).hidden).toBe(true);
+    expect((await patch(e, poll, { hidden: false })).statusCode).toBe(200);
+  });
+
+  it("an admin may still repeat hidden: true", async () => {
+    const e = await setup();
+    const poll = await create(e, { hidden: true });
+    expect((await patch(e, poll, { hidden: true }, e.admin.token)).statusCode).toBe(200);
+  });
+
+  it("an admin may reveal a poll that is not hidden (no change)", async () => {
+    const e = await setup();
+    const poll = await create(e);
+    expect((await patch(e, poll, { hidden: false }, e.admin.token)).statusCode).toBe(200);
+  });
+});
+
+describe("deleting single votes of a hidden poll", () => {
+  it("is allowed for the creator and refused for an admin", async () => {
+    const e = await setup();
+    const poll = await create(e, { hidden: true });
+    const annaView = await accountVote(e, poll, e.anna);
+    const voteId = annaView.myVoteId!;
+    const refused = await call(e, "DELETE", `/api/polls/${poll.id}/votes/${voteId}`, { token: e.admin.token });
+    expect(refused.statusCode).toBe(403);
+    expect(code(refused)).toBe("forbidden");
+    expect((await view(e, poll, e.owner.token)).votes).toHaveLength(1);
+    const done = await call(e, "DELETE", `/api/polls/${poll.id}/votes/${voteId}`, { token: e.owner.token });
+    expect(done.statusCode, done.body).toBe(200);
+    expect(done.json<PollView>().votes).toEqual([]);
+  });
+
+  it("stays allowed for an admin in an open poll", async () => {
+    const e = await setup();
+    const poll = await create(e);
+    const voteId = (await accountVote(e, poll, e.anna)).myVoteId!;
+    const r = await call(e, "DELETE", `/api/polls/${poll.id}/votes/${voteId}`, { token: e.admin.token });
+    expect(r.statusCode, r.body).toBe(200);
   });
 });
 
@@ -264,7 +320,7 @@ describe("notifications of a hidden poll", () => {
   }
   const votes = async (e: Setup, user: User, kind: string) => (await items(e, user)).filter((i) => i.data.kind === kind);
 
-  it("names the voter only for the creator and admins", async () => {
+  it("names the voter only for the creator", async () => {
     const e = await setup();
     await allOn(e);
     // Admin and Cara take part; Anna votes.
@@ -273,9 +329,7 @@ describe("notifications of a hidden poll", () => {
     const toOwner = await votes(e, e.owner, "vote");
     expect(toOwner).toHaveLength(1);
     expect(toOwner[0]!.data).toMatchObject({ kind: "vote", actorName: "Anna K." });
-    const toAdmin = await votes(e, e.admin, "vote");
-    expect(toAdmin[0]!.data).toMatchObject({ actorName: "Anna K." });
-    for (const user of [e.ben, e.cara]) {
+    for (const user of [e.ben, e.cara, e.admin]) {
       const got = await votes(e, user, "vote");
       expect(got).toHaveLength(1);
       expect(got[0]!.data).not.toHaveProperty("actorName");
@@ -294,7 +348,7 @@ describe("notifications of a hidden poll", () => {
     const kindsOf = async (u: User) => (await items(e, u)).map((i) => i.data.kind);
     expect(await kindsOf(e.owner)).toEqual(["vote", "vote", "all_voted"]);
     expect((await votes(e, e.owner, "all_voted"))[0]!.data).toMatchObject({ actorName: "ben m." });
-    expect((await votes(e, e.admin, "all_voted"))[0]!.data).toMatchObject({ actorName: "ben m." });
+    expect((await votes(e, e.admin, "all_voted"))[0]!.data).not.toHaveProperty("actorName");
     expect(await kindsOf(e.anna)).toEqual(["poll_created", "vote", "vote", "all_voted"]);
     const annaAll = (await votes(e, e.anna, "all_voted"))[0]!;
     expect(annaAll.data).not.toHaveProperty("actorName");

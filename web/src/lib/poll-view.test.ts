@@ -280,9 +280,15 @@ describe("hidden votes (filtered view)", () => {
     votedParticipantIds: [2, 3],
   };
 
-  it("is filtered only for a hidden poll the person cannot manage", () => {
+  it("is filtered when the poll is hidden and the server sent the sums, whoever manages it", () => {
     expect(isFilteredView(filtered)).toBe(true);
-    expect(isFilteredView({ ...filtered, canManage: true })).toBe(false);
+    // An admin who is not the creator: canManage, but the server filtered, so tally is there.
+    const adminView: PollView = { ...filtered, canManage: true };
+    expect(isFilteredView(adminView)).toBe(true);
+    // The creator: hidden, no tally.
+    const creatorView: PollView = { ...poll, hidden: true, canManage: true };
+    expect(isFilteredView(creatorView)).toBe(false);
+    expect(isFilteredView({ hidden: false, tally: [] })).toBe(false);
     expect(isFilteredView({ ...poll })).toBe(false);
     expect(isFilteredView({ ...poll, hidden: false })).toBe(false);
   });
@@ -302,6 +308,14 @@ describe("hidden votes (filtered view)", () => {
   it("takes who has not voted from votedParticipantIds", () => {
     expect(notVotedYet(filtered).map((p) => p.username)).toEqual(["Vincent"]);
     expect(notVotedYet({ ...filtered, votedParticipantIds: [1, 2, 3] })).toEqual([]);
+  });
+
+  it("shows an admin who manages the poll the sums and the missing people, not the votes", () => {
+    const admin: PollView = { ...filtered, canManage: true };
+    expect(tallies(admin)[1]).toEqual({ proposalId: 2, yes: 5, maybe: 0, no: 2 });
+    expect(voteCount(admin)).toBe(4);
+    expect(bestProposalIds(admin)).toEqual([2]);
+    expect(notVotedYet(admin).map((p) => p.username)).toEqual(["Vincent"]);
   });
 
   it("counts the votes themselves for the creator of a hidden poll", () => {

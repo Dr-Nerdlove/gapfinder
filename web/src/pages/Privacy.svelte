@@ -19,7 +19,7 @@
 
   <Card title="Was der Admin in der App sieht">
     <ul>
-      <li>Bei einer Abstimmung mit verdeckten Stimmen sieht der Admin, wer was gewählt hat, genau wie der Ersteller. Alle anderen sehen nur die Summen.</li>
+      <li>Bei einer Abstimmung mit verdeckten Stimmen sieht der Admin nur die Summen und seine eigene Stimme, genau wie alle anderen. Wer was gewählt hat, sieht nur der Ersteller.</li>
       <li>Die Benutzernamen und wie viele Kalender gerade ein Problem haben. Keine Termine und keine Kalender-Links.</li>
       <li>
         Wenn einer deiner Kalender sehr groß ist (über 5 MB): deinen Namen und die Größe, damit dich der Admin darauf ansprechen kann.

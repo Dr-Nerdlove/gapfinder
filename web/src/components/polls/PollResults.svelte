@@ -16,7 +16,7 @@
 
   interface Props {
     poll: PollView;
-    /** Creator and admin can remove single votes. */
+    /** The creator can remove single votes (an admin sees no single votes of a hidden poll). Only shown in the table. */
     onremove?: ((voteId: number, name: string) => void) | undefined;
     busy?: boolean;
   }
@@ -27,7 +27,7 @@
   const best = $derived(new Set(highlightedProposalIds(poll)));
   const fixed = $derived(poll.fixedProposalId != null);
   const missing = $derived(notVotedYet(poll));
-  // A hidden poll for someone who is not the creator or an admin: sums and bars instead of the table.
+  // A hidden poll for anyone but the creator (an admin included): sums and bars instead of the table.
   const filtered = $derived(isFilteredView(poll));
   const count = $derived(voteCount(poll));
   const secretKeeper = $derived(poll.creator ? poll.creator.username : "Die Person, die die Abstimmung angelegt hat,");
@@ -65,7 +65,7 @@
     {/if}
     <p class="hidden-note">{secretKeeper} sieht, wer was gewählt hat. Du siehst nur die Summen und deine eigene Stimme.</p>
   {:else}
-  {#if poll.hidden && poll.canManage}
+  {#if poll.hidden}
     <p class="hidden-note">Die Stimmen sind verdeckt: Die anderen sehen nur die Summen und wer noch nicht abgestimmt hat. Du siehst alles.</p>
   {/if}
   <!-- svelte-ignore a11y_no_noninteractive_tabindex -->

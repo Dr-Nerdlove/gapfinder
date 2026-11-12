@@ -7,7 +7,7 @@
   import Card from "../Card.svelte";
   import ConfirmDialog from "../ConfirmDialog.svelte";
   import Message from "../Message.svelte";
-  import { manageCloseState } from "../../lib/poll-view";
+  import { isFilteredView, manageCloseState } from "../../lib/poll-view";
 
   interface Props {
     poll: PollView;
@@ -101,7 +101,7 @@
       {poll.closed ? "Wieder öffnen" : "Abstimmung schließen"}
     </Button>
     <Button variant="tonal" disabled={busy || locked} onclick={onreplan}>Nochmal planen</Button>
-    {#if poll.hidden}
+    {#if poll.hidden && !isFilteredView(poll)}
       <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "reveal")}>Stimmen aufdecken</Button>
     {/if}
     <Button variant="tonal" disabled={busy || locked} onclick={() => (confirming = "link")}>Neuer Link</Button>

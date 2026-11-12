@@ -34,7 +34,7 @@ export interface PollRow {
   last_reminder_at: string | null;
   /** Set when the poll was deleted but its fixed date stays in the calendar feed until it expires; else null. */
   removed_at: string | null;
-  /** 1 = hidden votes: only the creator and admins see who voted what. Only ever goes from 1 to 0. */
+  /** 1 = hidden votes: only the creator sees who voted what. Only ever goes from 1 to 0. */
   hidden: number;
 }
 
@@ -486,8 +486,9 @@ export function buildPollView(
   const participants = participantsOf(db, poll.id);
   const myVote = viewer ? findAccountVote(db, poll.id, viewer.id) : undefined;
   const canManage = viewer !== null && (viewer.id === poll.creator_id || viewer.is_admin === 1);
-  // Hidden votes are filtered here, on the server, for every caller who cannot manage the poll.
-  const filtered = poll.hidden === 1 && !canManage;
+  // Hidden votes are filtered here, on the server, for every caller but the creator (an admin who is not the
+  // creator can still manage the poll, but sees what any participant sees).
+  const filtered = poll.hidden === 1 && (viewer === null || viewer.id !== poll.creator_id);
   const ownVoteId = myVote?.id ?? guestVoteIdByKey(db, poll.id, guestVoteKey);
   return {
     id: poll.id,

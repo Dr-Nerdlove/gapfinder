@@ -94,7 +94,7 @@ export const HELP_TEXTS: Record<HelpTopic, HelpText> = {
     title: "So wird gezählt",
     paragraphs: [
       "Mit ★ markiert ist der Termin mit den meisten „Ja“; bei Gleichstand der mit den wenigsten „Nein“. „Vielleicht“ macht einen Termin nicht zum Sieger, wird aber angezeigt – und wer „Vielleicht“ sagt, bekommt den Termin trotzdem, wenn er festgelegt wird.",
-      "Ist die Abstimmung als „verdeckt“ angelegt, sehen alle außer dem Ersteller (und dem Admin) nur die Summen pro Termin und wer noch nicht abgestimmt hat, dazu die eigene Stimme.",
+      "Ist die Abstimmung als „verdeckt“ angelegt, sehen alle außer dem Ersteller (auch der Admin) nur die Summen pro Termin und wer noch nicht abgestimmt hat, dazu die eigene Stimme.",
     ],
   },
   pollFix: {

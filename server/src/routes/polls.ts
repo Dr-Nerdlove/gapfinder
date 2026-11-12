@@ -224,6 +224,8 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
       const now = ctx.now();
       // `false` reveals (cannot be undone); `true` only repeats what a hidden poll already is.
       if (body.hidden === true && poll.hidden !== 1) throw validation("hidden");
+      // Only the creator may reveal: an admin must not be able to see the votes by revealing them.
+      if (body.hidden === false && poll.hidden === 1 && poll.creator_id !== user.id) throw forbidden();
       updatePoll(
         ctx.db,
         poll.id,
@@ -319,9 +321,11 @@ export function registerPollRoutes(app: FastifyInstance, ctx: AppContext): void 
     },
   );
 
-  // The creator or an admin removes any vote, also while the poll is closed.
+  // The creator or an admin removes any vote, also while the poll is closed (hidden poll: the creator only).
   app.delete("/api/polls/:id/votes/:voteId", { onRequest: requireUser }, async (request): Promise<PollView> => {
     const { poll, user } = manageablePollOrFail(request);
+    // In a hidden poll only the creator sees the votes, so only the creator may delete single ones.
+    if (poll.hidden === 1 && poll.creator_id !== user.id) throw forbidden();
     const voteId = numberParam(request, "voteId");
     if (voteId === null || !deleteVote(ctx.db, poll.id, voteId)) throw notFound();
     touchPoll(ctx.db, poll.id, ctx.now());
