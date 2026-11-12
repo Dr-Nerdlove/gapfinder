@@ -37,6 +37,7 @@ export interface RawCreatePoll {
   proposals: { start?: string; end?: string; first?: string; last?: string }[];
   participants: number[];
   deadline?: string | null;
+  hidden?: boolean;
 }
 
 export interface CheckedPoll {
@@ -47,6 +48,7 @@ export interface CheckedPoll {
   /** Each id once, the order of the request. Whether the accounts exist is checked by the caller. */
   participantIds: number[];
   deadline: string | null;
+  hidden: boolean;
   expiresAt: Date;
 }
 
@@ -171,6 +173,7 @@ export function checkedPoll(raw: RawCreatePoll, now: Date): CheckedPoll {
     proposals,
     participantIds: [...new Set(raw.participants)],
     deadline,
+    hidden: raw.hidden === true,
     expiresAt: expiryOf(raw.kind, proposals, lastDays),
   };
 }

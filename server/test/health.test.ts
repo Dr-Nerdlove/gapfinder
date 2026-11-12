@@ -22,6 +22,12 @@ describe("GET /api/health", () => {
     expect(new Date(body.time).toISOString()).toBe(body.time);
   });
 
+  it("lists the optional features of this server", async () => {
+    app = await buildApp(testConfig());
+    const response = await app.inject({ method: "GET", url: "/api/health" });
+    expect(response.json<{ features: string[] }>().features).toEqual(["hidden_votes"]);
+  });
+
   it("does not announce the framework", async () => {
     app = await buildApp(testConfig());
     const response = await app.inject({ method: "GET", url: "/api/health" });

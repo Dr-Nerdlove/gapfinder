@@ -306,6 +306,14 @@ export const migrations: readonly Migration[] = [
       PRIMARY KEY (user_id, app)
     ) STRICT;`,
   },
+  {
+    id: 15,
+    name: "polls_hidden",
+    // Additive only: one column with a default. 1 = hidden votes (phase 10b): only the creator and admins see who
+    // voted what. An older server (after a rollback) ignores the column and would show such a poll openly; the
+    // flag only ever goes from 1 to 0 (reveal), never back.
+    sql: `ALTER TABLE polls ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

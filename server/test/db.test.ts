@@ -225,7 +225,7 @@ describe("migrations", () => {
     runMigrations(db);
 
     expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
-    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]);
+    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     // The old poll is not fixed and still readable.
     expect(db.prepare("SELECT title, fixed_proposal_id, fixed_at, fixed_sequence FROM polls").get()).toEqual({
       title: "x",
@@ -237,6 +237,16 @@ describe("migrations", () => {
     expect(() => db.prepare("INSERT INTO calendar_feeds (user_id, token, created_at) VALUES (1, 'other', 'a')").run()).toThrow(
       /UNIQUE|PRIMARY/,
     );
+  });
+
+  it("migration 15 adds polls.hidden, 0 for existing polls", () => {
+    const db = openDatabase(":memory:");
+    db.prepare("INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')").run();
+    db.prepare(
+      "INSERT INTO polls (share_token, creator_id, title, kind, created_at, updated_at, expires_at) VALUES ('t', 1, 'x', 'days', 'a', 'a', 'z')",
+    ).run();
+    expect(db.prepare("SELECT hidden FROM polls").get()).toEqual({ hidden: 0 });
+    expect(db.prepare("SELECT name FROM pragma_table_info('polls') WHERE name = 'hidden'").get()).toEqual({ name: "hidden" });
   });
 
   it("migration 5: the fixed proposal is forgotten with the proposal, the feed goes with the account", () => {
