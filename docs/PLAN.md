@@ -791,8 +791,8 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   prefers the **direct ticket link** of the showing, which cineamo's data carries (`onlineTicketUrl`; in the one
   showing looked at it was the cinema's own booking page; the owner looked on cineamo's site and saw it always lead to
   the direct ticket page; in the data itself only that one showing was checked).
-  Where a showing has none, the link leads to the cinema's page on cineamo; with times entered by hand and no known
-  cinema, there is no link. The address comes from outside data: the app shows only `https` links and opens them
+  No fallback link (decided by the owner): a showing without a direct ticket link, and every showing entered by
+  hand, simply has no link. The address comes from outside data: the app shows only `https` links and opens them
   with `rel="noopener noreferrer"`. The link is part of 10d, not a phase of its own.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
