@@ -793,7 +793,9 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   the direct ticket page; in the data itself only that one showing was checked).
   No fallback link (decided by the owner): a showing without a direct ticket link, and every showing entered by
   hand, simply has no link. The address comes from outside data: the app shows only `https` links and opens them
-  with `rel="noopener noreferrer"`. The link is part of 10d, not a phase of its own.
+  with `rel="noopener noreferrer"`. The link is part of 10d, not a phase of its own. Where showtimes come from
+  cineamo, the app shows a visible credit "Spielzeiten: Cineamo" (decided with the owner on 2026-11-12, also offered
+  to cineamo in the request); times entered by hand get no credit.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
