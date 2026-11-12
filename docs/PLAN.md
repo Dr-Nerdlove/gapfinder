@@ -725,15 +725,98 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   as "17:30 20:15 22:45", copied from kinoheld or cineamo, and the browser's own time input for single times, which
   is the round clock on Android), plus the film's length and a buffer for the adverts (suggested 20 minutes). The app
   offers only the showings that fit into a free time of the search, and the poll is made from them. Server changes
-  needed (to settle when building): proposals today start and end on a quarter hour, showtimes need any minute; a
-  proposal needs an optional place (the cinema's name). Backward compatibility: the app offers the cinema mode only
-  when the server says it supports it. Later, in its own session: check whether showtimes can be read automatically.
+  (decided 2026-11-12, see "10d must not change today's use" below): any minute for every proposal, and an optional
+  place for every proposal. Backward compatibility: the app offers the cinema mode, the place and minute times only
+  when the server says it supports them. Later, in its own session: check whether showtimes can be read automatically.
   A first check on 2026-11-11 could not reach kinoheld.de, cineamo.com or the cinemas' sites (blocked by the cloud
   session's network settings); from search results only (unverified): kinoheld's site uses an undocumented GraphQL
   interface (an unofficial client exists), no official developer access was found, and the commercial International
   Showtimes API is the paid route. Before building on any of it: read the terms of use and robots.txt, and allow the
   hosts for that session. The friends use about ten cinemas in their region; the owner names them in that session
   (deliberately not recorded here: the repository is public, and the list would tell where the friends live).
+
+  **Automatic reading, checked on 2026-11-12 (nothing built; checked twice, the second time more carefully).**
+  Seen (a few polite requests, no login):
+  - *kinoheld*: its robots.txt blocks AI crawlers completely and lets other bots read most public pages; its terms
+    (AGB, point 4.8) forbid robot or spider software and any automated monitoring, copying or processing of the site.
+    The site's own script uses a GraphQL server (`next-live.kinoheld.de`) for its own pages; no public developer
+    access exists. A cinema's page is `www.kinoheld.de/kino/<city>/<slug>`. Six of the ten cinemas have their own
+    page there (checked by that address, not by a name on a city page, which also lists neighbouring towns); one more
+    is probably there (slug seen, not opened); for two towns kinoheld has no city page at all. Not usable without
+    kinoheld's permission.
+  - *cineamo*: lists all ten cinemas. robots.txt allows everything. There are no terms of use (no AGB page, footer
+    links only imprint and data protection); the imprint has the usual copyright clause: using content beyond what
+    copyright allows, "in particular storing or processing it in databases", needs written consent. Nothing about
+    automated access. The cinema pages show the times as text per day. The site reads from an undocumented JSON
+    interface: `GET api.cineamo.com/showings?cinemaId=<id>` returned 200 with every showing of a cinema (film name,
+    `startDatetime` in UTC, room, language, 3D/OV flags, booking link), 10 per page (one cinema: 353 showings, 36
+    pages); `api.cineamo.com/cinemas/<id>` names each cinema's showtime source. No ICS, RSS or JSON-LD screening
+    events. Its business site (`b2b.cineamo.com`) offers cinemas a showtimes widget for their own site, nothing for
+    third parties.
+  - *Where cineamo gets the times*: for one cinema from kinoheld, for one from the cinema's own ticket software, for
+    the other eight from "showtime_collector" (cineamo's own collecting; what exactly: not seen).
+  - *Cinema sites* (seven of ten found): none has RSS, ICS or JSON-LD screening events on the pages looked at. One
+    chain's robots.txt forbids its programme and API paths; one museum site blocks AI crawlers in robots.txt; the
+    others allow reading. Booking runs through different systems (the chain's own, kinoheld, a ticket service, a
+    museum shop): one data source per cinema would mean up to ten different readers.
+
+  Other providers, checked the same day for a source usable without asking first (none found):
+  - *International Showtimes* (Cinepass, Berlin): the only official, documented showtimes API with German cinemas
+    (REST/JSON, API key, filters by country); the key comes from a free trial sign-up (seen in their docs). Price
+    and trial length not published (a 2024 article names 7 days and about 149 EUR a month: guessed, maybe outdated);
+    no terms page found; whether the friends' cinemas are in it cannot be checked without signing up.
+  - *kino.de*: no API; robots.txt blocks `/api/` and reserves text and data mining (§ 44b UrhG). *filmstarts.de,
+    kinoprogramm.com, programmkino.de*: no API or feed. *moviepilot.de*: terms allow private, non-commercial use, but
+    robots.txt blocks its programme pages. *MovieGlu, Gracenote*: business contracts on request only.
+  - The cinemas' ticket systems publish no public programme feed (one ticket page looked at: plain HTML). No open data
+    for showtimes; Google has no showtimes API.
+
+  Guessed, not seen: the cineamo interface is meant only for their own pages and can change without notice;
+  cineamo would probably answer a polite request; kinoheld would grant access only as a business partner.
+
+  Result and recommendation: **technically possible through cineamo, legally not settled; reading each cinema's
+  site is too much work and too fragile.** Order: (1) build the semi-automatic entry as decided; (2) the owner asks
+  cineamo in writing (contact on `b2b.cineamo.com`) whether a private friends' app may read the showtimes of about
+  ten cinemas through `api.cineamo.com`, a few requests a day, with a link back to cineamo for booking; (3) only with
+  a yes: the server fetches once a day per cinema (cached in memory like the calendars, via
+  `server/src/calendars/fetch.ts`-style guarded requests) and fills the entry field, which stays editable; the cinema
+  ids go into the server's settings, not the repository. Without a yes, a button "open on cineamo" next to the entry
+  field makes copying quicker. Effort for (3), guessed: about a day's work; it breaks when cineamo changes its
+  interface, and the entry by hand stays as the fallback. The paid alternative, if cineamo says no: a trial of
+  International Showtimes, first to see whether the cinemas are covered, then the owner decides about the price.
+  The request to cineamo was drafted on 2026-11-12 and is sent by the owner (not kept here: it names the cinemas).
+
+  Decided with the owner on 2026-11-12: **no booking in the app**, but a "Tickets" link at a cinema proposal (the
+  poll's showings and the chosen date); buying and paying stay with the cinema or its ticket service. The owner
+  prefers the **direct ticket link** of the showing, which cineamo's data carries (`onlineTicketUrl`; in the one
+  showing looked at it was the cinema's own booking page; the owner looked on cineamo's site and saw it always lead to
+  the direct ticket page; in the data itself only that one showing was checked).
+  No fallback link (decided by the owner): a showing without a direct ticket link, and every showing entered by
+  hand, simply has no link. The address comes from outside data: the app shows only `https` links and opens them
+  with `rel="noopener noreferrer"`. The link is part of 10d, not a phase of its own. Where showtimes come from
+  cineamo, the app shows a visible credit "Spielzeiten: Cineamo" (decided with the owner on 2026-11-12, also offered
+  to cineamo in the request); times entered by hand get no credit.
+
+  **10d must not change today's use** (owner's requirement, 2026-11-12). Besides the usual rules (additive
+  migrations, new things offered only when `HealthResponse.features` lists them), points to keep when building.
+  Chosen with the owner on 2026-11-12 as general improvements instead of cinema-only exceptions (simpler, fewer
+  special cases):
+  - *A place for every proposal.* Every proposal gets an optional "Ort" (a cinema, a restaurant, "bei Tom"), shown in
+    the poll, at the chosen date and in the calendar feed (`LOCATION`). Without a place everything looks exactly as
+    today.
+  - *The server takes any minute; the app keeps quarter hours.* The quarter-hour check in
+    `server/src/polls/validation.ts` becomes a whole-minute check for all proposals (no flag "this is a showing").
+    The app keeps offering quarter hours for normal proposals, so the choice stays short; only the cinema entry and
+    typed times allow any minute. To check when building (not checked yet): that the previous server image, after a
+    rollback, still reads and shows polls whose proposals are not on a quarter hour (it probably checks only new
+    proposals).
+  - *Everything that shows proposals copes with minute times and the place*: the poll table, the colour grid (10c),
+    the calendar feed, the notification texts in `notification-text.ts` and `NotificationText.kt` (an older Android
+    shell must still show a sensible text). Each gets a test where it can be tested automatically.
+  - *The automatic fetch (only with cineamo's yes) is optional.* If cineamo is unreachable, slow or answers with
+    something unexpected, the entry field simply stays empty for typing by hand; nothing else waits for it or fails
+    (no effect on search, polls, health check or start-up). One fetch per cinema a day, outside the hours the home PC
+    is off, with a time limit and a size limit; the load test (9f) is rerun once it exists.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
