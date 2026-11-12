@@ -786,6 +786,13 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   International Showtimes, first to see whether the cinemas are covered, then the owner decides about the price.
   The request to cineamo was drafted on 2026-11-12 and is sent by the owner (not kept here: it names the cinemas).
 
+  Decided with the owner on 2026-11-12: **no booking in the app**, but a link "Tickets bei Cineamo" at a cinema
+  proposal (the poll's showings and the chosen date), leading to cineamo; buying and paying stay with cineamo and the
+  cinema. The link points to cineamo itself, not to the cinema's own ticket address that cineamo's data also carries.
+  With times read from cineamo the link is known per showing; with times entered by hand it leads to the cinema's
+  page on cineamo when the cinema is known, otherwise there is no link. The link is part of 10d, not a phase of its
+  own; it is also offered to cineamo in the request as a reason to agree.
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
