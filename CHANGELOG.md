@@ -5,6 +5,15 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-11-12
+
+Three new things for planning: "Nochmal planen" starts a new search with the same people as an earlier poll, the
+search results can be shown as a coloured month grid ("Raster"), and a poll can now hide its votes ("Stimmen
+verdecken"): then only its creator sees who chose what, everybody else sees only the sums as bars. The table of votes
+is more compact and coloured. The server updates itself within about an hour; until then the switch "Stimmen
+verdecken" does not appear. The Android app offers an update by itself (needed for the notification texts of polls
+with hidden votes).
+
 ### Added
 
 - A poll's management card has a new button "Nochmal planen": it opens the search with the same people (and the length of the first proposal), and the new poll starts with the old title and note. The old proposals are not copied.
