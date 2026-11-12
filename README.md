@@ -116,7 +116,7 @@ npm run build   # shared, then server (dist/) and web (web/dist/)
 
 `npm test` also runs the tests of the VM update and backup scripts (`npm run test:vm`, needs bash and
 [age](https://age-encryption.org/)). CI runs exactly these on
-every push and pull request, plus a build of the server's Docker image and checks of the VM files (shellcheck,
+every pull request and every push to `main`, plus a build of the server's Docker image and checks of the VM files (shellcheck,
 systemd units, compose file). The VM firewall's test needs root and is run by CI only:
 `sudo bash deploy/vm/test/firewall.test.sh` (needs `nft` and `ip`).
 
@@ -134,7 +134,7 @@ job does the same through `.github/actions/android-apk`.
 
 An Android app (a Capacitor shell around the live web app, with notifications from a background check) is built from
 `android/`. Install, signing key, local build and rules for changes: [`docs/android-app.md`](docs/android-app.md).
-CI builds it on every push; each release carries the signed APK (`lueckenfueller-<version>.apk`) and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
+CI builds a signed test APK on every pull request and every push to `main`; each release carries the signed APK (`lueckenfueller-<version>.apk`) and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
 Firebase "doorbell") need a one-time Firebase setup: [`docs/firebase-setup.md`](docs/firebase-setup.md).
 
 ## Run the server with Docker Compose

@@ -199,10 +199,10 @@ missing, with a recommendation, and let the people choose.
   and reasons: `docs/PLAN.md`.
 - **Build and test:** npm workspaces (`shared`, `server`, `web`), Node 24 in CI and Docker (22.13+ works
   locally). Before pushing: `npm run check`, `npm test`, `npm run build` (see README). CI (`ci.yml`) runs these
-  plus a Docker build of the server on every push and pull request. Cloud sessions have no Docker daemon, so
+  plus a Docker build of the server on every pull request and every push to `main` (not on pushes to other branches, which a pull request covers; a newer push cancels the older run of the same pull request). Cloud sessions have no Docker daemon, so
   the image build is only verified by CI. Android: CI's `android` job (`.github/actions/android-apk`, script
   `scripts/android-apk.sh`) checks the synced Capacitor files, runs the Kotlin unit tests and the debug build, and
-  on pushes builds a signed test APK (artifact `lueckenfueller-apk`) when the secrets exist. A cloud session builds
+  on pull requests from this repository and on pushes to `main` builds a signed test APK (artifact `lueckenfueller-apk`) when the secrets exist (forks get no secrets; on a pull request the label `sha-<7>` is the branch's commit, not GitHub's merge commit). A cloud session builds
   Android with JDK 21 and the SDK installed into the scratchpad as in `docs/android-app.md`, then runs the script;
   Maven Central sometimes answers 429: `--max-workers=2` and one retry (the script does both). The script refuses
   to run while files under `android/` are uncommitted (its stale-sync check). CI's `vm-scripts` job runs
