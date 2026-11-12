@@ -735,6 +735,33 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   hosts for that session. The friends use about ten cinemas in their region; the owner names them in that session
   (deliberately not recorded here: the repository is public, and the list would tell where the friends live).
 
+  **Automatic reading, checked on 2026-11-12 (nothing built).** Seen myself (a few polite requests, no login):
+  - *kinoheld*: its robots.txt blocks AI crawlers completely and lets other bots read the public pages; its terms
+    (AGB, point 4.8) forbid robot or spider software and any automated monitoring, copying or processing of the site.
+    The site's own script uses a GraphQL server, but that is for its own pages, there is no public developer access.
+    The city pages are built in the browser (no times in the plain page). Not usable without permission.
+  - *cineamo*: robots.txt allows everything; no terms of use were found on the site (only imprint and data protection),
+    so the terms question is open. The cinema pages contain the showtimes as plain text per day (for example
+    "16:30 · 17:00 · 20:30"), and the site has an undocumented JSON interface at `api.cineamo.com` (cinema data seen,
+    no showtime route found, its own robots.txt answers 403). There is a business site (`b2b.cineamo.com`) for
+    cinemas and partners, with no public data access. All the friends' cinemas are listed there. The booking
+    system it names per cinema is kinoheld for one, a cinema software for one, and a "showtime collector" for the
+    rest (what that is: unknown).
+  - *kinoheld* lists most of the region's cinemas, but not every one could be confirmed.
+  - *Cinema sites*: the sites of the bigger chains have no feed (no RSS, ICS or JSON-LD events found on the pages
+    looked at); one chain's robots.txt blocks its showtime paths and its API paths, one answered 403 to a plain request.
+    The small cinemas' own addresses could not be found by search; only portals list them.
+
+  Guessed, not seen: kinoheld would probably cooperate (or sell access) if asked; the "showtime collector" is probably
+  an aggregator that also feeds other portals; reading cineamo's pages would work technically but may break whenever
+  the pages change.
+
+  Result and recommendation: **no clean automatic route.** The one with a free hand (cineamo) has no official
+  interface and no stated terms; kinoheld forbids it. Options: (1) keep the semi-automatic entry as decided, build
+  it first; (2) ask cineamo in writing (their business contact) whether reading the cinema pages for a private
+  friends' app is fine; (3) a button "open the cinema's page" next to the entry field so copying is quick. Do not
+  build a crawler before (2) is answered.
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
