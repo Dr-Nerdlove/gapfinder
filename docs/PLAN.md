@@ -789,7 +789,8 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   Decided with the owner on 2026-11-12: **no booking in the app**, but a "Tickets" link at a cinema proposal (the
   poll's showings and the chosen date); buying and paying stay with the cinema or its ticket service. The owner
   prefers the **direct ticket link** of the showing, which cineamo's data carries (`onlineTicketUrl`; in the one
-  showing looked at it was the cinema's own booking page; how often it is filled for the other cinemas: not checked).
+  showing looked at it was the cinema's own booking page; the owner looked on cineamo's site and saw it always lead to
+  the direct ticket page; in the data itself only that one showing was checked).
   Where a showing has none, the link leads to the cinema's page on cineamo; with times entered by hand and no known
   cinema, there is no link. The address comes from outside data: the app shows only `https` links and opens them
   with `rel="noopener noreferrer"`. The link is part of 10d, not a phase of its own.
