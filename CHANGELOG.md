@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- Cinema evening: after an hours search, the new button "Kinoabend planen" opens an entry for showings. You type the cinema, the day and the showtimes (paste them from kinoheld or cineamo, or add single times), the film's length and the advert buffer (suggested 20 minutes). The app lists which showings fit into the free times of the search and which do not, with the reason ("Tobi hat da keine Zeit", "endet nach 23:00 Uhr"); the fitting ones can be left out by a tap and become the proposals of a new poll. A second cinema or day can be added.
+- Every proposal of a poll can have an optional place ("Ort (optional)", e.g. a café, a cinema or "bei Tom"). It is shown under the time in the poll, in the dialog and at the fixed date, in the calendar feed and in the notification texts.
+- Showings start and end on any minute (20:10), not only on quarter hours. Normal polls keep the quarter hours.
+- The server updates itself within about an hour; until then "Kinoabend planen" and "Ort" do not appear. The Android app offers an update (shell 6) for the notification text with the place; an older app shows the text without the place.
+
 ### Changed
 
 - The backup folder on the Windows PC is now shared as `lueckenfueller-backup$`: the "$" hides it from the list other devices see in the home network. A setup made before keeps the old name and stays visible until it is renamed; the guide (`docs/server-setup.md`, "9. Set up backups", part 3) has the steps. Only new setups get the new name by themselves.

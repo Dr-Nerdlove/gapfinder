@@ -205,6 +205,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
     margin: 0;
     padding: 0;
     border: 0;

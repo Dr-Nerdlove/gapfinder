@@ -124,6 +124,38 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
   await shot(b.page, "date-fixed-guest.png", { fullPage: false });
   await b.browser.close();
 
+  // The start of a normal poll (phase 4): two times picked in the search result, then the form with "Ort (optional)".
+  b = await login("Vincent");
+  {
+    const p = b.page;
+    await p.goto(BASE + "#/suche");
+    await p.waitForTimeout(1200);
+    for (const name of ["Anna", "Tobi"]) await p.getByRole("checkbox", { name, exact: true }).check();
+    const sel = p.locator("select");
+    await sel.nth(0).selectOption("180");
+    await sel.nth(2).selectOption("09:00");
+    await sel.nth(3).selectOption("23:00");
+    await p.getByRole("button", { name: "Lücken suchen" }).click();
+    await p.waitForTimeout(3500);
+    const chips = p.locator(".picks button");
+    await chips.nth(0).click();
+    await chips.nth(1).click();
+    await p.getByRole("button", { name: "Lücken suchen" }).evaluate((e) => window.scrollTo(0, e.getBoundingClientRect().top + scrollY - 8));
+    await p.waitForTimeout(400);
+    await shot(p, "poll-search-pick.png", { fullPage: false });
+    await p.getByRole("button", { name: "Abstimmung anlegen" }).click();
+    await p.getByLabel("Titel").waitFor();
+    await p.getByLabel("Titel").fill("Kinoabend");
+    const soon = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10);
+    await p.locator("#deadline-date").fill(soon);
+    await p.locator("#deadline-time").fill("18:00");
+    await p.waitForTimeout(500);
+    await shot(p, "poll-new.png");
+  }
+  await b.browser.close();
+
+  await require("./shoot-cinema.cjs")({ state, out, login });
+
   if (process.argv.includes("--install")) {
     const target = path.resolve(__dirname, "../../docs/screenshots");
     const where = {
@@ -132,7 +164,12 @@ const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/${nam
       "admin.png": "admin.png", "search-form.png": "search-form.png", "search-results.png": "search-results.png", "search-grid.png": "search-grid.png",
       "poll-calendar-check.png": "polls/7-calendar-check.png", "fix-check.png": "fix-date/2-fix-check.png", "date-fixed-creator.png": "fix-date/3-date-fixed-creator.png",
       "date-fixed-guest.png": "fix-date/4-date-fixed-guest.png",
+      "poll-search-pick.png": "polls/1-search-pick.png", "poll-new.png": "polls/2-new-poll.png",
+      "cinema/1-search-button.png": "cinema/1-search-button.png", "cinema/2-entry.png": "cinema/2-entry.png",
+      "cinema/2-entry-dark.png": "cinema/2-entry-dark.png", "cinema/3-poll.png": "cinema/3-poll.png", "cinema/4-fix.png": "cinema/4-fix.png",
+      "cinema/5-fixed.png": "cinema/5-fixed.png", "cinema/6-normal-place.png": "cinema/6-normal-place.png",
     };
+    fs.mkdirSync(`${target}/cinema`, { recursive: true });
     for (const [from, to] of Object.entries(where)) fs.copyFileSync(`${out}/${from}`, `${target}/${to}`);
     console.log(`copied ${Object.keys(where).length} pictures to ${target}`);
   } else console.log(`pictures are in ${out} (run with --install to copy them into docs/screenshots)`);

@@ -27,7 +27,13 @@ server runs on the home PC with automatic updates. The load test of the home ser
   Ja / Vielleicht / Nein and sees the state of the vote (in a poll with hidden votes only the sums; the creator sees
   everything and can reveal the votes). A card names the people whose calendar was not considered,
   and a logged-in person sees under each proposal whether they are free or busy according to their own calendar.
-  "Meine Abstimmungen" lists your polls.
+  "Meine Abstimmungen" lists your polls. Every proposal can carry an optional place ("Ort", e.g. a café or "bei Tom"),
+  shown in the poll, at the fixed date and in the calendar feed.
+- **Cinema evening:** after an hours search, "Kinoabend planen" opens an entry for showings: type the cinema, the day
+  and the showtimes (pasted from kinoheld or cineamo, or one by one), the film's length and a buffer for the adverts.
+  The app shows which showings fit into the free times of the search and which do not (and why); only the fitting
+  ones, which can still be left out by a tap, become the proposals of a poll, each with the cinema as its place and
+  its own minute times such as 20:10. The showtimes are typed in by hand; reading them automatically is not built.
 - **Fixing the date:** the creator or the admin fixes one proposal after a fresh calendar check (a warning, never
   a block). Everybody with the link sees the date and can download it as `.ics` or add it to Google Calendar or
   Outlook; in the profile, a personal calendar feed puts the fixed dates into any calendar app.
@@ -66,6 +72,18 @@ admin sees a warning on the start page when a backup is missing or the monthly t
 | Date fixed (what everybody sees)                          | Notifications (profile card)                                  | Reminder (poll creator)                                    |
 | --------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
 | ![Date fixed](docs/screenshots/fix-date/4-date-fixed-guest.png) | ![Notifications card](docs/screenshots/notifications/profile-card-on.png) | ![Reminder card](docs/screenshots/notifications/reminder-sent.png) |
+
+| Cinema: "Kinoabend planen" under the search result | Cinema entry: which showings fit (light, then dark) |
+| -------------------------------------------------- | -------------------------------------------------- |
+| ![Search result with the button](docs/screenshots/cinema/1-search-button.png) | ![Cinema entry](docs/screenshots/cinema/2-entry.png) |
+
+| Cinema entry in dark mode | Cinema poll: the place under each time | Fixing the date: the place goes with it |
+| ------------------------- | -------------------------------------- | --------------------------------------- |
+| ![Cinema entry, dark](docs/screenshots/cinema/2-entry-dark.png) | ![Cinema poll](docs/screenshots/cinema/3-poll.png) | ![Fixing a cinema date](docs/screenshots/cinema/4-fix.png) |
+
+| Cinema date fixed | A normal poll with the optional "Ort" |
+| ----------------- | ------------------------------------- |
+| ![Cinema date fixed](docs/screenshots/cinema/5-fixed.png) | ![Poll form with a place](docs/screenshots/cinema/6-normal-place.png) |
 
 | iPhone: add to the home screen first                                |
 | ------------------------------------------------------------------- |

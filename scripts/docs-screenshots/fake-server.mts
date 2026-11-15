@@ -5,6 +5,7 @@
 import { existsSync } from "node:fs";
 import { buildApp } from "../../server/src/app.ts";
 import { loadConfig } from "../../server/src/config.ts";
+import { CINEMA_PEOPLE, TOBI_BUSY, berlinInstant, cinemaDay } from "./cinema.mjs";
 
 const dir = process.env.SHOTS_DIR;
 if (!dir) throw new Error("SHOTS_DIR is not set (run.sh sets it)");
@@ -35,7 +36,12 @@ function calendarFor(name: string): string {
     seed = (seed * 1103515245 + 12345) >>> 0;
     return seed / 2 ** 32;
   };
+  // On the cinema day (phase 10d) the circle of the cinema pictures has no random events (the random numbers are still
+  // drawn, so every other day stays as it was), and Tobi has one fixed appointment.
+  const day10d = cinemaDay();
+  let quiet = false;
   const event = (uid: string, from: Date, to: Date): void => {
+    if (quiet) return;
     lines.push("BEGIN:VEVENT", `UID:${uid}@screenshots`, "DTSTAMP:20261101T000000Z", `DTSTART:${icsTime(from)}`, `DTEND:${icsTime(to)}`, "SUMMARY:Termin", "END:VEVENT");
   };
   for (let day = 0; day < 120; day++) {
@@ -43,6 +49,10 @@ function calendarFor(name: string): string {
     const weekday = d.getUTCDay(); // 0 Sunday, 6 Saturday
     const weekend = weekday === 0 || weekday === 6;
     const roll = rnd();
+    quiet = CINEMA_PEOPLE.includes(name) && d.toISOString().slice(0, 10) === day10d;
+    if (quiet && name === "Tobi") {
+      lines.push("BEGIN:VEVENT", "UID:Tobi-cinema@screenshots", "DTSTAMP:20261101T000000Z", `DTSTART:${icsTime(berlinInstant(day10d, TOBI_BUSY.from))}`, `DTEND:${icsTime(berlinInstant(day10d, TOBI_BUSY.to))}`, "SUMMARY:Termin", "END:VEVENT");
+    }
     if (name === "Sophie" && weekday === 6) {
       if (sophieBusy(d)) event(`${name}-${day}`, new Date(d.getTime() + 16 * 3600000), new Date(d.getTime() + 22 * 3600000));
       continue;
