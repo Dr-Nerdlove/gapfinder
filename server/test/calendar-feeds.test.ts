@@ -149,6 +149,26 @@ describe("reading the feed", () => {
     expect(titlesIn(response.body)).toEqual([]);
   });
 
+  it("writes LOCATION for a fixed proposal with a place and nothing for one without", async () => {
+    const e = await setup();
+    const created = await call(e, "POST", "/api/polls", {
+      token: e.me.token,
+      body: {
+        title: "Kino",
+        kind: "timed",
+        proposals: [{ ...slot(7), place: "Cinemaxx, Saal 3" }, slot(8)],
+        participants: [],
+      },
+    });
+    const poll = created.json<PollView>();
+    const token = await feedToken(e, e.me.token);
+    await fix(e, poll, 0, e.me.token);
+    const withPlace = (await feed(e, token)).body;
+    expect(withPlace).toContain("LOCATION:Cinemaxx\\, Saal 3\r\n");
+    await fix(e, poll, 1, e.me.token);
+    expect((await feed(e, token)).body).not.toContain("LOCATION");
+  });
+
   it("holds the fixed dates of polls the person created, takes part in, or voted in, except after a 'no'", async () => {
     const e = await setup();
     // me created it.

@@ -142,6 +142,81 @@ describe("creating polls", () => {
     expect(poll.proposals).toMatchObject([{ start: "2026-11-08T17:15:00.000Z", end: "2026-11-08T18:00:00.000Z" }, SLOT_A]);
   });
 
+  it("accepts any whole minute for start and end and returns it unchanged", async () => {
+    const e = await setup();
+    const slot = { start: "2026-11-07T19:10:00.000Z", end: "2026-11-07T21:40:00.000Z" };
+    const poll = await createPoll(e, timedBody({ proposals: [slot] }));
+    expect(poll.proposals).toEqual([{ id: expect.any(Number), ...slot }]);
+    const viewed = (await call(e, "GET", `/api/poll-links/${poll.shareToken}`)).json<PollView>();
+    expect(viewed.proposals).toEqual(poll.proposals);
+    expect(e.db.prepare("SELECT starts_at, ends_at FROM poll_proposals").get()).toEqual({
+      starts_at: slot.start,
+      ends_at: slot.end,
+    });
+  });
+
+  it("stores the place trimmed, returns it, and leaves the key out when there is none", async () => {
+    const e = await setup();
+    const poll = await createPoll(
+      e,
+      timedBody({
+        proposals: [
+          { ...SLOT_A, place: "  Cinemaxx   Hamburg " },
+          { ...SLOT_B, place: "   " },
+          { start: "2026-11-09T17:00:00.000Z", end: "2026-11-09T19:00:00.000Z", place: "" },
+          { start: "2026-11-10T17:00:00.000Z", end: "2026-11-10T19:00:00.000Z" },
+        ],
+      }),
+    );
+    expect(poll.proposals[0]).toEqual({ id: expect.any(Number), ...SLOT_A, place: "Cinemaxx Hamburg" });
+    for (const proposal of poll.proposals.slice(1)) expect("place" in proposal).toBe(false);
+    const viewed = (await call(e, "GET", `/api/poll-links/${poll.shareToken}`)).json<PollView>();
+    expect(viewed.proposals).toEqual(poll.proposals);
+    const raw = (await call(e, "GET", `/api/poll-links/${poll.shareToken}`)).body;
+    expect(raw).not.toContain('"place":null');
+    expect(e.db.prepare("SELECT place FROM poll_proposals ORDER BY position").all()).toEqual([
+      { place: "Cinemaxx Hamburg" },
+      { place: null },
+      { place: null },
+      { place: null },
+    ]);
+  });
+
+  it("accepts a place of exactly 100 characters, counted in code points", async () => {
+    const e = await setup();
+    const place = "😀".repeat(100);
+    const poll = await createPoll(e, timedBody({ proposals: [{ ...SLOT_A, place }] }));
+    expect(poll.proposals[0]).toMatchObject({ place });
+  });
+
+  it("takes a place for proposals of days too", async () => {
+    const e = await setup();
+    const poll = await createPoll(
+      e,
+      daysBody({ proposals: [{ first: "2026-11-10", last: "2026-11-10", place: " bei Tom " }, { first: "2026-11-12", last: "2026-11-12" }] }),
+    );
+    expect(poll.proposals[0]).toEqual({ id: expect.any(Number), first: "2026-11-10", last: "2026-11-10", place: "bei Tom" });
+    expect("place" in poll.proposals[1]!).toBe(false);
+    const bad = await call(e, "POST", "/api/polls", {
+      token: e.me.token,
+      body: daysBody({ proposals: [{ first: "2026-11-10", last: "2026-11-10", place: "x".repeat(101) }] }),
+    });
+    expect(bad.statusCode).toBe(400);
+    expect(bad.json<ApiErrorBody>()).toMatchObject({ code: "validation", field: "proposals" });
+  });
+
+  it("allows the same time at different places, but not the same time at the same place", async () => {
+    const e = await setup();
+    const poll = await createPoll(e, timedBody({ proposals: [{ ...SLOT_A, place: "Kino A" }, { ...SLOT_A, place: "Kino B" }, SLOT_A] }));
+    expect(poll.proposals).toHaveLength(3);
+    const twice = await call(e, "POST", "/api/polls", {
+      token: e.me.token,
+      body: timedBody({ proposals: [{ ...SLOT_A, place: "Kino A" }, { ...SLOT_A, place: " Kino A " }] }),
+    });
+    expect(twice.statusCode).toBe(400);
+    expect(twice.json<ApiErrorBody>()).toMatchObject({ code: "validation", field: "proposals" });
+  });
+
   it("ignores unknown and duplicate participants, lists the others sorted without regard to case", async () => {
     const e = await setup();
     const poll = await createPoll(e, timedBody({ participants: [e.ben.id, e.anna.id, e.anna.id, 99999, e.me.id] }));
@@ -179,8 +254,10 @@ describe("creating polls", () => {
     ["no proposals", { proposals: [] }, "proposals"],
     ["21 proposals", { proposals: tooMany }, "proposals"],
     ["a start in the past", { proposals: [{ start: "2026-11-01T09:00:00.000Z", end: "2026-11-07T19:00:00.000Z" }] }, "proposals"],
-    ["a start that is not on 15 minutes", { proposals: [{ start: "2026-11-07T17:10:00.000Z", end: "2026-11-07T19:00:00.000Z" }] }, "proposals"],
-    ["an end that is not on 15 minutes", { proposals: [{ start: "2026-11-07T17:00:00.000Z", end: "2026-11-07T19:20:00.000Z" }] }, "proposals"],
+    ["seconds in an end", { proposals: [{ start: "2026-11-07T17:00:00.000Z", end: "2026-11-07T19:10:01.000Z" }] }, "proposals"],
+    ["milliseconds in a start", { proposals: [{ start: "2026-11-07T17:10:00.500Z", end: "2026-11-07T19:00:00.000Z" }] }, "proposals"],
+    ["a place of 101 characters", { proposals: [{ ...SLOT_A, place: "p".repeat(101) }] }, "proposals"],
+    ["a place with a control character", { proposals: [{ ...SLOT_A, place: "Cine\u0007max" }] }, "proposals"],
     ["seconds in a start", { proposals: [{ start: "2026-11-07T17:00:30.000Z", end: "2026-11-07T19:00:00.000Z" }] }, "proposals"],
     ["an end before the start", { proposals: [{ start: "2026-11-07T19:00:00.000Z", end: "2026-11-07T17:00:00.000Z" }] }, "proposals"],
     ["an end equal to the start", { proposals: [{ start: "2026-11-07T19:00:00.000Z", end: "2026-11-07T19:00:00.000Z" }] }, "proposals"],

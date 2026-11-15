@@ -25,7 +25,7 @@ describe("GET /api/health", () => {
   it("lists the optional features of this server", async () => {
     app = await buildApp(testConfig());
     const response = await app.inject({ method: "GET", url: "/api/health" });
-    expect(response.json<{ features: string[] }>().features).toEqual(["hidden_votes"]);
+    expect(response.json<{ features: string[] }>().features).toEqual(["hidden_votes", "proposal_place", "minute_times"]);
   });
 
   it("does not announce the framework", async () => {

@@ -225,7 +225,7 @@ describe("migrations", () => {
     runMigrations(db);
 
     expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
-    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
+    expect(migrations.map((m) => m.id)).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
     // The old poll is not fixed and still readable.
     expect(db.prepare("SELECT title, fixed_proposal_id, fixed_at, fixed_sequence FROM polls").get()).toEqual({
       title: "x",
@@ -346,5 +346,29 @@ describe("migrations", () => {
   it("waits for a locked database instead of failing at once", () => {
     const db = openDatabase(":memory:");
     expect(db.prepare("PRAGMA busy_timeout").get()).toEqual({ timeout: 5000 });
+  });
+
+  it("migration 16 adds the nullable place to the proposals of a database at migration 15 and keeps its data", () => {
+    const db = new DatabaseSync(":memory:");
+    db.exec("PRAGMA foreign_keys = ON");
+    runMigrations(db, migrations.slice(0, 15));
+    db.prepare(
+      "INSERT INTO users (username, username_key, password_hash, created_at) VALUES ('Anna', 'anna', 'h', 'a')",
+    ).run();
+    db.prepare(
+      "INSERT INTO polls (share_token, creator_id, title, kind, created_at, updated_at, expires_at) VALUES ('t', 1, 'x', 'days', 'a', 'a', 'z')",
+    ).run();
+    db.prepare(
+      "INSERT INTO poll_proposals (poll_id, position, first_date, last_date) VALUES (1, 0, '2026-11-10', '2026-11-10')",
+    ).run();
+
+    runMigrations(db, migrations);
+
+    expect(appliedIds(db)).toEqual(migrations.map((m) => m.id));
+    expect(db.prepare("SELECT first_date, place FROM poll_proposals").all()).toEqual([
+      { first_date: "2026-11-10", place: null },
+    ]);
+    db.prepare("UPDATE poll_proposals SET place = 'Kino'").run();
+    expect(db.prepare("SELECT place FROM poll_proposals").get()).toEqual({ place: "Kino" });
   });
 });

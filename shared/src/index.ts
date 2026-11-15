@@ -23,8 +23,11 @@ export interface HealthResponse {
   features?: ServerFeature[];
 }
 
-/** `hidden_votes`: polls with hidden votes (phase 10b). */
-export type ServerFeature = "hidden_votes";
+/**
+ * `hidden_votes`: polls with hidden votes (phase 10b). `proposal_place`: an optional place for every proposal (phase
+ * 10d). `minute_times`: timed proposals may start and end on any whole minute (phase 10d).
+ */
+export type ServerFeature = "hidden_votes" | "proposal_place" | "minute_times";
 
 /**
  * `GET /api/admin/backup-status` (admin only): when the VM's backup script last did what, from the file it writes.
