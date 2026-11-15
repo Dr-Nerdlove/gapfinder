@@ -5,6 +5,16 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-11-15
+
+Planning a cinema evening: after a search, "Kinoabend planen" takes the showtimes of one or more cinemas (pasted from
+kinoheld or cineamo, or typed one by one), the film's length and an advert buffer, and shows which showings fit into
+everybody's free times and why the others do not; the fitting ones become the poll, with times to the minute (20:10)
+and the cinema as place. Every proposal can now have an optional place ("Ort"), shown in the poll, at the fixed date,
+in the calendar and in the notification. The server updates itself within about an hour; until then "Kinoabend
+planen" and "Ort" do not appear. The Android app offers an update by itself (needed for the place in the notification
+text).
+
 ### Added
 
 - Cinema evening: after an hours search, the new button "Kinoabend planen" opens an entry for showings. You type the cinema, the day and the showtimes (paste them from kinoheld or cineamo, or add single times), the film's length and the advert buffer (suggested 20 minutes). The app lists which showings fit into the free times of the search and which do not, with the reason ("Tobi hat da keine Zeit", "endet nach 23:00 Uhr"); the fitting ones can be left out by a tap and become the proposals of a new poll. A second cinema or day can be added.
