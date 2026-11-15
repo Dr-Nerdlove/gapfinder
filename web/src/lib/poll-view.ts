@@ -35,6 +35,18 @@ export function proposalLabel(proposal: Proposal): string {
   return `${formatDay(day)}, ${formatClock(proposal.start)}–${end}`;
 }
 
+/** The place of a proposal ("Kino am Markt"), or null when it has none (an older server sends no `place`). */
+export function proposalPlace(proposal: Proposal): string | null {
+  const place = (proposal as { place?: unknown }).place;
+  return typeof place === "string" && place.trim() !== "" ? place.trim() : null;
+}
+
+/** The label for places that need one line: "Sa 12.12., 20:10–22:40, Kino am Markt"; without a place the same as `proposalLabel`. */
+export function proposalLabelWithPlace(proposal: Proposal): string {
+  const place = proposalPlace(proposal);
+  return place === null ? proposalLabel(proposal) : `${proposalLabel(proposal)}, ${place}`;
+}
+
 /** The two lines of a column heading: the day and the time (or the days of a run). */
 export function proposalHeading(proposal: Proposal): { top: string; bottom: string } {
   if ("first" in proposal) return { top: formatStretch(proposal.first, proposal.last), bottom: "" };

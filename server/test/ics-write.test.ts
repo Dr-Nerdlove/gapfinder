@@ -159,3 +159,21 @@ describe("writeCalendar", () => {
     expect(b.description).toBe("Bei mir");
   });
 });
+
+describe("LOCATION", () => {
+  it("writes the escaped place of a fixed event and nothing without one", () => {
+    const withPlace = writeCalendar([{ ...timed, place: "Kino, Saal 2; Hamburg" }, { ...days, place: "bei Tom" }], { feed: false });
+    expect(linesOf(withPlace)).toContain("LOCATION:Kino\\, Saal 2\\; Hamburg");
+    expect(linesOf(withPlace)).toContain("LOCATION:bei Tom");
+    const { events } = parse(withPlace);
+    expect(events[0]!.location).toBe("Kino, Saal 2; Hamburg");
+    const without = writeCalendar([timed, days], { feed: true });
+    expect(without).not.toContain("LOCATION");
+  });
+
+  it("folds a long place like any other line", () => {
+    const text = writeCalendar([{ ...timed, place: "ü".repeat(60) }], { feed: false });
+    expect(text.split("\r\n").every((line) => bytes(line) <= 75)).toBe(true);
+    expect(parse(text).events[0]!.location).toBe("ü".repeat(60));
+  });
+});

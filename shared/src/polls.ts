@@ -21,6 +21,8 @@ export const POLLS_PER_USER = 20;
 export const POLL_MAX_PARTICIPANTS = 50;
 export const POLL_TITLE_MAX_LENGTH = 80;
 export const POLL_NOTE_MAX_LENGTH = 500;
+/** Longest place of a proposal (e.g. a cinema), in characters. */
+export const PROPOSAL_PLACE_MAX_LENGTH = 100;
 export const VOTE_NAME_MAX_LENGTH = 40;
 /** A poll is deleted this many days after its last proposal has ended. */
 export const POLL_KEPT_DAYS_AFTER_LAST_PROPOSAL = 30;
@@ -40,16 +42,23 @@ export type PollKind = "timed" | "days";
 
 export type VoteAnswer = "yes" | "maybe" | "no";
 
-/** A proposal with times: start and end on 15 minutes, start in the future, at most 24 hours long. */
+/**
+ * A proposal with times: start and end on a whole minute (the app offers quarter hours for normal proposals), start
+ * in the future, at most 24 hours long.
+ */
 export interface TimedProposalInput {
   start: string;
   end: string;
+  /** Optional place, e.g. a cinema; 1 to `PROPOSAL_PLACE_MAX_LENGTH` characters after trimming; missing or empty means none. */
+  place?: string;
 }
 
 /** A proposal of whole German days, both ends included: tomorrow at the earliest, at most 31 days. */
 export interface DaysProposalInput {
   first: string;
   last: string;
+  /** Optional place, e.g. a cinema; 1 to `PROPOSAL_PLACE_MAX_LENGTH` characters after trimming; missing or empty means none. */
+  place?: string;
 }
 
 interface CreatePollBase {
@@ -103,6 +112,7 @@ export interface NewShareLink {
   shareToken: string;
 }
 
+/** In responses `place` is present only when the proposal has one. */
 export type Proposal = { id: number } & (TimedProposalInput | DaysProposalInput);
 
 /** A person with an account as shown in a poll: only the name and colour. */

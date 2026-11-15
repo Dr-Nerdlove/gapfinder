@@ -1,6 +1,6 @@
 import type { NotificationData, Proposal } from "@lueckenfueller/shared";
 import type { AppContext } from "../context.js";
-import { proposalRowsOf, type PollRow } from "../polls/store.js";
+import { proposalRowsOf, proposalView, type PollRow } from "../polls/store.js";
 import { notify, notifyUsers } from "./dispatch.js";
 import {
   type Recipient,
@@ -67,10 +67,7 @@ function notifyNamed(
 export function notifyDateFixed(ctx: AppContext, poll: PollInfo, proposalId: number, actorId: number, actorName: string): void {
   const row = proposalRowsOf(ctx.db, poll.id).find((r) => r.id === proposalId);
   if (!row) return;
-  const proposal: Proposal =
-    poll.kind === "timed"
-      ? { id: row.id, start: row.starts_at!, end: row.ends_at! }
-      : { id: row.id, first: row.first_date!, last: row.last_date! };
+  const proposal: Proposal = proposalView(poll, row);
   const data: NotificationData = { kind: "date_fixed", ...base(poll), actorName, proposal };
   notify(ctx, poll.id, data, dateFixedRecipients(ctx.db, poll, proposalId, actorId));
 }

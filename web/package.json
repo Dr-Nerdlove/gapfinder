@@ -1,7 +1,7 @@
 {
   "name": "@lueckenfueller/web",
   "private": true,
-  "version": "2.4.0",
+  "version": "2.5.0",
   "type": "module",
   "scripts": {
     "predev": "npm run build -w shared",
@@ -12,7 +12,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@capacitor/core": "8.5.0",
+    "@capacitor/core": "8.6.2",
     "@lueckenfueller/shared": "*",
     "@material/material-color-utilities": "^0.4.0"
   },

@@ -9,6 +9,8 @@ export interface FixedEvent {
   title: string;
   /** Empty when the poll has no note. */
   note: string;
+  /** The optional place of the fixed proposal; written as LOCATION. */
+  place?: string;
   /** Timed: ISO instants (UTC). Days: German days "YYYY-MM-DD", both included. */
   when: { kind: "timed"; start: string; end: string } | { kind: "days"; first: string; last: string };
   /** ISO instant when the date was fixed; becomes DTSTAMP. */
@@ -70,6 +72,7 @@ function eventLines(event: FixedEvent): string[] {
     `SUMMARY:${escapeText(event.title)}`,
   ];
   if (event.note !== "") lines.push(`DESCRIPTION:${escapeText(event.note)}`);
+  if (event.place !== undefined && event.place !== "") lines.push(`LOCATION:${escapeText(event.place)}`);
   const { when } = event;
   if (when.kind === "timed") {
     lines.push(`DTSTART:${utcStamp(when.start)}`, `DTEND:${utcStamp(when.end)}`);

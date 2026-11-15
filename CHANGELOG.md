@@ -5,6 +5,27 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Fixed
+
+- Android app: updated the app shell (Capacitor 8.6.2) to close a reported security issue. The app offers the update itself.
+
+## [2.5.0] - 2026-11-15
+
+Planning a cinema evening: after a search, "Kinoabend planen" takes the showtimes of one or more cinemas (pasted from
+kinoheld or cineamo, or typed one by one), the film's length and an advert buffer, and shows which showings fit into
+everybody's free times and why the others do not; the fitting ones become the poll, with times to the minute (20:10)
+and the cinema as place. Every proposal can now have an optional place ("Ort"), shown in the poll, at the fixed date,
+in the calendar and in the notification. The server updates itself within about an hour; until then "Kinoabend
+planen" and "Ort" do not appear. The Android app offers an update by itself (needed for the place in the notification
+text).
+
+### Added
+
+- Cinema evening: after an hours search, the new button "Kinoabend planen" opens an entry for showings. You type the cinema, the day and the showtimes (paste them from kinoheld or cineamo, or add single times), the film's length and the advert buffer (suggested 20 minutes). The app lists which showings fit into the free times of the search and which do not, with the reason ("Tobi hat da keine Zeit", "endet nach 23:00 Uhr"); the fitting ones can be left out by a tap and become the proposals of a new poll. A second cinema or day can be added.
+- Every proposal of a poll can have an optional place ("Ort (optional)", e.g. a café, a cinema or "bei Tom"). It is shown under the time in the poll, in the dialog and at the fixed date, in the calendar feed and in the notification texts.
+- Showings start and end on any minute (20:10), not only on quarter hours. Normal polls keep the quarter hours.
+- The server updates itself within about an hour; until then "Kinoabend planen" and "Ort" do not appear. The Android app offers an update (shell 6) for the notification text with the place; an older app shows the text without the place.
+
 ### Changed
 
 - Polls with hidden votes: only the creator can now see who has already voted. Everybody else still sees the sums, but no longer which people are still missing. The app shows nothing about who voted even while the server has not been updated yet.

@@ -156,6 +156,7 @@ describe("times inside a gap", () => {
       gap,
       start: "2026-12-12T13:00:00.000Z",
       end: "2026-12-12T15:00:00.000Z",
+      place: "",
     };
     const moved = withStart(item, "2026-12-12T16:00:00.000Z");
     expect(moved.kind === "timed" && moved.end).toBe("2026-12-12T18:00:00.000Z");
@@ -173,7 +174,7 @@ describe("times inside a gap", () => {
 describe("draftFromSource", () => {
   it("suggests the searched duration from the start of each gap", () => {
     const items = draftFromSource(source([timedPick(gap)]), TODAY);
-    expect(items).toEqual([{ kind: "timed", id: `timed:${gap.start}`, label: "x", gap, start: gap.start, end: "2026-12-12T16:00:00.000Z" }]);
+    expect(items).toEqual([{ kind: "timed", id: `timed:${gap.start}`, label: "x", gap, start: gap.start, end: "2026-12-12T16:00:00.000Z", place: "" }]);
   });
 
   it("keeps a proposal at the same time only once", () => {
@@ -184,6 +185,7 @@ describe("draftFromSource", () => {
   it("starts a run of days on the first possible start, as long as was searched", () => {
     const [item] = draftFromSource(source([daysPick("2026-12-01", "2026-12-20", ["2026-12-05", "2026-12-12"])]), TODAY);
     expect(item).toMatchObject({ kind: "days", first: "2026-12-05", last: "2026-12-07", gapFirst: "2026-12-01", gapLast: "2026-12-20" });
+    expect(item).toMatchObject({ place: "" });
   });
 
   it("starts at the first day without a starting weekday and stays inside the stretch", () => {
@@ -217,7 +219,7 @@ describe("deadlineOf", () => {
 });
 
 describe("buildCreateRequest", () => {
-  const timedItem: DraftItem = { kind: "timed", id: "a", label: "x", gap, start: gap.start, end: "2026-12-12T16:00:00.000Z" };
+  const timedItem: DraftItem = { kind: "timed", id: "a", label: "x", gap, start: gap.start, end: "2026-12-12T16:00:00.000Z", place: "" };
   const draft = (extra: Partial<PollDraft> = {}): PollDraft => ({
     title: "  Spieleabend ",
     note: "",
@@ -251,8 +253,26 @@ describe("buildCreateRequest", () => {
     }
   });
 
+  it("sends a trimmed place only when it is not empty", () => {
+    const withPlace = buildCreateRequest(draft({ items: [{ ...timedItem, place: "  Kino am Markt " }] }), NOW);
+    expect(withPlace).toMatchObject({ ok: true, request: { proposals: [{ place: "Kino am Markt" }] } });
+    for (const place of ["", "   "]) {
+      const check = buildCreateRequest(draft({ items: [{ ...timedItem, place }] }), NOW);
+      expect(check.ok && check.request.proposals.every((p) => !("place" in p))).toBe(true);
+    }
+    const days: DraftItem = { kind: "days", id: "d", label: "x", gapFirst: "2026-12-01", gapLast: "2026-12-20", first: "2026-12-05", last: "2026-12-07", place: "bei Tom" };
+    expect(buildCreateRequest(draft({ items: [days], deadlineDate: "2026-12-02", deadlineTime: "20:00" }), NOW)).toMatchObject({
+      request: { proposals: [{ first: "2026-12-05", last: "2026-12-07", place: "bei Tom" }] },
+    });
+  });
+
+  it("refuses a place that is too long", () => {
+    expect(buildCreateRequest(draft({ items: [{ ...timedItem, place: "x".repeat(101) }] }), NOW)).toEqual({ ok: false, problem: "place_long", itemId: "a" });
+    expect(buildCreateRequest(draft({ items: [{ ...timedItem, place: "ä".repeat(100) }] }), NOW).ok).toBe(true);
+  });
+
   it("builds a poll of whole days", () => {
-    const days: DraftItem = { kind: "days", id: "d", label: "x", gapFirst: "2026-12-01", gapLast: "2026-12-20", first: "2026-12-05", last: "2026-12-07" };
+    const days: DraftItem = { kind: "days", id: "d", label: "x", gapFirst: "2026-12-01", gapLast: "2026-12-20", first: "2026-12-05", last: "2026-12-07", place: "" };
     const check = buildCreateRequest(draft({ items: [days], deadlineDate: "2026-12-02", deadlineTime: "20:00" }), NOW);
     expect(check).toMatchObject({
       ok: true,
@@ -289,7 +309,7 @@ describe("buildCreateRequest", () => {
   });
 
   it("checks runs of days", () => {
-    const days = (first: string, last: string): DraftItem => ({ kind: "days", id: "d", label: "x", gapFirst: "2026-12-01", gapLast: "2027-02-28", first, last });
+    const days = (first: string, last: string): DraftItem => ({ kind: "days", id: "d", label: "x", gapFirst: "2026-12-01", gapLast: "2027-02-28", first, last, place: "" });
     const check = (item: DraftItem) => buildCreateRequest(draft({ items: [item] }), NOW);
     expect(check(days("2026-12-07", "2026-12-05"))).toMatchObject({ problem: "item_order" });
     expect(check(days("2026-11-02", "2026-12-05"))).toMatchObject({ problem: "item_past" });

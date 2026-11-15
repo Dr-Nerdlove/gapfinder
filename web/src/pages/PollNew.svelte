@@ -1,9 +1,10 @@
 <script lang="ts">
-  import type { Person } from "@lueckenfueller/shared";
+  import type { CreatePollRequest, Person } from "@lueckenfueller/shared";
   import { POLL_NOTE_MAX_LENGTH, POLL_TITLE_MAX_LENGTH } from "@lueckenfueller/shared";
   import { onMount, untrack } from "svelte";
   import * as api from "../lib/api";
   import { berlinToday } from "../lib/gap-search";
+  import { CINEMA_PROBLEM_TEXTS, cinemaRequest, cinemaSubmitLabel, type CheckedShowing } from "../lib/cinema";
   import { errorMessage } from "../lib/messages";
   import {
     DRAFT_PROBLEM_TEXTS,
@@ -21,6 +22,7 @@
   import Message from "../components/Message.svelte";
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
+  import CinemaEntry from "../components/polls/CinemaEntry.svelte";
   import DraftItem from "../components/polls/DraftItem.svelte";
   import Switch from "../components/Switch.svelte";
   import TextField from "../components/TextField.svelte";
@@ -33,6 +35,7 @@
   let deadlineDate = $state("");
   let deadlineTime = $state("");
   let items = $state<Item[]>(source ? draftFromSource(source, today) : []);
+  let chosenShowings = $state<CheckedShowing[]>([]);
   let problem = $state("");
   let problemItem = $state("");
   let busy = $state(false);
@@ -40,10 +43,13 @@
   let hidden = $state(source?.hidden === true);
   // The switch is offered only when the server says it knows hidden votes (an older server would ignore the field).
   let canHide = $state(false);
+  // The same for the place of a proposal.
+  let canPlace = $state(false);
 
   onMount(() => {
     void checkHealth(API_URL).then((result) => {
       canHide = result.kind === "online" && hasFeature(result.features, "hidden_votes");
+      canPlace = result.kind === "online" && hasFeature(result.features, "proposal_place");
     });
   });
 
@@ -67,12 +73,30 @@
     if (!source || busy) return;
     problem = "";
     problemItem = "";
+    if (source.cinema) {
+      const cinema = cinemaRequest({
+        title,
+        note,
+        deadlineDate,
+        deadlineTime,
+        showings: $state.snapshot(chosenShowings),
+        participants: source.participants,
+        hidden: canHide && hidden,
+      });
+      if (!cinema.ok) {
+        problem = CINEMA_PROBLEM_TEXTS[cinema.problem];
+        return;
+      }
+      await send(cinema.request);
+      return;
+    }
     const check = buildCreateRequest({
       title,
       note,
       deadlineDate,
       deadlineTime,
-      items: $state.snapshot(items),
+      // An older server ignores a place: do not send one.
+      items: $state.snapshot(items).map((item) => (canPlace ? item : { ...item, place: "" })),
       participants: source.participants,
       hidden: canHide && hidden,
     });
@@ -81,8 +105,12 @@
       problemItem = check.itemId ?? "";
       return;
     }
+    await send(check.request);
+  }
+
+  async function send(request: CreatePollRequest): Promise<void> {
     busy = true;
-    const result = await session.run((o) => api.createPoll(check.request, o));
+    const result = await session.run((o) => api.createPoll(request, o));
     busy = false;
     if (result.ok) {
       pollSource.clear();
@@ -95,7 +123,7 @@
 
 <Page title="Neue Abstimmung" subtitle="Deine Freunde stimmen über die Termine ab.">
   <OfflineNotice />
-  {#if !source || items.length === 0}
+  {#if !source || (items.length === 0 && !source.cinema)}
     <Card title="Noch keine Termine gewählt">
       <p>Suche zuerst nach Lücken und tippe dort auf die Zeiten, die du vorschlagen möchtest.</p>
       <div><Button href="#/suche">Zur Suche</Button></div>
@@ -132,16 +160,21 @@
         {/if}
       </Card>
 
-      <Card title="Termine">
-        <p class="hint">{source.summary}</p>
-        {#each items as item, index (item.id)}
-          <DraftItem {item} problem={problemItem === item.id} onchange={(next) => (items[index] = next)} />
-        {/each}
+      {#if source.cinema}
+        <CinemaEntry source={source.cinema} bind:chosen={chosenShowings} />
         <p class="hint">{invited}</p>
-      </Card>
+      {:else}
+        <Card title="Termine">
+          <p class="hint">{source.summary}</p>
+          {#each items as item, index (item.id)}
+            <DraftItem {item} {canPlace} problem={problemItem === item.id} onchange={(next) => (items[index] = next)} />
+          {/each}
+          <p class="hint">{invited}</p>
+        </Card>
+      {/if}
 
       <Message text={problem} />
-      <Button type="submit" disabled={busy || sessionState.offline} full>{busy ? "Wird erstellt …" : "Abstimmung erstellen"}</Button>
+      <Button type="submit" disabled={busy || sessionState.offline} full>{busy ? "Wird erstellt …" : source.cinema ? cinemaSubmitLabel(chosenShowings.length) : "Abstimmung erstellen"}</Button>
     </form>
   {/if}
 </Page>
@@ -172,6 +205,7 @@
     display: flex;
     flex-direction: column;
     gap: 4px;
+    min-width: 0;
     margin: 0;
     padding: 0;
     border: 0;

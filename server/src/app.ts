@@ -136,7 +136,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
       status: "ok",
       version: config.appVersion,
       time: now().toISOString(),
-      features: ["hidden_votes"],
+      features: ["hidden_votes", "proposal_place", "minute_times"],
     }),
   );
 

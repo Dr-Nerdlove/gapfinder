@@ -2,7 +2,7 @@
   import type { PollView, VoteAnswer } from "@lueckenfueller/shared";
   import { VOTE_NAME_MAX_LENGTH } from "@lueckenfueller/shared";
   import type { CalendarHint } from "../../lib/poll-calendar";
-  import { ANSWER_LABELS, ANSWERS, answersOfVote, proposalLabel, type AnswerMap } from "../../lib/poll-view";
+  import { ANSWER_LABELS, ANSWERS, answersOfVote, proposalLabel, proposalPlace, type AnswerMap } from "../../lib/poll-view";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
   import Chip from "../Chip.svelte";
@@ -61,6 +61,7 @@
     {#each poll.proposals as proposal (proposal.id)}
       <fieldset>
         <legend>{proposalLabel(proposal)}</legend>
+        {#if proposalPlace(proposal)}<p class="place">{proposalPlace(proposal)}</p>{/if}
         {#if hintFor}
           {@const hint = hintFor(proposal.id, answers[proposal.id])}
           {#if hint}<p class="hint {hint.tone}">{hint.text}</p>{/if}
@@ -103,6 +104,13 @@
     margin-bottom: 8px;
     font-weight: 600;
     color: var(--md-sys-color-on-surface);
+  }
+
+  .place {
+    margin: 0 0 8px;
+    font-size: 0.875rem;
+    color: var(--md-sys-color-on-surface-variant);
+    overflow-wrap: anywhere;
   }
 
   .hint {

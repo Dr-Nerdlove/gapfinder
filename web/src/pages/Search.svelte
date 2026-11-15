@@ -1,6 +1,6 @@
 <script lang="ts">
   import { NEAR_MISS_MIN_PEOPLE, SEARCH_DEFAULT_WINDOW, type Group, type Person, type SearchRequest, type SearchResult, type SkippedPerson } from "@lueckenfueller/shared";
-  import { tick, untrack } from "svelte";
+  import { onMount, tick, untrack } from "svelte";
   import * as api from "../lib/api";
   import {
     REQUEST_PROBLEM_TEXTS,
@@ -17,8 +17,11 @@
     type ResultView,
   } from "../lib/gap-search";
   import { searchedDays, type SearchedDays } from "../lib/colour-grid";
+  import { API_URL } from "../lib/config";
+  import { checkHealth, hasFeature } from "../lib/health";
   import { errorMessage } from "../lib/messages";
-  import { MAX_PICKS, pollSource, selectionLabel, togglePick } from "../lib/poll-draft";
+  import { cinemaSourceOf } from "../lib/cinema";
+  import { MAX_PICKS, pollSource, selectionLabel, togglePick, type CinemaSource } from "../lib/poll-draft";
   import { applyReplan, replanHandover } from "../lib/replan";
   import { navigate } from "../lib/router";
   import { session, sessionState } from "../lib/session.svelte";
@@ -56,9 +59,18 @@
     grid: { result: SearchResult; readable: number; searched: SearchedDays; window: { start: string; end: string } };
     /** What a poll made from this answer needs to know about the search. */
     source: { durationMinutes: number; periodDays: number; participants: number[] };
+    /** The whole hours result for the cinema entry; none for a days search. */
+    cinema: CinemaSource | null;
   }
   let selected = $state<PollPick[]>([]);
   let answer = $state<Answer | null>(null);
+  // The cinema entry needs a server that knows places and minute times (an older one would ignore them).
+  let canCinema = $state(false);
+  onMount(() => {
+    void checkHealth(API_URL).then((result) => {
+      canCinema = result.kind === "online" && hasFeature(result.features, "proposal_place") && hasFeature(result.features, "minute_times");
+    });
+  });
 
   const others = $derived(user ? everyone.filter((p) => p.id !== user.id) : []);
 
@@ -125,6 +137,11 @@
           periodDays: request.mode === "days" ? request.days : 1,
           participants: [...request.people],
         },
+        cinema: cinemaSourceOf(
+          result.data,
+          { from: request.from, to: request.to, window: (request.mode === "hours" ? request.window : undefined) ?? SEARCH_DEFAULT_WINDOW, durationMinutes: request.mode === "hours" ? request.durationMinutes : 0 },
+          everyone,
+        ),
       };
       selected = []; // the chosen times belong to the old answer
       await tick();
@@ -137,6 +154,18 @@
 
   function toggle(pick: PollPick): void {
     selected = togglePick(selected, pick);
+  }
+
+  function planCinema(): void {
+    if (!answer?.cinema) return;
+    pollSource.set({
+      picks: [],
+      summary: answer.summary,
+      ...answer.source,
+      cinema: answer.cinema,
+      ...(replan ? { title: replan.title, note: replan.note, hidden: replan.hidden } : {}),
+    });
+    navigate("#/abstimmung-neu");
   }
 
   function makePoll(): void {
@@ -170,6 +199,9 @@
     <SearchForm bind:settings {others} {groups} ongroups={(next) => (groups = next)} {today} {searching} {locked} {problem} onsearch={search} />
     {#if answer}
       <div bind:this={resultBox} class="scroll-target">
+        {#if canCinema && answer.cinema}
+          <div class="cinema"><Button variant="tonal" onclick={planCinema} disabled={locked}>Kinoabend planen</Button></div>
+        {/if}
         <SearchResults
           summary={answer.summary}
           notices={answer.notices}
@@ -207,6 +239,10 @@
     color: var(--md-sys-color-on-primary-container);
     box-shadow: 0 2px 8px rgb(0 0 0 / 0.25);
     font-weight: 600;
+  }
+
+  .cinema {
+    margin-bottom: 12px;
   }
 
   .scroll-target {

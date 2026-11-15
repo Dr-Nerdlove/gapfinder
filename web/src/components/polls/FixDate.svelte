@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { PollView } from "@lueckenfueller/shared";
   import { fixedIdOf, startChoice, warningLines, type CheckReview } from "../../lib/fix-date";
-  import { bestProposalIds, proposalLabel, tallies, tallyText } from "../../lib/poll-view";
+  import { bestProposalIds, proposalLabel, proposalPlace, tallies, tallyText } from "../../lib/poll-view";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
   import ConfirmDialog from "../ConfirmDialog.svelte";
@@ -84,6 +84,7 @@
         <input type="radio" name="{id}-choice" value={proposal.id} checked={proposal.id === choice} onchange={() => (picked = proposal.id)} />
         <span>
           <strong>{proposalLabel(proposal)}</strong>
+          {#if proposalPlace(proposal)}<small>{proposalPlace(proposal)}</small>{/if}
           <small>{detail(proposal.id, index)}</small>
         </span>
       </label>
@@ -121,6 +122,9 @@
       <p>Du kannst den Termin trotzdem festlegen.</p>
     {/if}
     <p>Danach können alle nicht mehr abstimmen.</p>
+    {#if chosen && proposalPlace(chosen)}
+      <p>Der Termin geht mit Ort („{proposalPlace(chosen)}“) an alle und in den Kalender.</p>
+    {/if}
     <div class="buttons">
       <Button variant="outlined" onclick={() => (review = null)}>Abbrechen</Button>
       <Button disabled={busy || locked} onclick={confirmFix}>

@@ -92,7 +92,9 @@ object NotificationTexts {
                 "date_fixed" -> {
                     val label = proposalText(record.opt("proposal"))
                     if (label != null) {
-                        return NotificationText("Termin steht: $pollTitle", "$actor hat den Termin festgelegt: $label.", shareToken, tag)
+                        val place = (record.opt("proposal") as? JSONObject)?.let { textOf(it.opt("place")) }
+                        val what = if (place != null) "$label, $place" else label
+                        return NotificationText("Termin steht: $pollTitle", "$actor hat den Termin festgelegt: $what.", shareToken, tag)
                     }
                 }
             }

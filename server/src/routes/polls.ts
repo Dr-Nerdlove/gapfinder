@@ -95,7 +95,7 @@ const createBody = {
       maxItems: POLL_MAX_PROPOSALS,
       items: {
         type: "object",
-        properties: { start: instant, end: instant, first: instant, last: instant },
+        properties: { start: instant, end: instant, first: instant, last: instant, place: { type: "string", maxLength: 1000 } },
       },
     },
     // The creator may be in the list too.

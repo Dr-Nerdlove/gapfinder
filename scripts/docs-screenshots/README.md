@@ -20,6 +20,7 @@ two minutes. `run.sh` builds `shared` and the server, starts the web app (`vite`
 | `seed.mjs`        | 14 accounts (Vincent is the admin, made with the CLI like on the real server), a calendar each except Lena, two groups, one poll, one open invite. |
 | `lib.cjs`         | Phone-sized browser (390x844, scale 2, German, Berlin time), login helper.                                      |
 | `shoot.cjs`       | The pictures, one after the other. Fixing the date changes the poll, so it is the last step.                    |
+| `shoot-cinema.cjs` | Phase 10d, `docs/screenshots/cinema`: search, cinema entry (light and dark, seed colour teal #00796B), poll made in the app, votes through the API, fixing the date, a normal poll with a place. On the cinema day (`cinema.mjs`) five people are free in the evening and Tobi is busy 17:00-18:30, so one showing fails because of a person and one ends after the window. |
 | `run.sh`          | Runs all of it. Everything lives in `$SHOTS_DIR` and is deleted at the start of every run.                      |
 
 Things to know:

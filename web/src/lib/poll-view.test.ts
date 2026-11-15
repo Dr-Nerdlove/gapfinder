@@ -16,6 +16,8 @@ import {
   notVotedYet,
   proposalHeading,
   proposalLabel,
+  proposalLabelWithPlace,
+  proposalPlace,
   manageCloseState,
   statusText,
   summaryLine,
@@ -327,5 +329,22 @@ describe("hidden votes (filtered view)", () => {
 
   it("falls back to the votes when a filtered view has no tally", () => {
     expect(tallies({ ...poll, hidden: true }).map((t) => t.yes)).toEqual([2, 0]);
+  });
+});
+
+describe("place of a proposal", () => {
+  const withPlace: Proposal = { ...P1, place: "Kino am Markt" };
+  it("is added to the one-line label only when set", () => {
+    expect(proposalLabel(withPlace)).toBe("Sa 12.12., 14:00–17:00");
+    expect(proposalLabelWithPlace(withPlace)).toBe("Sa 12.12., 14:00–17:00, Kino am Markt");
+    expect(proposalLabelWithPlace(P1)).toBe(proposalLabel(P1));
+    expect(proposalLabelWithPlace({ ...P1, place: "" })).toBe(proposalLabel(P1));
+  });
+
+  it("is found or null", () => {
+    expect(proposalPlace(withPlace)).toBe("Kino am Markt");
+    expect(proposalPlace(P1)).toBeNull();
+    expect(proposalPlace({ ...P1, place: "  " })).toBeNull();
+    expect(proposalPlace({ id: 3, first: "2026-12-01", last: "2026-12-02", place: "bei Tom" })).toBe("bei Tom");
   });
 });

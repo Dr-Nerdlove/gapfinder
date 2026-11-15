@@ -1,7 +1,7 @@
 {
   "name": "lueckenfueller",
   "private": true,
-  "version": "2.4.0",
+  "version": "2.5.0",
   "description": "Lückenfüller: finds time slots where all friends are free.",
   "license": "AGPL-3.0-only",
   "engines": {
@@ -21,7 +21,7 @@
     "build": "npm run build --workspaces --if-present"
   },
   "devDependencies": {
-    "@capacitor/android": "8.5.0",
-    "@capacitor/cli": "8.5.0"
+    "@capacitor/android": "8.6.2",
+    "@capacitor/cli": "8.6.2"
   }
 }

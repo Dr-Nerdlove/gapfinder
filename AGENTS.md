@@ -343,6 +343,9 @@ missing, with a recommendation, and let the people choose.
     From day 50 after the last commit on `main`, the run at 12:37 Berlin time fails once a day as a reminder
     (`scripts/inactivity-reminder.sh`, last step of the workflow); a run failed because of the reminder does not
     affect the outage marker.
+  - Proposals may carry a `place` and start/end on any minute since 10d (features `proposal_place`, `minute_times`);
+    the app keeps quarter hours for normal proposals. The cinema logic lives in `web/src/lib/cinema.ts`; a showing's end
+    includes the advert buffer, and times before 05:00 belong to the night after the chosen day.
 - **Android release:** `release.yml` builds the signed APK (`lueckenfueller-<version>.apk`) for the release commit and
   attaches it, with its SHA-256 signature in the notes. It needs the secrets `ANDROID_KEYSTORE_BASE64` and
   `ANDROID_KEYSTORE_PASSWORD` and the committed `android/signing-fingerprint.txt` (made by the owner, see

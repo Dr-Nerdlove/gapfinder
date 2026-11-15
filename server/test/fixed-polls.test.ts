@@ -476,6 +476,20 @@ describe("the calendar file of the fixed date", () => {
     return calendar.getAllSubcomponents("vevent").map((vevent) => new ICAL.Event(vevent));
   }
 
+  it("writes the place of the fixed proposal as LOCATION, and none when there is no place", async () => {
+    const e = await setup();
+    const poll = await createPoll(
+      e,
+      timedBody({ proposals: [{ ...SLOT_A, place: "Kino, Saal 2" }, SLOT_B] }),
+    );
+    await fix(e, poll, 0);
+    const withPlace = await download(e, poll);
+    expect(parse(withPlace.body)[0]!.location).toBe("Kino, Saal 2");
+    expect(withPlace.body).toContain("LOCATION:Kino\\, Saal 2\r\n");
+    await fix(e, poll, 1);
+    expect((await download(e, poll)).body).not.toContain("LOCATION");
+  });
+
   it("sends the fixed date as a download to everybody with the link, guests too", async () => {
     const e = await setup();
     const poll = await createPoll(e, timedBody({ note: "Bei mir, Küche; Tür 2" }));
