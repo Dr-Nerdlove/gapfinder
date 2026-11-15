@@ -21,7 +21,7 @@
     "build": "npm run build --workspaces --if-present"
   },
   "devDependencies": {
-    "@capacitor/android": "8.5.0",
-    "@capacitor/cli": "8.5.0"
+    "@capacitor/android": "8.6.2",
+    "@capacitor/cli": "8.6.2"
   }
 }
