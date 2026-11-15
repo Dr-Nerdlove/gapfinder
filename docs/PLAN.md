@@ -785,6 +785,10 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   interface, and the entry by hand stays as the fallback. The paid alternative, if cineamo says no: a trial of
   International Showtimes, first to see whether the cinemas are covered, then the owner decides about the price.
   The request to cineamo was drafted on 2026-11-12 and is sent by the owner (not kept here: it names the cinemas).
+  Status 2026-11-15: cineamo answered by pointing to the group poll in their own app, no yes; the owner explained the
+  different approach (free times from the calendars first) and asked again, no answer yet. Decided: **no automatic
+  fetch without a yes**; the entry by hand is built first. Note when it comes to it: the interface gives 10 showings
+  per page (one cinema had 36 pages), so a daily fetch is more requests than "a few" unless it can filter by date.
 
   Decided with the owner on 2026-11-12: **no booking in the app**, but a "Tickets" link at a cinema proposal (the
   poll's showings and the chosen date); buying and paying stay with the cinema or its ticket service. The owner
