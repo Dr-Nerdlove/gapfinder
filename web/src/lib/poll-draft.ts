@@ -81,6 +81,23 @@ export function selectionLabel(count: number): string {
   return count === 1 ? "1 Termin gewählt" : `${count} Termine gewählt`;
 }
 
+/** What the cinema entry ("Kinoabend planen") needs to know about an hours search. */
+export interface CinemaSource {
+  /** Free for everyone, per day. */
+  days: { date: string; slots: Slot[] }[];
+  /** Free for most people: each listed person is busy at some point within every slot (never more is known). */
+  partial: { date: string; missingPersonIds: number[]; slots: Slot[] }[];
+  /** The searched daily window; an end at or before the start runs into the next day. */
+  window: { start: string; end: string };
+  /** The searched period, "YYYY-MM-DD", both days included. */
+  from: string;
+  to: string;
+  /** The searched minimum length of a free time. */
+  durationMinutes: number;
+  /** Id to username, for the reasons. */
+  names: Record<number, string>;
+}
+
 /** What the search page hands over to the page that creates the poll. */
 export interface PollSource {
   picks: PollPick[];
@@ -97,6 +114,8 @@ export interface PollSource {
   note?: string;
   /** "Nochmal planen": the old poll hid the votes, so the new form starts with the switch on. */
   hidden?: boolean;
+  /** Cinema entry: the whole hours result; `picks` is empty then. */
+  cinema?: CinemaSource;
 }
 
 let handedOver: PollSource | null = null;
@@ -284,7 +303,7 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
       if ((end - start) / MINUTE_MS > POLL_MAX_TIMED_MINUTES) return fail("item_long");
       if (start <= now.getTime()) return fail("item_past");
       if (start < Date.parse(item.gap.start) || end > Date.parse(item.gap.end)) return fail("item_outside");
-      const key = `${item.start}|${item.end}`;
+      const key = `${item.start}|${item.end}|${place}`; // the same time at two places is fine
       if (seen.has(key)) return fail("item_duplicate");
       seen.add(key);
       timed.push({ start: item.start, end: item.end, ...placePart });
