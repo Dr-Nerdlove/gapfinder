@@ -152,3 +152,16 @@ describe("order of the add-to-calendar buttons", () => {
     expect(defaultProvider([])).toBeNull();
   });
 });
+
+describe("place in the calendar links", () => {
+  const placed = { ...TIMED, place: "Kino am Markt" };
+  it("goes into Google and Outlook as the location", () => {
+    expect(new URL(googleCalendarUrl(eventOf(poll, placed))).searchParams.get("location")).toBe("Kino am Markt");
+    expect(new URL(outlookCalendarUrl(eventOf(poll, placed))).searchParams.get("location")).toBe("Kino am Markt");
+  });
+  it("is left out without a place", () => {
+    expect(new URL(googleCalendarUrl(eventOf(poll, TIMED))).searchParams.has("location")).toBe(false);
+    expect(new URL(outlookCalendarUrl(eventOf(poll, TIMED))).searchParams.has("location")).toBe(false);
+    expect(new URL(googleCalendarUrl(eventOf(poll, { ...TIMED, place: "" }))).searchParams.has("location")).toBe(false);
+  });
+});

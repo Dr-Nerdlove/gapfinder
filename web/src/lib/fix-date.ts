@@ -2,6 +2,7 @@ import type { Calendar, CalendarProvider, FixCheck, PollPerson, PollView, Propos
 import type { ApiResult } from "./api";
 import { addDays } from "./gap-search";
 import { errorMessage } from "./messages";
+import { proposalPlace } from "./poll-view";
 
 // Phase 5b: everything the "date is fixed" screens decide without the screen: which proposal is fixed, the
 // "add to calendar" links, and what the check before fixing says.
@@ -30,13 +31,14 @@ export function fixedProposal(poll: Pick<PollView, "proposals"> & FixedFields): 
 // ---------- links for Google Calendar and Outlook ----------
 
 /** What the "add to calendar" links need to know. Days: both ends included, like the proposal. */
-export type CalendarEvent = { title: string; note: string } & (
+export type CalendarEvent = { title: string; note: string; /** Only present when the proposal has a place. */ place?: string } & (
   | { kind: "timed"; start: string; end: string }
   | { kind: "days"; first: string; last: string }
 );
 
 export function eventOf(poll: Pick<PollView, "title" | "note">, proposal: Proposal): CalendarEvent {
-  const base = { title: poll.title, note: poll.note };
+  const place = proposalPlace(proposal);
+  const base = { title: poll.title, note: poll.note, ...(place !== null ? { place } : {}) };
   return "first" in proposal
     ? { ...base, kind: "days", first: proposal.first, last: proposal.last }
     : { ...base, kind: "timed", start: proposal.start, end: proposal.end };
@@ -65,6 +67,7 @@ export function googleCalendarUrl(event: CalendarEvent): string {
       : `${googleDay(event.first)}/${googleDay(addDays(event.last, 1))}`;
   const parts = [`action=TEMPLATE`, `text=${enc(event.title)}`, `dates=${dates}`];
   if (event.note !== "") parts.push(`details=${enc(event.note)}`);
+  if (event.place !== undefined) parts.push(`location=${enc(event.place)}`);
   return `https://calendar.google.com/calendar/render?${parts.join("&")}`;
 }
 
@@ -89,6 +92,7 @@ export function outlookCalendarUrl(event: CalendarEvent): string {
       : [`startdt=${event.first}`, `enddt=${event.last}`, `allday=true`];
   const parts = [`path=${enc("/calendar/action/compose")}`, `rru=addevent`, `subject=${enc(event.title)}`, ...when];
   if (event.note !== "") parts.push(`body=${enc(event.note)}`);
+  if (event.place !== undefined) parts.push(`location=${enc(event.place)}`);
   return `https://outlook.live.com/calendar/0/deeplink/compose?${parts.join("&")}`;
 }
 

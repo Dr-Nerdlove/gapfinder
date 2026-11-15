@@ -5,6 +5,7 @@ import {
   POLL_MAX_TIMED_MINUTES,
   POLL_NOTE_MAX_LENGTH,
   POLL_TITLE_MAX_LENGTH,
+  PROPOSAL_PLACE_MAX_LENGTH,
   type CreatePollRequest,
   type Slot,
 } from "@lueckenfueller/shared";
@@ -116,8 +117,8 @@ export const pollSource = {
 // ---------- one proposal while it is being edited ----------
 
 export type DraftItem =
-  | { kind: "timed"; id: string; label: string; gap: Slot; start: string; end: string }
-  | { kind: "days"; id: string; label: string; gapFirst: string; gapLast: string; first: string; last: string };
+  | { kind: "timed"; id: string; label: string; gap: Slot; start: string; end: string; place: string }
+  | { kind: "days"; id: string; label: string; gapFirst: string; gapLast: string; first: string; last: string; place: string };
 
 /**
  * Every half hour inside a gap, as instants (`toISOString()`), plus the start and the end of the gap themselves
@@ -178,7 +179,7 @@ export function draftFromSource(source: PollSource, today: string): DraftItem[] 
       const key = `${start}|${end}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      items.push({ kind: "timed", id: pick.id, label: pick.label, gap: pick.slot, start, end });
+      items.push({ kind: "timed", id: pick.id, label: pick.label, gap: pick.slot, start, end, place: "" });
     } else {
       const tomorrow = addDays(today, 1);
       const earliest = pick.starts.find((day) => day >= tomorrow) ?? (pick.first < tomorrow ? tomorrow : pick.first);
@@ -188,7 +189,7 @@ export function draftFromSource(source: PollSource, today: string): DraftItem[] 
       const key = `${first}|${last}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      items.push({ kind: "days", id: pick.id, label: pick.label, gapFirst: pick.first, gapLast: pick.last, first, last });
+      items.push({ kind: "days", id: pick.id, label: pick.label, gapFirst: pick.first, gapLast: pick.last, first, last, place: "" });
     }
   }
   return items;
@@ -204,6 +205,7 @@ export type DraftProblem =
   | "too_many"
   | "item_order"
   | "item_long"
+  | "place_long"
   | "item_past"
   | "item_outside"
   | "item_duplicate"
@@ -219,6 +221,7 @@ export const DRAFT_PROBLEM_TEXTS: Record<DraftProblem, string> = {
   too_many: `Eine Abstimmung kann höchstens ${POLL_MAX_PROPOSALS} Termine haben.`,
   item_order: "Bei einem Termin liegt das Ende nicht nach dem Beginn.",
   item_long: `Ein Termin darf höchstens ${POLL_MAX_TIMED_MINUTES / 60} Stunden oder ${POLL_MAX_DAYS} Tage lang sein.`,
+  place_long: `Ein Ort darf höchstens ${PROPOSAL_PLACE_MAX_LENGTH} Zeichen lang sein.`,
   item_past: "Ein Termin liegt nicht mehr in der Zukunft. Suche bitte neu.",
   item_outside: "Ein Termin liegt nicht innerhalb der gefundenen Lücke.",
   item_duplicate: "Zwei Termine sind gleich.",
@@ -267,10 +270,13 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
   const today = berlinToday(now);
   const tomorrow = addDays(today, 1);
   const seen = new Set<string>();
-  const timed: { start: string; end: string }[] = [];
-  const days: { first: string; last: string }[] = [];
+  const timed: { start: string; end: string; place?: string }[] = [];
+  const days: { first: string; last: string; place?: string }[] = [];
   for (const item of draft.items) {
     const fail = (problem: DraftProblem): DraftCheck => ({ ok: false, problem, itemId: item.id });
+    const place = item.place.trim();
+    if (length(place) > PROPOSAL_PLACE_MAX_LENGTH) return fail("place_long");
+    const placePart = place !== "" ? { place } : {};
     if (item.kind === "timed") {
       const start = Date.parse(item.start);
       const end = Date.parse(item.end);
@@ -281,7 +287,7 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
       const key = `${item.start}|${item.end}`;
       if (seen.has(key)) return fail("item_duplicate");
       seen.add(key);
-      timed.push({ start: item.start, end: item.end });
+      timed.push({ start: item.start, end: item.end, ...placePart });
     } else {
       if (item.last < item.first) return fail("item_order");
       if (item.first < tomorrow) return fail("item_past");
@@ -290,7 +296,7 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
       const key = `${item.first}|${item.last}`;
       if (seen.has(key)) return fail("item_duplicate");
       seen.add(key);
-      days.push({ first: item.first, last: item.last });
+      days.push({ first: item.first, last: item.last, ...placePart });
     }
   }
 

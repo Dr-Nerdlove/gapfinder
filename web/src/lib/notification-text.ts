@@ -78,7 +78,9 @@ export function notificationText(data: unknown): NotificationText {
       case "date_fixed": {
         const label = proposalText(record["proposal"]);
         if (label !== null) {
-          return { title: `Termin steht: ${pollTitle}`, body: `${actor} hat den Termin festgelegt: ${label}.`, shareToken, tag };
+          const place = isRecord(record["proposal"]) ? textOf(record["proposal"]["place"]) : null;
+          const what = place !== null ? `${label}, ${place}` : label;
+          return { title: `Termin steht: ${pollTitle}`, body: `${actor} hat den Termin festgelegt: ${what}.`, shareToken, tag };
         }
         break;
       }

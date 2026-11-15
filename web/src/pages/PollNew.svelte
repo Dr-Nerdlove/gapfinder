@@ -40,10 +40,13 @@
   let hidden = $state(source?.hidden === true);
   // The switch is offered only when the server says it knows hidden votes (an older server would ignore the field).
   let canHide = $state(false);
+  // The same for the place of a proposal.
+  let canPlace = $state(false);
 
   onMount(() => {
     void checkHealth(API_URL).then((result) => {
       canHide = result.kind === "online" && hasFeature(result.features, "hidden_votes");
+      canPlace = result.kind === "online" && hasFeature(result.features, "proposal_place");
     });
   });
 
@@ -72,7 +75,8 @@
       note,
       deadlineDate,
       deadlineTime,
-      items: $state.snapshot(items),
+      // An older server ignores a place: do not send one.
+      items: $state.snapshot(items).map((item) => (canPlace ? item : { ...item, place: "" })),
       participants: source.participants,
       hidden: canHide && hidden,
     });
@@ -135,7 +139,7 @@
       <Card title="Termine">
         <p class="hint">{source.summary}</p>
         {#each items as item, index (item.id)}
-          <DraftItem {item} problem={problemItem === item.id} onchange={(next) => (items[index] = next)} />
+          <DraftItem {item} {canPlace} problem={problemItem === item.id} onchange={(next) => (items[index] = next)} />
         {/each}
         <p class="hint">{invited}</p>
       </Card>

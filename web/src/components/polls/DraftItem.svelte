@@ -1,15 +1,18 @@
 <script lang="ts">
+  import { PROPOSAL_PLACE_MAX_LENGTH } from "@lueckenfueller/shared";
   import { endOptions, instantLabel, startOptions, withStart, type DraftItem } from "../../lib/poll-draft";
   import { berlinToday, formatDay } from "../../lib/gap-search";
 
   interface Props {
     item: DraftItem;
+    /** Whether the server knows places (`proposal_place`); an older server would ignore the field. */
+    canPlace?: boolean;
     /** Marks the proposal the check has complained about. */
     problem?: boolean;
     onchange: (next: DraftItem) => void;
   }
 
-  let { item, problem = false, onchange }: Props = $props();
+  let { item, canPlace = false, problem = false, onchange }: Props = $props();
   const id = $props.id();
 
   function setStart(value: string): void {
@@ -54,6 +57,19 @@
         <label for="{id}-last">Letzter Tag</label>
         <input id="{id}-last" type="date" min={item.first} max={item.gapLast} value={item.last} onchange={(e) => setLast(e.currentTarget.value)} />
       </div>
+    </div>
+  {/if}
+  {#if canPlace}
+    <div class="field">
+      <label for="{id}-place">Ort (optional)</label>
+      <input
+        id="{id}-place"
+        type="text"
+        maxlength={PROPOSAL_PLACE_MAX_LENGTH}
+        placeholder="z. B. Café, Kino, bei Tom"
+        value={item.place}
+        oninput={(e) => onchange({ ...item, place: e.currentTarget.value })}
+      />
     </div>
   {/if}
 </div>
