@@ -272,10 +272,11 @@ $Hide = "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\SpecialAcco
 New-Item -Path $Hide -Force | Out-Null
 New-ItemProperty -Path $Hide -Name $User -Value 0 -PropertyType DWord -Force | Out-Null
 
-# The folder in OneDrive, shared only with that user.
+# The folder in OneDrive, shared only with that user. The "$" at the end of the name hides the share from the
+# list that other devices see in the network (it stays reachable for the VM). Keep the single quotes.
 New-Item -ItemType Directory -Force -Path $Folder | Out-Null
 icacls $Folder /grant "${User}:(OI)(CI)M" | Out-Null
-New-SmbShare -Name "lueckenfueller-backup" -Path $Folder -ChangeAccess $User | Out-Null
+New-SmbShare -Name 'lueckenfueller-backup$' -Path $Folder -ChangeAccess $User | Out-Null
 
 # Let only the VM reach the shared folder, not the rest of the home network.
 New-NetFirewallRule -DisplayName "Lückenfüller backups from the VM" -Direction Inbound -Protocol TCP -LocalPort 445 -RemoteAddress $Vm -InterfaceAlias "vEthernet ($Switch)" -Action Allow | Out-Null
@@ -298,8 +299,9 @@ Get-NetFirewallPortFilter | Where-Object LocalPort -eq 445 | Get-NetFirewallRule
 ```
 
 Only "Lückenfüller backups from the VM" should show. If Windows' "Datei- und Druckerfreigabe (SMB eingehend)"
-shows as well, other devices at home can reach the share too. They would still need the backup user's
-password, but if you do not share files from this PC otherwise, you can switch that rule off.
+shows as well, other devices at home can reach the share too. They do not see it in the network (the "$" in its
+name hides it), and they would still need the backup user's password and your backup key. If you do not share
+files or printers from this PC otherwise, you can switch that rule off; if you do, leave it on.
 
 ### Part 2: the VM
 
@@ -317,7 +319,7 @@ It asks:
    new **secret backup key**, a line starting with `AGE-SECRET-KEY-`. Copy it and save it **in your password
    manager**, and also print it or write it down and keep that at home. To confirm, it asks for the key's last
    6 characters.
-2. **The share and the Windows user**: press Enter twice (`lueckenfueller-backup` and `lueckenbackup`).
+2. **The share and the Windows user**: press Enter twice (`lueckenfueller-backup$` and `lueckenbackup`).
 3. **The password**: paste the password from the PowerShell window (nothing is shown while you paste) and
    press Enter.
 
@@ -332,6 +334,23 @@ Now do the **trial restore** below once, to be sure that your saved key works.
   five lines of the block in part 1 (`$Vm` to `$Password`), then `Set-LocalUser -Name $User -Password (ConvertTo-SecureString
   $Password -AsPlainText -Force)` and `Write-Host $Password`; then `sudo lueckenfueller-backup setup` in the VM
   again (it keeps the key).
+- **The shared folder shows up on other devices in the network** (set up before the share was hidden, under
+  the name `lueckenfueller-backup` without "$"): in PowerShell as administrator run
+
+  ```powershell
+  $Folder = (Get-SmbShare -Name "lueckenfueller-backup").Path
+  Remove-SmbShare -Name "lueckenfueller-backup" -Force
+  New-SmbShare -Name 'lueckenfueller-backup$' -Path $Folder -ChangeAccess "lueckenbackup" | Out-Null
+  ```
+
+  This only renames the share; the folder and the backups in it stay. Then in the VM:
+
+  ```bash
+  sudo sed -i 's/^share=.*/share=lueckenfueller-backup$/' /opt/lueckenfueller/backup-settings/windows-folder.conf
+  sudo lueckenfueller-backup
+  ```
+
+  It ends with `lueckenfueller-backup: done` when the VM reaches the renamed share.
 - **The key is lost**: the old backups can no longer be opened. In the VM run
   `sudo rm /opt/lueckenfueller/backup-settings/public-key.txt` and `sudo lueckenfueller-backup setup`; it creates
   a new key. Backups from then on use the new key (and carry the calendar key again, step 10).
@@ -499,7 +518,7 @@ If the VM is broken or deleted, the backups are still in your OneDrive folder.
 1. Set up a new VM as in steps 2–6 (on the Tailscale admin page, remove the old machine `lueckenfueller` first,
    so the new one gets the same address).
 2. Make sure the folder from "9. Set up backups", part 1, still exists and is shared (in PowerShell:
-   `Get-SmbShare lueckenfueller-backup`). If you set up Windows again too, run part 1 again and copy the
+   `Get-SmbShare 'lueckenfueller-backup$'`). If you set up Windows again too, run part 1 again and copy the
    backup files from OneDrive into the new folder.
 3. In the VM run `sudo lueckenfueller-backup setup`. At the first question **paste your existing secret
    backup key** (do not press Enter, that would create a new key). Then answer as in part 2. It finds the old
@@ -666,7 +685,7 @@ The Tailscale connection and the server address are the same in both directions.
   working on the project; the next fixed version is installed automatically.
 - **A backup failed.** `sudo journalctl -u lueckenfueller-backup -n 30` shows why. "cannot reach the Windows
   folder" means the backup is safe in the VM and is copied the next night; if it keeps happening, check that
-  the shared folder still exists (`Get-SmbShare lueckenfueller-backup` in PowerShell) and run
+  the shared folder still exists (`Get-SmbShare 'lueckenfueller-backup$'` in PowerShell) and run
   `sudo lueckenfueller-backup setup` again. "The Windows PC's address is not set up" means the setup has not
   asked for it yet: run the setup again (see "When the files in `deploy/vm/` change"). If backups fail only
   while a VPN runs on the PC, see the NordVPN note in "Moving the VM from the Default Switch to the home

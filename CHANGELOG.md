@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- The backup folder on the Windows PC is now shared as `lueckenfueller-backup$`: the "$" hides it from the list other devices see in the home network. A setup made before keeps the old name and stays visible until it is renamed; the guide (`docs/server-setup.md`, "9. Set up backups", part 3) has the steps. Only new setups get the new name by themselves.
+
 ## [2.4.0] - 2026-11-12
 
 Three new things for planning: "Nochmal planen" starts a new search with the same people as an earlier poll, the

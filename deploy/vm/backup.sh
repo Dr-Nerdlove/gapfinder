@@ -295,8 +295,9 @@ setup_share() {
   install -d -m 0700 "$SETTINGS_DIR"
   echo >&2
   echo "Now the shared folder on the Windows PC (guide: \"Backups\", part 1)." >&2
-  share="$(ask "Name of the share [lueckenfueller-backup]:")"
-  share="${share:-lueckenfueller-backup}"
+  # The default ends in "$": Windows then leaves the share out of the list other devices see in the network.
+  share="$(ask "Name of the share [lueckenfueller-backup\$]:")"
+  share="${share:-lueckenfueller-backup\$}"
   user="$(ask "Windows user for the backups [lueckenbackup]:")"
   user="${user:-lueckenbackup}"
   if [[ "$user" == *\\* ]]; then domain="${user%%\\*}"; user="${user#*\\}"; fi
