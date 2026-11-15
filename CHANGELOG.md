@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-11-15
+
+Two security fixes: the Android app gets a new app shell (Capacitor 8.6.2) that closes a reported security issue, and
+in polls with hidden votes only the creator still sees who has already voted. The Android app offers the update by
+itself; the server updates itself within about an hour.
+
 ### Fixed
 
 - Android app: updated the app shell (Capacitor 8.6.2) to close a reported security issue. The app offers the update itself.
