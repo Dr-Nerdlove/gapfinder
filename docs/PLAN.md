@@ -732,7 +732,13 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   session's network settings); from search results only (unverified): kinoheld's site uses an undocumented GraphQL
   interface (an unofficial client exists), no official developer access was found, and the commercial International
   Showtimes API is the paid route. Before building on any of it: read the terms of use and robots.txt, and allow the
-  hosts for that session. The friends use about ten cinemas in their region; the owner names them in that session
+  hosts for that session. **Mock-up approved 2026-11-15:** `docs/mockups/10d-cinema-entry.jpg` (light above, dark below,
+  seed colour teal `#00796B`; three screens): the cinema entry when creating a poll (cinema as place, day, field for
+  pasted times, single time, film length, advert buffer 20 minutes, and below it which showings fit into the free times
+  of the search and which do not, with the reason), a finished cinema poll (place and minute times such as 20:10 in the
+  colour table, place under each time), and a normal poll with the new optional "Ort" per proposal. Assumptions in the
+  picture: the end time includes the buffer (20:10–22:40 for a 130-minute film), and a showing that does not fit stays
+  visible, greyed out. The friends use about ten cinemas in their region; the owner names them in that session
   (deliberately not recorded here: the repository is public, and the list would tell where the friends live).
 
   **Automatic reading, checked on 2026-11-12 (nothing built; checked twice, the second time more carefully).**
