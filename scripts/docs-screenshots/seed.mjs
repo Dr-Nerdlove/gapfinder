@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { cinemaDay } from "./cinema.mjs";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const dir = process.env.SHOTS_DIR;
@@ -69,5 +70,5 @@ for (const [name, list] of Object.entries(answers)) {
 const busyIndex = saturdays.findIndex((s) => Math.floor(s.day.getTime() / 86400000 / 7) % 2 === 0);
 
 const invite = await call("POST", "/api/admin/invites", { username: "Ben M." }, admin.token);
-writeFileSync(`${dir}/state.json`, JSON.stringify({ tokens, ids, poll: { id: poll.id, shareToken: poll.shareToken, busyIndex }, benInvite: invite.token, password: PASSWORD }, null, 1));
+writeFileSync(`${dir}/state.json`, JSON.stringify({ tokens, ids, poll: { id: poll.id, shareToken: poll.shareToken, busyIndex }, benInvite: invite.token, cinemaDay: cinemaDay(), password: PASSWORD }, null, 1));
 console.log(`seeded ${Object.keys(tokens).length} accounts, a poll and an invite`);

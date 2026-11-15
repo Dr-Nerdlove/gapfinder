@@ -44,6 +44,8 @@ export interface NewProposal {
   endsAt: string | null;
   firstDate: string | null;
   lastDate: string | null;
+  /** The optional place, already checked; null = none. */
+  place: string | null;
 }
 
 export interface ProposalRow {
@@ -52,6 +54,16 @@ export interface ProposalRow {
   ends_at: string | null;
   first_date: string | null;
   last_date: string | null;
+  place: string | null;
+}
+
+/** A proposal as shown in responses: `place` only when set. */
+export function proposalView(poll: { kind: PollKind }, row: Omit<ProposalRow, "id"> & { id: number }): Proposal {
+  const base =
+    poll.kind === "timed"
+      ? { id: row.id, start: row.starts_at!, end: row.ends_at! }
+      : { id: row.id, first: row.first_date!, last: row.last_date! };
+  return row.place === null ? base : { ...base, place: row.place };
 }
 
 export interface VoteRow {
@@ -129,10 +141,10 @@ export function insertPoll(db: DatabaseSync, poll: NewPoll): number {
     );
   const pollId = Number(result.lastInsertRowid);
   const insertProposal = db.prepare(
-    "INSERT INTO poll_proposals (poll_id, position, starts_at, ends_at, first_date, last_date) VALUES (?, ?, ?, ?, ?, ?)",
+    "INSERT INTO poll_proposals (poll_id, position, starts_at, ends_at, first_date, last_date, place) VALUES (?, ?, ?, ?, ?, ?, ?)",
   );
   poll.proposals.forEach((p, position) => {
-    insertProposal.run(pollId, position, p.startsAt, p.endsAt, p.firstDate, p.lastDate);
+    insertProposal.run(pollId, position, p.startsAt, p.endsAt, p.firstDate, p.lastDate, p.place);
   });
   const insertParticipant = db.prepare("INSERT INTO poll_participants (poll_id, user_id) VALUES (?, ?)");
   for (const userId of poll.participantIds) insertParticipant.run(pollId, userId);
@@ -238,7 +250,7 @@ export function proposalIdsOf(db: DatabaseSync, pollId: number): number[] {
 /** The poll's proposals as stored, in the order the creator chose them. */
 export function proposalRowsOf(db: DatabaseSync, pollId: number): ProposalRow[] {
   return db
-    .prepare("SELECT id, starts_at, ends_at, first_date, last_date FROM poll_proposals WHERE poll_id = ? ORDER BY position")
+    .prepare("SELECT id, starts_at, ends_at, first_date, last_date, place FROM poll_proposals WHERE poll_id = ? ORDER BY position")
     .all(pollId) as unknown as ProposalRow[];
 }
 
@@ -389,11 +401,7 @@ function creatorOf(db: DatabaseSync, poll: PollRow): PollView["creator"] {
 }
 
 function proposalsOf(db: DatabaseSync, poll: PollRow): Proposal[] {
-  return proposalRowsOf(db, poll.id).map((row) =>
-    poll.kind === "timed"
-      ? { id: row.id, start: row.starts_at!, end: row.ends_at! }
-      : { id: row.id, first: row.first_date!, last: row.last_date! },
-  );
+  return proposalRowsOf(db, poll.id).map((row) => proposalView(poll, row));
 }
 
 function votesOf(db: DatabaseSync, pollId: number, onlyVoteId?: number | null): VoteView[] {

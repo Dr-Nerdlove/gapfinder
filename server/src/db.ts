@@ -314,6 +314,13 @@ export const migrations: readonly Migration[] = [
     // flag only ever goes from 1 to 0 (reveal), never back.
     sql: `ALTER TABLE polls ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;`,
   },
+  {
+    id: 16,
+    name: "proposal_place",
+    // Additive only: one nullable column (phase 10d). The optional place of a proposal (a cinema, a restaurant);
+    // NULL = none. An older server (after a rollback) ignores the column.
+    sql: `ALTER TABLE poll_proposals ADD COLUMN place TEXT;`,
+  },
 ];
 
 /** Opens the database (creating its directory if needed) and applies all missing migrations. */

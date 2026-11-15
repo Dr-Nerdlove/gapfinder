@@ -109,6 +109,69 @@
       }
     },
     {
+      "name": "date fixed with a place",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "date_fixed",
+        "actorName": "Anna",
+        "proposal": {
+          "id": 1,
+          "start": "2026-12-12T13:00:00.000Z",
+          "end": "2026-12-12T16:00:00.000Z",
+          "place": "Kino am Markt"
+        }
+      },
+      "expected": {
+        "title": "Termin steht: Grillen",
+        "body": "Anna hat den Termin festgelegt: Sa 12.12., 14:00–17:00, Kino am Markt.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:date_fixed"
+      }
+    },
+    {
+      "name": "date fixed with a place that is not a string",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "date_fixed",
+        "actorName": "Anna",
+        "proposal": {
+          "id": 1,
+          "start": "2026-12-12T13:00:00.000Z",
+          "end": "2026-12-12T16:00:00.000Z",
+          "place": 42
+        }
+      },
+      "expected": {
+        "title": "Termin steht: Grillen",
+        "body": "Anna hat den Termin festgelegt: Sa 12.12., 14:00–17:00.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:date_fixed"
+      }
+    },
+    {
+      "name": "date fixed with an empty place",
+      "data": {
+        "pollTitle": "Grillen",
+        "shareToken": "tok_1",
+        "kind": "date_fixed",
+        "actorName": "Anna",
+        "proposal": {
+          "id": 1,
+          "start": "2026-12-12T13:00:00.000Z",
+          "end": "2026-12-12T16:00:00.000Z",
+          "place": ""
+        }
+      },
+      "expected": {
+        "title": "Termin steht: Grillen",
+        "body": "Anna hat den Termin festgelegt: Sa 12.12., 14:00–17:00.",
+        "shareToken": "tok_1",
+        "tag": "tok_1:date_fixed"
+      }
+    },
+    {
       "name": "account deleted",
       "data": {
         "kind": "account_deleted",

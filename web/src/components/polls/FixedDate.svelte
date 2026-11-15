@@ -6,7 +6,7 @@
   import { errorMessage } from "../../lib/messages";
   import { Lueckenfueller, isAndroidApp } from "../../lib/native";
   import { deliverIcs } from "../../lib/native-actions";
-  import { proposalLabel } from "../../lib/poll-view";
+  import { proposalLabel, proposalPlace } from "../../lib/poll-view";
   import { session } from "../../lib/session.svelte";
   import Button from "../Button.svelte";
   import Message from "../Message.svelte";
@@ -67,6 +67,7 @@
 <section class="fixed" aria-labelledby="fixed-title">
   <span class="tag">Termin steht ✓</span>
   <h2 id="fixed-title">{proposalLabel(proposal)}</h2>
+  {#if proposalPlace(proposal)}<p class="place">{proposalPlace(proposal)}</p>{/if}
   {#if poll.note}<p class="note">{poll.note}</p>{/if}
   <p class="info">Abstimmen geht nicht mehr.</p>
   <div class="actions">
@@ -99,6 +100,12 @@
     font-size: 1.5rem;
     line-height: 1.3;
     font-weight: 700;
+  }
+
+  .place {
+    font-size: 1.125rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
   }
 
   .tag {

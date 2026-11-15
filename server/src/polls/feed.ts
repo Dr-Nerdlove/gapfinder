@@ -16,6 +16,7 @@ function eventOf(
       poll.kind === "timed"
         ? { kind: "timed", start: proposal.starts_at!, end: proposal.ends_at! }
         : { kind: "days", first: proposal.first_date!, last: proposal.last_date! },
+    ...(proposal.place === null ? {} : { place: proposal.place }),
     fixedAt: poll.fixed_at!,
     sequence: poll.fixed_sequence,
   };
@@ -84,7 +85,7 @@ export function feedEventsOf(db: DatabaseSync, userId: number, now: Date): Fixed
   const rows = db
     .prepare(
       `SELECT p.id, p.title, p.note, p.kind, p.fixed_at, p.fixed_sequence,
-              pr.starts_at, pr.ends_at, pr.first_date, pr.last_date
+              pr.starts_at, pr.ends_at, pr.first_date, pr.last_date, pr.place
        FROM polls p JOIN poll_proposals pr ON pr.id = p.fixed_proposal_id
        WHERE p.expires_at > ? AND p.fixed_at IS NOT NULL AND (
          p.creator_id = ?

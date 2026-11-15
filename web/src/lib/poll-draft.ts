@@ -5,6 +5,7 @@ import {
   POLL_MAX_TIMED_MINUTES,
   POLL_NOTE_MAX_LENGTH,
   POLL_TITLE_MAX_LENGTH,
+  PROPOSAL_PLACE_MAX_LENGTH,
   type CreatePollRequest,
   type Slot,
 } from "@lueckenfueller/shared";
@@ -80,6 +81,23 @@ export function selectionLabel(count: number): string {
   return count === 1 ? "1 Termin gewählt" : `${count} Termine gewählt`;
 }
 
+/** What the cinema entry ("Kinoabend planen") needs to know about an hours search. */
+export interface CinemaSource {
+  /** Free for everyone, per day. */
+  days: { date: string; slots: Slot[] }[];
+  /** Free for most people: each listed person is busy at some point within every slot (never more is known). */
+  partial: { date: string; missingPersonIds: number[]; slots: Slot[] }[];
+  /** The searched daily window; an end at or before the start runs into the next day. */
+  window: { start: string; end: string };
+  /** The searched period, "YYYY-MM-DD", both days included. */
+  from: string;
+  to: string;
+  /** The searched minimum length of a free time. */
+  durationMinutes: number;
+  /** Id to username, for the reasons. */
+  names: Record<number, string>;
+}
+
 /** What the search page hands over to the page that creates the poll. */
 export interface PollSource {
   picks: PollPick[];
@@ -96,6 +114,8 @@ export interface PollSource {
   note?: string;
   /** "Nochmal planen": the old poll hid the votes, so the new form starts with the switch on. */
   hidden?: boolean;
+  /** Cinema entry: the whole hours result; `picks` is empty then. */
+  cinema?: CinemaSource;
 }
 
 let handedOver: PollSource | null = null;
@@ -116,8 +136,8 @@ export const pollSource = {
 // ---------- one proposal while it is being edited ----------
 
 export type DraftItem =
-  | { kind: "timed"; id: string; label: string; gap: Slot; start: string; end: string }
-  | { kind: "days"; id: string; label: string; gapFirst: string; gapLast: string; first: string; last: string };
+  | { kind: "timed"; id: string; label: string; gap: Slot; start: string; end: string; place: string }
+  | { kind: "days"; id: string; label: string; gapFirst: string; gapLast: string; first: string; last: string; place: string };
 
 /**
  * Every half hour inside a gap, as instants (`toISOString()`), plus the start and the end of the gap themselves
@@ -178,7 +198,7 @@ export function draftFromSource(source: PollSource, today: string): DraftItem[] 
       const key = `${start}|${end}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      items.push({ kind: "timed", id: pick.id, label: pick.label, gap: pick.slot, start, end });
+      items.push({ kind: "timed", id: pick.id, label: pick.label, gap: pick.slot, start, end, place: "" });
     } else {
       const tomorrow = addDays(today, 1);
       const earliest = pick.starts.find((day) => day >= tomorrow) ?? (pick.first < tomorrow ? tomorrow : pick.first);
@@ -188,7 +208,7 @@ export function draftFromSource(source: PollSource, today: string): DraftItem[] 
       const key = `${first}|${last}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      items.push({ kind: "days", id: pick.id, label: pick.label, gapFirst: pick.first, gapLast: pick.last, first, last });
+      items.push({ kind: "days", id: pick.id, label: pick.label, gapFirst: pick.first, gapLast: pick.last, first, last, place: "" });
     }
   }
   return items;
@@ -204,6 +224,7 @@ export type DraftProblem =
   | "too_many"
   | "item_order"
   | "item_long"
+  | "place_long"
   | "item_past"
   | "item_outside"
   | "item_duplicate"
@@ -219,6 +240,7 @@ export const DRAFT_PROBLEM_TEXTS: Record<DraftProblem, string> = {
   too_many: `Eine Abstimmung kann höchstens ${POLL_MAX_PROPOSALS} Termine haben.`,
   item_order: "Bei einem Termin liegt das Ende nicht nach dem Beginn.",
   item_long: `Ein Termin darf höchstens ${POLL_MAX_TIMED_MINUTES / 60} Stunden oder ${POLL_MAX_DAYS} Tage lang sein.`,
+  place_long: `Ein Ort darf höchstens ${PROPOSAL_PLACE_MAX_LENGTH} Zeichen lang sein.`,
   item_past: "Ein Termin liegt nicht mehr in der Zukunft. Suche bitte neu.",
   item_outside: "Ein Termin liegt nicht innerhalb der gefundenen Lücke.",
   item_duplicate: "Zwei Termine sind gleich.",
@@ -267,10 +289,13 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
   const today = berlinToday(now);
   const tomorrow = addDays(today, 1);
   const seen = new Set<string>();
-  const timed: { start: string; end: string }[] = [];
-  const days: { first: string; last: string }[] = [];
+  const timed: { start: string; end: string; place?: string }[] = [];
+  const days: { first: string; last: string; place?: string }[] = [];
   for (const item of draft.items) {
     const fail = (problem: DraftProblem): DraftCheck => ({ ok: false, problem, itemId: item.id });
+    const place = item.place.trim();
+    if (length(place) > PROPOSAL_PLACE_MAX_LENGTH) return fail("place_long");
+    const placePart = place !== "" ? { place } : {};
     if (item.kind === "timed") {
       const start = Date.parse(item.start);
       const end = Date.parse(item.end);
@@ -278,10 +303,10 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
       if ((end - start) / MINUTE_MS > POLL_MAX_TIMED_MINUTES) return fail("item_long");
       if (start <= now.getTime()) return fail("item_past");
       if (start < Date.parse(item.gap.start) || end > Date.parse(item.gap.end)) return fail("item_outside");
-      const key = `${item.start}|${item.end}`;
+      const key = `${item.start}|${item.end}|${place}`; // the same time at two places is fine
       if (seen.has(key)) return fail("item_duplicate");
       seen.add(key);
-      timed.push({ start: item.start, end: item.end });
+      timed.push({ start: item.start, end: item.end, ...placePart });
     } else {
       if (item.last < item.first) return fail("item_order");
       if (item.first < tomorrow) return fail("item_past");
@@ -290,7 +315,7 @@ export function buildCreateRequest(draft: PollDraft, now: Date = new Date()): Dr
       const key = `${item.first}|${item.last}`;
       if (seen.has(key)) return fail("item_duplicate");
       seen.add(key);
-      days.push({ first: item.first, last: item.last });
+      days.push({ first: item.first, last: item.last, ...placePart });
     }
   }
 

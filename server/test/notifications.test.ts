@@ -283,6 +283,18 @@ describe("date fixed", () => {
     expect(fixed).toMatchObject({ actorName: "Olga O.", proposal: { id: poll.proposals[0]!.id, ...SLOT_A } });
   });
 
+  it("puts the place of the fixed proposal into the notification, and no key without one", async () => {
+    const e = await setup();
+    const poll = await createPoll(e, [e.anna], { proposals: [{ ...SLOT_A, place: "Cinemaxx" }, SLOT_B] });
+    await fix(e, poll, 0);
+    const first = (await notificationsOf(e, e.anna)).at(-1)!.data as Extract<NotificationData, { kind: "date_fixed" }>;
+    expect(first.proposal).toEqual({ id: poll.proposals[0]!.id, ...SLOT_A, place: "Cinemaxx" });
+    await fix(e, poll, 1);
+    const second = (await notificationsOf(e, e.anna)).at(-1)!.data as Extract<NotificationData, { kind: "date_fixed" }>;
+    expect(second.proposal).toEqual({ id: poll.proposals[1]!.id, ...SLOT_B });
+    expect("place" in second.proposal).toBe(false);
+  });
+
   it("tells again when the date changes, but not when the same proposal is fixed again or the date is taken back", async () => {
     const e = await setup();
     const poll = await createPoll(e, [e.anna]);

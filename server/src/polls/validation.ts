@@ -7,6 +7,7 @@ import {
   POLL_MAX_TIMED_MINUTES,
   POLL_NOTE_MAX_LENGTH,
   POLL_TITLE_MAX_LENGTH,
+  PROPOSAL_PLACE_MAX_LENGTH,
   usernameKey,
   VOTE_NAME_MAX_LENGTH,
   type PollKind,
@@ -34,7 +35,7 @@ export interface RawCreatePoll {
   title: string;
   note?: string;
   kind: PollKind;
-  proposals: { start?: string; end?: string; first?: string; last?: string }[];
+  proposals: { start?: string; end?: string; first?: string; last?: string; place?: string }[];
   participants: number[];
   deadline?: string | null;
   hidden?: boolean;
@@ -70,6 +71,15 @@ export function checkedNote(raw: string): string {
   return note;
 }
 
+/** The optional place of a proposal: trimmed, 1 to `PROPOSAL_PLACE_MAX_LENGTH` characters, no control characters; empty or missing = null. */
+export function checkedPlace(raw: string | undefined): string | null {
+  if (raw === undefined) return null;
+  const place = normalizeName(raw);
+  if (place === "") return null;
+  if (codePoints(place) > PROPOSAL_PLACE_MAX_LENGTH || CONTROL_CHARACTER.test(place)) throw validation("proposals");
+  return place;
+}
+
 export function checkedGuestName(raw: string): { name: string; key: string } {
   const name = normalizeName(raw);
   const length = codePoints(name);
@@ -102,10 +112,9 @@ function timedProposals(raw: RawCreatePoll["proposals"], now: Date): NewProposal
     const start = parseInstant(item.start);
     const end = parseInstant(item.end);
     if (start === null || end === null) throw validation("proposals");
-    if (start.getUTCMinutes() % 15 !== 0 || end.getUTCMinutes() % 15 !== 0) throw validation("proposals");
     if (start <= now || start > latest || end <= start) throw validation("proposals");
     if ((end.getTime() - start.getTime()) / MINUTE_MS > POLL_MAX_TIMED_MINUTES) throw validation("proposals");
-    return { startsAt: start.toISOString(), endsAt: end.toISOString(), firstDate: null, lastDate: null };
+    return { startsAt: start.toISOString(), endsAt: end.toISOString(), firstDate: null, lastDate: null, place: checkedPlace(item.place) };
   });
 }
 
@@ -128,7 +137,7 @@ function daysProposals(raw: RawCreatePoll["proposals"], now: Date): DaysRange[] 
     }
     if (lastDay > today + POLL_MAX_DAYS_AHEAD) throw validation("proposals");
     return {
-      proposal: { startsAt: null, endsAt: null, firstDate: formatDateParts(first), lastDate: formatDateParts(last) },
+      proposal: { startsAt: null, endsAt: null, firstDate: formatDateParts(first), lastDate: formatDateParts(last), place: checkedPlace(item.place) },
       last,
     };
   });
@@ -162,7 +171,7 @@ export function checkedPoll(raw: RawCreatePoll, now: Date): CheckedPoll {
     proposals = ranges.map((range) => range.proposal);
     lastDays = ranges.map((range) => range.last);
   }
-  const keys = proposals.map((p) => `${p.startsAt ?? p.firstDate}|${p.endsAt ?? p.lastDate}`);
+  const keys = proposals.map((p) => `${p.startsAt ?? p.firstDate}|${p.endsAt ?? p.lastDate}|${p.place ?? ""}`);
   if (new Set(keys).size !== keys.length) throw validation("proposals");
 
   const deadline = raw.deadline === undefined || raw.deadline === null ? null : checkedDeadline(raw.deadline, now);

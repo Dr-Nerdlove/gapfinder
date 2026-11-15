@@ -8,6 +8,7 @@
     notVotedYet,
     proposalHeading,
     proposalLabel,
+    proposalPlace,
     tallies,
     tallyText,
     voteCount,
@@ -46,6 +47,7 @@
             {#if best.has(proposal.id)}<span class="star-gap" aria-hidden="true">★</span>{/if}{proposalLabel(proposal)}
             {#if best.has(proposal.id)}<span class="visually-hidden">{fixed ? " (festgelegter Termin)" : " (meiste Ja)"}</span>{/if}
           </span>
+          {#if proposalPlace(proposal)}<span class="place"><svg class="pin" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg><span class="visually-hidden">Ort: </span>{proposalPlace(proposal)}</span>{/if}
           <span class="bar" role="img" aria-label={tallyText(sum)}>
             {#if sum.yes > 0}<span class="seg yes" style:flex-grow={sum.yes} aria-hidden="true">{sum.yes}</span>{/if}
             {#if sum.maybe > 0}<span class="seg maybe" style:flex-grow={sum.maybe} aria-hidden="true">{sum.maybe}</span>{/if}
@@ -78,6 +80,7 @@
             {@const heading = proposalHeading(proposal)}
             <th scope="col" class:best={best.has(proposal.id)}>
               {#if best.has(proposal.id)}<span class="star-mark" aria-hidden="true">★</span>{/if}{heading.top}{#if heading.bottom}<br /><small>{heading.bottom}</small>{/if}
+              {#if proposalPlace(proposal)}<small class="place"><svg class="pin" viewBox="0 0 24 24" width="12" height="12" aria-hidden="true" focusable="false"><path fill="currentColor" d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7Zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5Z"/></svg><span class="visually-hidden">Ort: </span><span class="place-text">{proposalPlace(proposal)}</span></small>{/if}
               {#if best.has(proposal.id)}<span class="visually-hidden">{fixed ? " (festgelegter Termin)" : " (meiste Ja)"}</span>{/if}
             </th>
           {/each}
@@ -174,6 +177,27 @@
 
   small {
     font-weight: 400;
+  }
+
+  /* The place under the time: small, may wrap, never widens the table much. */
+  .place {
+    color: var(--md-sys-color-on-surface-variant);
+    font-size: 0.75rem;
+    font-weight: 400;
+    overflow-wrap: anywhere;
+  }
+
+  thead .place {
+    display: block;
+    max-width: 7rem;
+    margin: 2px auto 0;
+    line-height: 1.25;
+  }
+
+  .pin {
+    display: inline-block;
+    margin-inline-end: 2px;
+    vertical-align: -1px;
   }
 
   /* The best (or fixed) proposal is marked with a star and bold type, not with a fill. */

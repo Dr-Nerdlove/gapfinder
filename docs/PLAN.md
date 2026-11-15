@@ -828,6 +828,26 @@ the owner (choices with a recommendation, a preview mock-up where something is v
     (no effect on search, polls, health check or start-up). One fetch per cinema a day, outside the hours the home PC
     is off, with a time limit and a size limit; the load test (9f) is rerun once it exists.
 
+  **Built 2026-11-15 (entry by hand).** Server: an optional `place` for every proposal and start/end on any whole minute
+  (`HealthResponse.features`: `proposal_place`, `minute_times`); the place is in the poll view, the calendar feed
+  (`LOCATION`) and the notification data. App: "Ort (optional)" in the poll form, the place under each time in the table
+  and at the fixed date, and the cinema entry (`web/src/lib/cinema.ts`, `CinemaEntry.svelte`): cinema, day, pasted
+  showtimes or single times, film length (default 120 minutes), advert buffer (default 20 minutes), the card "Passt in
+  eure freien Zeiten?", a poll made from the fitting showings. Android shell 6 shows the place in notification texts.
+  Rollback check (the open point above): the previous server image reads, shows, fixes and exports polls with minute
+  times and the extra column unchanged; it only does not show the place until it is updated. Deviations from the
+  mock-up:
+  - The reason "Lena ist erst ab 18:00 frei" is not possible honestly, because the search only says that someone is busy
+    within a time, not from when they are free. The reasons read "Lena hat da keine Zeit" (or "Lena und Emil haben da
+    keine Zeit") and, where only the free times of everybody are known, "alle frei erst ab 18:00 Uhr" / "alle frei nur
+    bis 22:00 Uhr".
+  - The entry starts from the button "Kinoabend planen" under an hours search (it needs that result), not from the poll
+    form; a fitting showing can be left out by a tap ("weggelassen").
+  - The hint about the search duration appears only when the searched duration is longer than film plus buffer, because
+    the search finds only gaps at least that long (shorter gaps that the film would fit into are missing).
+  Still open: the automatic fetch of showtimes, the ticket link and the credit "Spielzeiten: Cineamo" (only with
+  cineamo's yes).
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
