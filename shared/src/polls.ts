@@ -66,7 +66,7 @@ interface CreatePollBase {
   deadline?: string | null;
   /**
    * Hidden votes (phase 10b): only the creator sees who voted what (an admin does not); everybody else gets the sums per
-   * proposal (`PollView.tally`), which participants have voted (`PollView.votedParticipantIds`) and their own vote.
+   * proposal (`PollView.tally`) and their own vote, but not who has voted.
    * Default false. Send it only when the server lists `hidden_votes` in `HealthResponse.features`: an older server
    * ignores the field and would create an open poll. A server that knows it refuses unknown fields of this request
    * (`validation`, field = the unknown name) instead of ignoring them.
@@ -161,12 +161,16 @@ export interface PollView {
    */
   hidden?: boolean;
   /**
-   * The sums per proposal, in the order of `proposals`. The server sends `tally` and `votedParticipantIds` exactly
+   * The sums per proposal, in the order of `proposals`. The server sends `tally` exactly
    * when it filtered the votes for this caller (hidden poll, caller is not the creator), so their presence is the
    * sign to show sums instead of a table. Never judge it by `canManage`: an admin manages but is filtered.
    */
   tally?: ProposalTally[];
-  /** Sent together with `tally`, only when the votes are filtered: the participants (account ids) who have voted. */
+  /**
+   * Sent by servers up to 2.4.0 together with `tally` to non-creators of a hidden poll. No longer sent (it showed who
+   * had voted, which with the sums gives away every vote); the app ignores it. Only the creator learns who voted,
+   * from `votes`.
+   */
   votedParticipantIds?: number[];
   deadline: string | null;
   /** Closed by hand (`UpdatePollRequest.closed`). */

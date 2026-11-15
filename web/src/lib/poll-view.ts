@@ -185,12 +185,13 @@ export function answerOf(vote: VoteView, proposalId: number): VoteAnswer | null 
   return vote.answers.find((a) => a.proposalId === proposalId)?.answer ?? null;
 }
 
-/** The people of the search who have no account vote yet (guests are not on the list of participants). */
-export function notVotedYet(poll: Pick<PollView, "participants" | "votes"> & Partial<Pick<PollView, "hidden" | "tally" | "votedParticipantIds">>): PollPerson[] {
-  if (isFilteredView(poll) && poll.votedParticipantIds !== undefined) {
-    const sent = new Set(poll.votedParticipantIds);
-    return poll.participants.filter((p) => !sent.has(p.id));
-  }
+/**
+ * The people of the search who have no account vote yet (guests are not on the list of participants). A filtered
+ * view (hidden poll, not the creator) has none: who has voted is the creator's secret, and an older server's
+ * `votedParticipantIds` is ignored on purpose.
+ */
+export function notVotedYet(poll: Pick<PollView, "participants" | "votes"> & Partial<Pick<PollView, "hidden" | "tally">>): PollPerson[] {
+  if (isFilteredView(poll)) return [];
   const voted = new Set(poll.votes.flatMap((v) => (v.personId === null ? [] : [v.personId])));
   return poll.participants.filter((p) => !voted.has(p.id));
 }

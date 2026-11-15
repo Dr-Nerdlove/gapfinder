@@ -7,6 +7,7 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- Polls with hidden votes: only the creator can now see who has already voted. Everybody else still sees the sums, but no longer which people are still missing. The app shows nothing about who voted even while the server has not been updated yet.
 - The backup folder on the Windows PC is now shared as `lueckenfueller-backup$`: the "$" hides it from the list other devices see in the home network. A setup made before keeps the old name and stays visible until it is renamed; the guide (`docs/server-setup.md`, "9. Set up backups", part 3) has the steps. Only new setups get the new name by themselves.
 
 ## [2.4.0] - 2026-11-12
