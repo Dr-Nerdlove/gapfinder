@@ -9,6 +9,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - Android app: updated the app shell (Capacitor 8.6.2) to close a reported security issue. The app offers the update itself.
 
+### Changed
+
+- Polls with hidden votes: only the creator can now see who has already voted. Everybody else still sees the sums, but no longer which people are still missing. The app shows nothing about who voted even while the server has not been updated yet.
+
 ## [2.5.0] - 2026-11-15
 
 Planning a cinema evening: after a search, "Kinoabend planen" takes the showtimes of one or more cinemas (pasted from

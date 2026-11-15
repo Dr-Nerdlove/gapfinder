@@ -307,17 +307,18 @@ describe("hidden votes (filtered view)", () => {
     expect(bestProposalIds(filtered)).toEqual([2]);
   });
 
-  it("takes who has not voted from votedParticipantIds", () => {
-    expect(notVotedYet(filtered).map((p) => p.username)).toEqual(["Vincent"]);
-    expect(notVotedYet({ ...filtered, votedParticipantIds: [1, 2, 3] })).toEqual([]);
+  it("tells nobody who has not voted, even when an older server still sends votedParticipantIds", () => {
+    expect(notVotedYet(filtered)).toEqual([]);
+    const { votedParticipantIds: _old, ...fromNewServer } = filtered;
+    expect(notVotedYet(fromNewServer)).toEqual([]);
   });
 
-  it("shows an admin who manages the poll the sums and the missing people, not the votes", () => {
+  it("shows an admin who manages the poll the sums, not the votes or the missing people", () => {
     const admin: PollView = { ...filtered, canManage: true };
     expect(tallies(admin)[1]).toEqual({ proposalId: 2, yes: 5, maybe: 0, no: 2 });
     expect(voteCount(admin)).toBe(4);
     expect(bestProposalIds(admin)).toEqual([2]);
-    expect(notVotedYet(admin).map((p) => p.username)).toEqual(["Vincent"]);
+    expect(notVotedYet(admin)).toEqual([]);
   });
 
   it("counts the votes themselves for the creator of a hidden poll", () => {

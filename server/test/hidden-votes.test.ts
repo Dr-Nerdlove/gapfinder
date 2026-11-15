@@ -99,7 +99,7 @@ describe("the view of a hidden poll", () => {
     return { poll, guest };
   }
 
-  it("shows another account only its own vote, the sums and who voted", async () => {
+  it("shows another account only its own vote, the sums, but not who voted", async () => {
     const e = await setup();
     const { poll } = await filled(e);
     const v = await view(e, poll, e.anna.token);
@@ -112,7 +112,23 @@ describe("the view of a hidden poll", () => {
       { proposalId: poll.proposals[0]!.id, yes: 2, maybe: 1, no: 0 },
       { proposalId: poll.proposals[1]!.id, yes: 2, maybe: 0, no: 1 },
     ]);
-    expect(v.votedParticipantIds).toEqual([e.owner.id, e.anna.id].sort((a, b) => a - b));
+    expect(v.votedParticipantIds).toBeUndefined();
+  });
+
+  it("tells nobody but the creator who has voted", async () => {
+    const e = await setup();
+    const { poll, guest } = await filled(e);
+    const asGuest = await view(e, poll, undefined, guest.voteKey);
+    const viewers = [await view(e, poll, e.anna.token), await view(e, poll, e.ben.token), await view(e, poll, e.admin.token), asGuest, await view(e, poll)];
+    for (const v of viewers) {
+      expect(v.tally).toBeDefined();
+      expect(v).not.toHaveProperty("votedParticipantIds");
+      // Only the viewer's own vote may name a person.
+      expect(v.votes.length).toBeLessThanOrEqual(1);
+      expect(JSON.stringify(v)).not.toContain("Olga O.\",\"answers");
+    }
+    const creator = await view(e, poll, e.owner.token);
+    expect(creator.votes.map((x) => x.name).sort()).toEqual(["Anna K.", "Gast G.", "Olga O."]);
   });
 
   it("shows an account that has not voted no votes but the sums", async () => {
@@ -173,7 +189,7 @@ describe("the view of a hidden poll", () => {
     expect(v.canManage).toBe(true);
     expect(v.votes).toEqual([]);
     expect(v.tally).toHaveLength(2);
-    expect(v.votedParticipantIds).toEqual([e.owner.id, e.anna.id].sort((a, b) => a - b));
+    expect(v.votedParticipantIds).toBeUndefined();
     expect(JSON.stringify(v)).not.toContain("Gast G.");
     // The management routes answer with the same filtered view.
     const closed = await call(e, "PATCH", `/api/polls/${poll.id}`, { token: e.admin.token, body: { closed: true } });

@@ -460,18 +460,6 @@ function tallyOf(db: DatabaseSync, pollId: number): ProposalTally[] {
   return rows.map((row) => ({ proposalId: row.proposal_id, yes: row.yes, maybe: row.maybe, no: row.no }));
 }
 
-/** The participants (account ids) who have a vote. */
-function votedParticipantIdsOf(db: DatabaseSync, pollId: number): number[] {
-  const rows = db
-    .prepare(
-      `SELECT pp.user_id FROM poll_participants pp
-       WHERE pp.poll_id = ? AND EXISTS (SELECT 1 FROM poll_votes v WHERE v.poll_id = pp.poll_id AND v.user_id = pp.user_id)
-       ORDER BY pp.user_id`,
-    )
-    .all(pollId) as unknown as { user_id: number }[];
-  return rows.map((row) => row.user_id);
-}
-
 /** The id of the guest vote of this poll whose key is `voteKey`, or null (an unknown key is ignored). */
 export function guestVoteIdByKey(db: DatabaseSync, pollId: number, voteKey: string | null): number | null {
   if (voteKey === null) return null;
@@ -496,6 +484,8 @@ export function buildPollView(
   const canManage = viewer !== null && (viewer.id === poll.creator_id || viewer.is_admin === 1);
   // Hidden votes are filtered here, on the server, for every caller but the creator (an admin who is not the
   // creator can still manage the poll, but sees what any participant sees).
+  // Nothing that tells who has voted goes to them either (no voter list, no per-person flags): sums plus who
+  // voted would give away every single vote.
   const filtered = poll.hidden === 1 && (viewer === null || viewer.id !== poll.creator_id);
   const ownVoteId = myVote?.id ?? guestVoteIdByKey(db, poll.id, guestVoteKey);
   return {
@@ -509,7 +499,7 @@ export function buildPollView(
     participants: participants.map(toPerson),
     votes: votesOf(db, poll.id, filtered ? (ownVoteId ?? -1) : undefined),
     hidden: poll.hidden === 1,
-    ...(filtered ? { tally: tallyOf(db, poll.id), votedParticipantIds: votedParticipantIdsOf(db, poll.id) } : {}),
+    ...(filtered ? { tally: tallyOf(db, poll.id) } : {}),
     deadline: poll.deadline,
     closed: poll.closed === 1,
     open: isOpen(poll, now),
