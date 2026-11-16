@@ -796,6 +796,20 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   fetch without a yes**; the entry by hand is built first. Note when it comes to it: the interface gives 10 showings
   per page (one cinema had 36 pages), so a daily fetch is more requests than "a few" unless it can filter by date.
 
+  **Trial run on 2026-11-16 (owner's wish, for the owner only, nothing built; about 15 requests, two of the cinemas,
+  not named here).** Seen: `GET api.cineamo.com/showings?cinemaId=<id>&date=<YYYY-MM-DD>&per_page=100` returns all
+  showings of one cinema for one day in a single answer (22 showings of 14 films for one cinema), so one request per
+  cinema and day is enough and the worry about 36 pages is gone; `startDatetime[gte]`-style filters answer 400.
+  `api.cineamo.com/cinemas?search=<town>` finds a cinema's id. Every showing seen had an `onlineTicketUrl` (the
+  cinema's own booking page or kinoheld's; the links were not opened). Limits found: (1) the new cinema week (from
+  Thursday) was not complete on Monday evening: Thursday and Friday showed only the advance sale of one film, while
+  Wednesday was complete, so times for a weekend are usable only shortly before; (2) `endDatetime` was filled for
+  one cinema and empty for the other, and the embedded film's `duration` was empty, so the film length must stay
+  an entry by hand; (3) film names can carry additions by the cinema (advert words such as "KNALLERPREIS: ...", the
+  screen format in brackets); (4) `language` (`deu`, `eng`) is given, but was empty for one showing. Times come in
+  UTC and must be shown in Europe/Berlin. Cloud sessions reach the host only when the owner's environment allows
+  `api.cineamo.com` (allowed since this trial). The decision stays: no automatic fetch without cineamo's yes.
+
   Decided with the owner on 2026-11-12: **no booking in the app**, but a "Tickets" link at a cinema proposal (the
   poll's showings and the chosen date); buying and paying stay with the cinema or its ticket service. The owner
   prefers the **direct ticket link** of the showing, which cineamo's data carries (`onlineTicketUrl`; in the one
