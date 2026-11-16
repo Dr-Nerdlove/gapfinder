@@ -97,4 +97,19 @@ class NotificationTextTest {
             "https://evil.example/https://dr-nerdlove.github.io/gapfinder/", "javascript:alert(1)",
         )) assertFalse(bad.toString(), NotificationTexts.isAppUrl(bad))
     }
+
+    @Test
+    fun otherPagesOfTheHostLeaveTheApp() {
+        for (other in listOf(
+            "https://dr-nerdlove.github.io/game-night/", "https://dr-nerdlove.github.io/cutecraft-studio/index.html",
+            "https://dr-nerdlove.github.io/", "http://dr-nerdlove.github.io/gapfinder/",
+            "https://dr-nerdlove.github.io/gapfinder/../game-night/", "https://DR-NERDLOVE.github.io/game-night/",
+            "https://dr-nerdlove.github.io/game night/",
+        )) assertTrue(other, NotificationTexts.leavesApp(other))
+        for (stay in listOf(
+            "https://dr-nerdlove.github.io/gapfinder/", "https://dr-nerdlove.github.io/gapfinder/#/abstimmung/abc",
+            "https://localhost/offline.html", "https://example.org/", "data:text/html,x",
+            "blob:https://dr-nerdlove.github.io/abc", "about:blank", null, "",
+        )) assertFalse(stay.toString(), NotificationTexts.leavesApp(stay))
+    }
 }

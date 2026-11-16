@@ -325,6 +325,17 @@ missing, with a recommendation, and let the people choose.
     handling follows firebase-admin's source (`lib/messaging/messaging-errors-internal.js`). The doorbell was verified on the owner's phone on
     2026-11-05 (instant notification on the locked phone, also after the API key was restricted to the app id and
     fingerprint).
+  - Shared address (security review of 2026-11-15, decided by the owner on 2026-11-16): the app shares the origin
+    `dr-nerdlove.github.io` with the owner's other Pages projects (`cutecraft-studio`, `game-night`), so a script
+    running in one of them could read the login in `localStorage`. The owner accepts this and wants no own domain: both
+    projects were checked on 2026-11-16 (no outside scripts; cutecraft-studio takes no outside data; game-night escapes
+    the Wikidata results and imported backups it shows, spot-checked). Do not report it again, unless one of them or a
+    new project under the address starts to load outside scripts or to show content made by other people; then an own
+    domain is the fix (everybody logs in again, notifications are switched on again, the app needs a new shell). A
+    Content-Security-Policy does not help: it cannot protect against other paths of the same origin. In the Android app,
+    `LueckenfuellerPlugin.shouldOverrideLoad` sends every address of the host outside `/gapfinder/` to the browser
+    (`NotificationTexts.leavesApp`), so a page of another project never runs inside the app with its native functions;
+    Capacitor's `allowNavigation` only knows hosts.
   - `deploy.yml` runs one at a time (workflow-level `concurrency`, not cancelled): two merges a few seconds apart once
     ran side by side and the older run, finishing last, put 1.9.0 back over 2.0.0 on Pages (2026-11-09; fixed by
     re-running the newer Deploy). After merging several pull requests, check that the newest Deploy run finished last.

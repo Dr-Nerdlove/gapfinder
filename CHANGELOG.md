@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Fixed
+
+- Android app: pages of other projects under the same web address can no longer open inside the app; they open in the browser. The app offers the update itself.
+
 ### Changed
 
 - The server now trusts only the visitor address that Tailscale Funnel itself sets (one hop), so the limits per

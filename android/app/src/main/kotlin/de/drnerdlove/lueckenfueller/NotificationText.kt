@@ -140,6 +140,25 @@ object NotificationTexts {
             false
         }
     }
+
+    /**
+     * True for an http(s) address on the app's host that is not inside the app: pages of the owner's other projects
+     * under the same host. Everything else (other hosts such as Capacitor's local offline page, data:, blob:, about:,
+     * null) is false, so Capacitor's own handling of it stays as it is. An address that cannot be parsed but plainly
+     * names the host after http(s):// counts as leaving the app (the safe side: it goes to the browser).
+     */
+    fun leavesApp(url: String?): Boolean {
+        if (url == null || isAppUrl(url)) return false
+        return try {
+            val uri = java.net.URI(url)
+            val scheme = uri.scheme?.lowercase(Locale.ROOT)
+            (scheme == "https" || scheme == "http") && uri.host?.lowercase(Locale.ROOT) == APP_HOST
+        } catch (e: java.net.URISyntaxException) {
+            Regex("^https?://[^/?#]*" + Regex.escape(APP_HOST), RegexOption.IGNORE_CASE).containsMatchIn(url)
+        }
+    }
+
+    private const val APP_HOST = "dr-nerdlove.github.io"
 }
 
 /** The date texts, always in German time (Europe/Berlin), like the web app. */
