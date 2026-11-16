@@ -11,7 +11,7 @@ export interface Config {
   /** Exact origins (scheme + host + port) that may call the API from a browser. */
   corsOrigins: string[];
   appVersion: string;
-  /** Trust `X-Forwarded-*` headers. Only switch on behind a proxy you control. */
+  /** Trust one proxy hop: the last `X-Forwarded-For` entry is the visitor address. Only behind a proxy you control. */
   trustProxy: boolean;
   /**
    * Address of the web app including its path, always ending with `/` (e.g. `https://user.github.io/gapfinder/`).

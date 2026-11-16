@@ -65,7 +65,10 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
       },
       ...(options.logStream ? { stream: options.logStream } : {}),
     },
-    trustProxy: config.trustProxy,
+    // One hop = the last entry of `X-Forwarded-For`, the one Tailscale Funnel writes. Funnel replaces the header
+    // today; trusting a single hop guards against that ever changing to appending (a forged first entry would
+    // then not count). A function, not the number 1: this Fastify treats a bare hop count as "trust nobody".
+    trustProxy: config.trustProxy ? (_address: string, hop: number) => hop === 0 : false,
     bodyLimit: BODY_LIMIT_BYTES,
     // A number sent where text is expected is an error, not silently turned into text.
     ajv: { customOptions: { coerceTypes: false } },
