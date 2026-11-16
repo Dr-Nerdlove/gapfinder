@@ -27,6 +27,26 @@ import java.io.File
 class LueckenfuellerPlugin : Plugin() {
     private val storage get() = CheckStorage(context)
 
+    /**
+     * Other projects of the owner share this host (/game-night/, ...). Capacitor only knows hosts, so such a page
+     * would run inside the app with its native functions: hand it to the browser instead. Everything else keeps
+     * Capacitor's default (null).
+     */
+    override fun shouldOverrideLoad(url: Uri?): Boolean? {
+        val address = url?.toString()
+        if (!NotificationTexts.leavesApp(address)) return null
+        try {
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(address)).addCategory(Intent.CATEGORY_BROWSABLE)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(intent)
+        } catch (e: ActivityNotFoundException) {
+            // No browser: the page is simply not opened.
+        } catch (e: RuntimeException) {
+            // Never crash because of a link.
+        }
+        return true
+    }
+
     private fun permission(): String {
         // Before Android 13 there is no runtime permission; only the switch in the system settings.
         if (!NotificationManagerCompat.from(context).areNotificationsEnabled()) return "denied"

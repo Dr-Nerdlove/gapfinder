@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Fixed
+
+- Android app: pages of other projects under the same web address can no longer open inside the app; they open in the browser. The app offers the update itself.
+
 ## [2.5.1] - 2026-11-15
 
 Two security fixes: the Android app gets a new app shell (Capacitor 8.6.2) that closes a reported security issue, and

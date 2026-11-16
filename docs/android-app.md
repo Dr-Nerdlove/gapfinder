@@ -82,7 +82,12 @@ browser version, and it adds what a web page cannot do on Android: notifications
   WebView history to the nearest earlier app page (`BackNavigation.kt`, tested in `BackNavigationTest.kt`; other
   pages such as `offline.html` are skipped) and lets Android leave the app only when there is none. The web app's
   hash routes are history entries, so this is the same as the browser's Back button.
-- `SHELL_VERSION` was raised to 2 for the doorbell (3 since the self-update, 4 since Back goes to the previous page, 5 since the texts for hidden votes, 6 since the place in the notification text in 2.5.0, 7 since Capacitor 8.6.2 closed a security advisory). The Firebase BoM version is
+- Navigation scope: the app loads `https://dr-nerdlove.github.io/gapfinder/`, but other projects of the owner live under
+  the same host (`/game-night/`, `/cutecraft-studio/`) and Capacitor's `allowNavigation` only knows hosts. So
+  `LueckenfuellerPlugin.shouldOverrideLoad` opens every `http(s)` address of that host outside `/gapfinder/`
+  (`NotificationTexts.leavesApp`) in the browser instead, where the page does not get the app's native functions. The
+  manifest has no intent filter for web links, so such a link cannot come back to the app.
+- `SHELL_VERSION` was raised to 2 for the doorbell (3 since the self-update, 4 since Back goes to the previous page, 5 since the texts for hidden votes, 6 since the place in the notification text in 2.5.0, 7 since Capacitor 8.6.2 closed a security advisory, 8 since other pages of the host open in the browser). The Firebase BoM version is
   `firebaseBomVersion` in `android/variables.gradle`.
 
 ## Self-update (phase 7c)
