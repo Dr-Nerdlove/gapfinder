@@ -369,7 +369,9 @@ missing, with a recommendation, and let the people choose.
 - **Repository:** public (checked Nov 2026); `main` is protected by the ruleset "protect main branch" (no force
   pushes, no deletion; the checks `test`, `docker`, `vm-scripts` and `android` must pass, Nov 2026); licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
   CI: `.github/workflows/ci.yml` (checks), `deploy.yml` (Pages + server image), `release.yml` (tag + GitHub
-  release after a green deploy of a new version) and `health.yml` (hourly check of the server).
+  release after a green deploy of a new version) and `health.yml` (hourly check of the server). GitHub security settings (set by the owner, Nov 2026): Dependabot alerts on (with the dependency
+  graph), secret scanning with push protection on; automatic dependency submission and AI scan off (Actions runs and AI credits for little gain). A Dependabot alert is checked in a session
+  before anything is changed.
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
   tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
   later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never
