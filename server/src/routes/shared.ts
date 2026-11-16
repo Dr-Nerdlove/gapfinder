@@ -18,7 +18,7 @@ export function enforceLimits(ctx: AppContext, checks: readonly (readonly [strin
   if (wait !== null) throw rateLimited(wait);
 }
 
-/** The address of the caller (correct behind Funnel because `TRUST_PROXY=true`). */
+/** The address of the caller (behind Funnel the last `X-Forwarded-For` entry, because `TRUST_PROXY=true` trusts one hop). */
 export function clientKey(request: FastifyRequest): string {
   return request.ip;
 }

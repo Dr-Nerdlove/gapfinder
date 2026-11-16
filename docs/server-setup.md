@@ -730,5 +730,11 @@ The Tailscale connection and the server address are the same in both directions.
   the VM holds only the public half, so even someone who breaks into the VM cannot read the older backups in
   OneDrive. The Windows user for the backups can only reach its one shared folder, and the Windows firewall
   lets only the VM's address reach it.
-- The server trusts the visitor address that Tailscale passes on (`TRUST_PROXY=true` in `.env`), which is
-  correct only because Funnel is the only way in. Do not publish port 8080 any other way.
+- The server trusts the visitor address that Tailscale passes on (`TRUST_PROXY=true` in `.env`): exactly one hop,
+  that is the last entry of `X-Forwarded-For`, the one Funnel writes. This is correct only because Funnel is the
+  only way in. Do not publish port 8080 any other way.
+- To check this at the real server: from another machine run
+  `curl -H "X-Forwarded-For: 1.2.3.4" https://<funnel-address>/api/health`. Then in the VM
+  `cd /opt/lueckenfueller && sudo docker compose logs --since 2m api | grep -c "1.2.3.4"` must print `0`, and
+  `sudo docker compose logs --since 5m api | grep "/api/health" | tail -n 3` must show the caller's real public
+  address as `remoteAddress`.

@@ -9,6 +9,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 - Android app: pages of other projects under the same web address can no longer open inside the app; they open in the browser. The app offers the update itself.
 
+### Changed
+
+- The server now trusts only the visitor address that Tailscale Funnel itself sets (one hop), so the limits per
+  address could not be bypassed with a forged header even if Tailscale ever changed how it passes the address on.
+  Nothing changes for users, and `setup.sh` does not need to be run again.
+
 ## [2.5.1] - 2026-11-15
 
 Two security fixes: the Android app gets a new app shell (Capacitor 8.6.2) that closes a reported security issue, and

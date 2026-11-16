@@ -236,6 +236,16 @@ missing, with a recommendation, and let the people choose.
   - The frontend updates immediately on deploy, the server only when the owner updates the VM: keep the API
     backward compatible.
   - The Funnel address is public; treat the API as exposed to the whole internet.
+  - Visitor address (security review of 2026-11-15, decided by the owner on 2026-11-16): `TRUST_PROXY=true` trusts
+    exactly one hop, that is the last entry of `X-Forwarded-For`, the one Funnel writes. It is a trust function in
+    `server/src/app.ts`, not `trustProxy: 1`: Fastify 5.12 treats a bare number as "trust nobody" (`getTrustProxyFn`
+    in `lib/request.js`), and every visitor would get the proxy's address.
+    Tailscale replaces the header: Go's `ReverseProxy` with `Rewrite` deletes what the caller sent, then
+    `addProxyForwardedHeaders` in `ipn/ipnlocal/serve.go` sets the real source address (source read on 2026-11-16).
+    So the limits per address cannot be bypassed with a forged header, and the single hop only guards against
+    Tailscale ever appending instead. Do not report this again. Not "loopback only": inside Docker the request
+    arrives from the bridge gateway, not from 127.0.0.1, and all visitors would share one address. How to test at
+    the real server: `docs/server-setup.md`.
   - `shared` must be built (`npm run build:shared`) before the server or web can use it; the root scripts and
     the `predev` hooks do this, `npm test -w server` alone does not.
   - TypeScript stays on 6.x until `svelte-check` supports 7.
@@ -383,6 +393,10 @@ missing, with a recommendation, and let the people choose.
   release after a green deploy of a new version) and `health.yml` (hourly check of the server). GitHub security settings (set by the owner, Nov 2026): Dependabot alerts on (with the dependency
   graph), secret scanning with push protection on; automatic dependency submission and AI scan off (Actions runs and AI credits for little gain). A Dependabot alert is checked in a session
   before anything is changed.
+  Checked on 2026-11-16: `deepmerge` 4.3.1 (GHSA-gcqx-w48m-w2h4, low, prototype poisoning, no fixed version yet) needs
+  no change. It comes only with the build tool `@sveltejs/vite-plugin-svelte`, which merges the project's own build
+  configuration with it; it is not part of the shipped app or the server and never sees data from users. Look again
+  only when a fixed version exists (then update) or when the package turns up in `server` or in the built app.
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
   tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
   later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never
