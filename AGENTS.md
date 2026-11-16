@@ -372,6 +372,10 @@ missing, with a recommendation, and let the people choose.
   release after a green deploy of a new version) and `health.yml` (hourly check of the server). GitHub security settings (set by the owner, Nov 2026): Dependabot alerts on (with the dependency
   graph), secret scanning with push protection on; automatic dependency submission and AI scan off (Actions runs and AI credits for little gain). A Dependabot alert is checked in a session
   before anything is changed.
+  Checked on 2026-11-16: `deepmerge` 4.3.1 (GHSA-gcqx-w48m-w2h4, low, prototype poisoning, no fixed version yet) needs
+  no change. It comes only with the build tool `@sveltejs/vite-plugin-svelte`, which merges the project's own build
+  configuration with it; it is not part of the shipped app or the server and never sees data from users. Look again
+  only when a fixed version exists (then update) or when the package turns up in `server` or in the built app.
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
   tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
   later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never
