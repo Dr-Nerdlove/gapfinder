@@ -1,6 +1,9 @@
 <script lang="ts">
-  import { PROPOSAL_PLACE_MAX_LENGTH } from "@lueckenfueller/shared";
+  import { PROPOSAL_PLACE_MAX_LENGTH, type CinemaInfo } from "@lueckenfueller/shared";
   import { untrack } from "svelte";
+  import * as api from "../../lib/api";
+  import { errorMessage } from "../../lib/messages";
+  import { session } from "../../lib/session.svelte";
   import {
     ADVERT_MINUTES_DEFAULT,
     ADVERT_MINUTES_OPTIONS,
@@ -8,17 +11,20 @@
     FILM_MINUTES_OPTIONS,
     checkShowings,
     defaultCinemaDay,
+    filmsOfEvening,
     groupShowings,
     minutesLabel,
     parseShowtimes,
     shortSearchHint,
     summaryLines,
     type CheckedShowing,
+    type FetchedFilm,
   } from "../../lib/cinema";
   import { formatClock, formatDay } from "../../lib/gap-search";
   import type { CinemaSource } from "../../lib/poll-draft";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
+  import Message from "../Message.svelte";
   import SelectField from "../SelectField.svelte";
   import TextField from "../TextField.svelte";
 
@@ -26,9 +32,11 @@
     source: CinemaSource;
     /** The showings that fit and are not left out: they become the proposals. */
     chosen?: CheckedShowing[];
+    /** The cinemas the server can fetch showtimes for (admin-only test); empty: the entry works by hand only. */
+    cinemas?: CinemaInfo[];
   }
 
-  let { source, chosen = $bindable([]) }: Props = $props();
+  let { source, chosen = $bindable([]), cinemas = [] }: Props = $props();
 
   interface Block {
     id: number;
@@ -36,10 +44,58 @@
     day: string;
     text: string;
     time: string;
+    /** Chosen cinema of the list ("" = enter by hand). */
+    cinemaId: string;
+    /** The cinema whose name was last written into `place`. */
+    appliedCinemaId: string;
+    /** "cinema|day" the fetched films belong to; "" when there are none. */
+    fetchedFor: string;
+    films: FetchedFilm[];
+    /** "cinema|day" of the request in flight; "" when none. */
+    loadingFor: string;
+    error: string;
+    /** "cinema|day" the error belongs to. */
+    errorFor: string;
+    pickedKey: string;
   }
 
+  const newBlock = (place: string, day: string, cinemaId = ""): Block => ({
+    id: nextId++,
+    place,
+    day,
+    text: "",
+    time: "",
+    cinemaId,
+    appliedCinemaId: cinemaId,
+    fetchedFor: "",
+    films: [],
+    loadingFor: "",
+    error: "",
+    errorFor: "",
+    pickedKey: "",
+  });
+
   let nextId = 1;
-  let blocks = $state<Block[]>([{ id: nextId++, place: "", day: untrack(() => defaultCinemaDay(source)), text: "", time: "" }]);
+  let blocks = $state<Block[]>([newBlock("", untrack(() => defaultCinemaDay(source)))]);
+  const cinemaOptions = $derived([{ value: "", label: "Selbst eintragen" }, ...cinemas.map((c) => ({ value: String(c.id), label: c.name }))]);
+  const fetchKey = (block: Block): string => `${block.cinemaId}|${block.day}`;
+
+  // A chosen cinema writes its name into the place (still editable); a changed cinema or day drops the fetched list.
+  $effect(() => {
+    for (const block of blocks) {
+      if (block.cinemaId !== block.appliedCinemaId) {
+        block.appliedCinemaId = block.cinemaId;
+        const cinema = cinemas.find((c) => String(c.id) === block.cinemaId);
+        if (cinema) block.place = cinema.name;
+      }
+      if (block.fetchedFor !== "" && block.fetchedFor !== fetchKey(block)) {
+        block.fetchedFor = "";
+        block.films = [];
+        block.pickedKey = "";
+      }
+      if (block.error !== "" && block.errorFor !== fetchKey(block)) block.error = "";
+    }
+  });
   let film = $state(String(FILM_MINUTES_DEFAULT));
   let advert = $state(String(ADVERT_MINUTES_DEFAULT));
   let leftOut = $state<string[]>([]);
@@ -60,6 +116,34 @@
     chosen = showings.filter((s) => s.fits && !leftOut.includes(s.key));
   });
 
+  async function fetchFilms(block: Block): Promise<void> {
+    const key = fetchKey(block);
+    const id = Number(block.cinemaId);
+    if (block.cinemaId === "" || block.day === "" || block.loadingFor === key) return;
+    const day = block.day;
+    block.loadingFor = key;
+    block.error = "";
+    const result = await session.run((o) => api.getCinemaShowings(id, day, o));
+    if (block.loadingFor === key) block.loadingFor = "";
+    // A late answer for an earlier cinema or day must not overwrite the newer choice.
+    if (fetchKey(block) !== key) return;
+    if (!result.ok) {
+      block.error = errorMessage(result);
+      block.errorFor = key;
+      block.fetchedFor = "";
+      block.films = [];
+      return;
+    }
+    block.films = filmsOfEvening(result.data.showings, day);
+    block.fetchedFor = key;
+    block.pickedKey = "";
+  }
+
+  function pickFilm(block: Block, film: FetchedFilm): void {
+    block.text = film.clocks.join(" ");
+    block.pickedKey = film.key;
+  }
+
   function addTime(block: Block): void {
     const [time] = parseShowtimes(block.time);
     if (time === undefined) return;
@@ -69,7 +153,7 @@
 
   function addBlock(): void {
     const last = blocks[blocks.length - 1];
-    blocks.push({ id: nextId++, place: last?.place ?? "", day: last?.day ?? defaultCinemaDay(source), text: "", time: "" });
+    blocks.push(newBlock(last?.place ?? "", last?.day ?? defaultCinemaDay(source)));
   }
 
   function toggle(key: string): void {
@@ -80,13 +164,43 @@
 </script>
 
 <Card title="Kino-Vorschläge">
+  {#if cinemas.length > 0}<p class="hint">Test: Diesen Abschnitt sehen nur Admins.</p>{/if}
   {#each blocks as block, index (block.id)}
     <div class="block">
+      {#if cinemas.length > 0}
+        <div class="select"><SelectField label="Kino aus der Liste" bind:value={block.cinemaId} options={cinemaOptions} /></div>
+      {/if}
       <TextField label="Kino (Ort)" bind:value={block.place} maxlength={PROPOSAL_PLACE_MAX_LENGTH} />
       <div class="field">
         <label for="day-{block.id}">Tag</label>
         <input id="day-{block.id}" type="date" min={source.from} max={source.to} bind:value={block.day} />
       </div>
+      {#if cinemas.length > 0}
+        <div>
+          <Button variant="tonal" onclick={() => fetchFilms(block)} disabled={block.cinemaId === "" || block.day === "" || block.loadingFor === fetchKey(block)}>
+            {block.loadingFor === fetchKey(block) ? "Wird geholt …" : "Spielzeiten holen"}
+          </Button>
+        </div>
+        {#if block.error !== ""}<Message text={block.error} />{/if}
+        {#if block.fetchedFor === fetchKey(block)}
+          <div class="films">
+            {#each block.films as film (film.key)}
+              {@const on = block.pickedKey === film.key}
+              <button type="button" class="showing" class:fits={on} aria-pressed={on} onclick={() => pickFilm(block, film)}>
+                <span class="text">
+                  <strong>{film.film}</strong>
+                  {#if film.languageLabel}<span class="reason">{film.languageLabel}</span>{/if}
+                  <span class="reason">{film.clocks.join(" · ")}</span>
+                </span>
+                {#if on}<span class="chip ok">✓ gewählt</span>{/if}
+              </button>
+            {:else}
+              <p class="hint">Für diesen Tag kennt Cineamo keine Vorstellungen. Das Programm ab Donnerstag steht oft erst kurz vorher fest. Du kannst die Zeiten von Hand eintragen.</p>
+            {/each}
+            <p class="hint">Spielzeiten: Cineamo</p>
+          </div>
+        {/if}
+      {/if}
       <div class="field">
         <label for="times-{block.id}">Zeiten einfügen</label>
         <textarea id="times-{block.id}" rows="3" placeholder="17:30 20:15 22:45" aria-describedby="times-{block.id}-hint" bind:value={block.text}></textarea>
@@ -179,6 +293,21 @@
     min-height: 48px;
     min-width: 0;
     width: 100%;
+  }
+
+  /* SelectField grows with flex-basis; in this column it would grow in height. */
+  .select {
+    display: flex;
+  }
+
+  .films {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .films .text strong {
+    overflow-wrap: anywhere;
   }
 
   .single {

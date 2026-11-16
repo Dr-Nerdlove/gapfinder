@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { PROPOSAL_PLACE_MAX_LENGTH, type CinemaInfo } from "@lueckenfueller/shared";
 import { decodeCalendarKey } from "./calendar-key.js";
 
 export interface Config {
@@ -28,7 +29,13 @@ export interface Config {
   fcm: FcmAccount | null;
   /** Why `fcm` is null (never contains the value); null when the key is usable. */
   fcmProblem: string | null;
+  /** Cinemas for the admin-only showtimes test (`CINEMAS`); empty when not set or invalid (the feature is then off). */
+  cinemas: CinemaInfo[];
+  /** Why `cinemas` is empty (never contains the value); null when cinemas are configured. */
+  cinemasProblem: string | null;
 }
+
+export const MAX_CINEMAS = 20;
 
 export interface FcmAccount {
   projectId: string;
@@ -118,6 +125,37 @@ export function parseFcmAccount(value: string | undefined): { account: FcmAccoun
   };
 }
 
+/**
+ * Reads `CINEMAS`: `<cineamo id>=<name>;<id>=<name>`. Like the keys, a missing or invalid value is a problem text,
+ * never an error, and the text never contains the value. One broken entry makes the whole value invalid.
+ */
+export function parseCinemas(value: string | undefined): { cinemas: CinemaInfo[]; problem: string | null } {
+  const text = value?.trim() ?? "";
+  if (text === "") return { cinemas: [], problem: "CINEMAS is not set" };
+  const invalid = (why: string) => ({ cinemas: [], problem: `CINEMAS is not valid: ${why}` });
+  const entries = text.split(";").map((entry) => entry.trim()).filter((entry) => entry !== "");
+  if (entries.length === 0) return invalid("it has no entries");
+  if (entries.length > MAX_CINEMAS) return invalid(`at most ${MAX_CINEMAS} cinemas are allowed`);
+  const cinemas: CinemaInfo[] = [];
+  const seen = new Set<number>();
+  for (const entry of entries) {
+    const at = entry.indexOf("=");
+    const idText = at < 0 ? "" : entry.slice(0, at).trim();
+    const name = at < 0 ? "" : entry.slice(at + 1).trim();
+    if (!/^\d{1,9}$/.test(idText) || Number(idText) < 1) {
+      return invalid("every entry must look like <id>=<name> with a whole number as id");
+    }
+    if (name === "" || [...name].length > PROPOSAL_PLACE_MAX_LENGTH) {
+      return invalid(`every name must have 1 to ${PROPOSAL_PLACE_MAX_LENGTH} characters`);
+    }
+    const id = Number(idText);
+    if (seen.has(id)) return invalid("an id is listed twice");
+    seen.add(id);
+    cinemas.push({ id, name });
+  }
+  return { cinemas, problem: null };
+}
+
 /** Reads and validates the configuration. Throws a `ConfigError` that lists every problem. */
 export function loadConfig(env: Env = process.env): Config {
   const problems: string[] = [];
@@ -182,6 +220,9 @@ export function loadConfig(env: Env = process.env): Config {
   // The same holds for the Firebase key: without it only the instant ring is off, the 15-minute check carries on.
   const fcm = parseFcmAccount(env.FCM_SERVICE_ACCOUNT);
 
+  // Likewise the cinema list: a bad value only switches the showtimes test off.
+  const cinemas = parseCinemas(env.CINEMAS);
+
   return {
     port,
     host,
@@ -196,5 +237,7 @@ export function loadConfig(env: Env = process.env): Config {
     calendarKeyProblem: calendar.problem,
     fcm: fcm.account,
     fcmProblem: fcm.problem,
+    cinemas: cinemas.cinemas,
+    cinemasProblem: cinemas.problem,
   };
 }

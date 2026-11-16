@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { CreatePollRequest, Person } from "@lueckenfueller/shared";
+  import type { CinemaInfo, CreatePollRequest, Person } from "@lueckenfueller/shared";
   import { POLL_NOTE_MAX_LENGTH, POLL_TITLE_MAX_LENGTH } from "@lueckenfueller/shared";
   import { onMount, untrack } from "svelte";
   import * as api from "../lib/api";
@@ -46,10 +46,21 @@
   // The same for the place of a proposal.
   let canPlace = $state(false);
 
+  // The cinemas of the admin-only test of fetching showtimes; empty for everybody else and on any failure.
+  let cinemas = $state<CinemaInfo[]>([]);
+
   onMount(() => {
     void checkHealth(API_URL).then((result) => {
       canHide = result.kind === "online" && hasFeature(result.features, "hidden_votes");
       canPlace = result.kind === "online" && hasFeature(result.features, "proposal_place");
+      if (result.kind === "online" && hasFeature(result.features, "cinema_showtimes") && sessionState.user?.isAdmin === true) {
+        void session
+          .run((o) => api.listCinemas(o))
+          .then((list) => {
+            if (list.ok) cinemas = list.data.cinemas;
+          })
+          .catch(() => {});
+      }
     });
   });
 
@@ -161,7 +172,7 @@
       </Card>
 
       {#if source.cinema}
-        <CinemaEntry source={source.cinema} bind:chosen={chosenShowings} />
+        <CinemaEntry source={source.cinema} bind:chosen={chosenShowings} {cinemas} />
         <p class="hint">{invited}</p>
       {:else}
         <Card title="Termine">

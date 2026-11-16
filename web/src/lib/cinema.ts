@@ -1,6 +1,6 @@
-import type { CreatePollRequest, Person, SearchResult, Slot } from "@lueckenfueller/shared";
+import type { CinemaShowing, CreatePollRequest, Person, SearchResult, Slot } from "@lueckenfueller/shared";
 import { addDays, clockToMinutes, formatClock, formatDay, formatSlot } from "./gap-search";
-import { DRAFT_PROBLEM_TEXTS, berlinWallToInstant, buildCreateRequest, type CinemaSource, type DraftProblem } from "./poll-draft";
+import { DRAFT_PROBLEM_TEXTS, berlinParts, berlinWallToInstant, buildCreateRequest, type CinemaSource, type DraftProblem } from "./poll-draft";
 
 // The cinema entry of a poll (phase 10d): showings typed in by hand are checked against the free times of an
 // hours search. No DOM here.
@@ -37,6 +37,47 @@ export function parseShowtimes(text: string): string[] {
   }
   const key = (minutes: number): number => (minutes < NIGHT_END_MINUTES ? minutes + 1440 : minutes);
   return [...found.entries()].sort((a, b) => key(a[1]) - key(b[1])).map(([clock]) => clock);
+}
+
+// ---------- showings fetched from the server (admin-only test) ----------
+
+export interface FetchedFilm {
+  /** Film name and language code. */
+  key: string;
+  film: string;
+  /** null for German or unknown; "Englisch" for `eng`; otherwise the code in capitals. */
+  languageLabel: string | null;
+  /** "HH:MM" in the order of an evening (times before 05:00 last). */
+  clocks: string[];
+}
+
+export function languageLabel(code: string | undefined): string | null {
+  const c = (code ?? "").trim().toLowerCase();
+  if (c === "" || c === "deu") return null;
+  return c === "eng" ? "Englisch" : c.toUpperCase();
+}
+
+/** The films shown on the evening of `day` (Berlin time; the night before 05:00 belongs to the evening before), by film and language. */
+export function filmsOfEvening(showings: readonly CinemaShowing[], day: string): FetchedFilm[] {
+  const nextDay = addDays(day, 1);
+  const groups = new Map<string, { film: string; language: string; clocks: Set<string> }>();
+  for (const showing of showings) {
+    if (Number.isNaN(Date.parse(showing.start))) continue;
+    const { date, time } = berlinParts(showing.start);
+    const minutes = clockToMinutes(time);
+    const inEvening = (date === day && minutes >= NIGHT_END_MINUTES) || (date === nextDay && minutes < NIGHT_END_MINUTES);
+    if (!inEvening) continue;
+    // German and unknown share a group: both read the same in the list.
+    const language = languageLabel(showing.language) ?? "";
+    const key = `${showing.film}|${language}`;
+    let group = groups.get(key);
+    if (!group) groups.set(key, (group = { film: showing.film, language, clocks: new Set() }));
+    group.clocks.add(time);
+  }
+  return [...groups.entries()]
+    .map(([key, g]) => ({ key, film: g.film, language: g.language, languageLabel: g.language === "" ? null : g.language, clocks: parseShowtimes([...g.clocks].join(" ")) }))
+    .sort((a, b) => a.film.localeCompare(b.film, "de") || a.language.localeCompare(b.language))
+    .map(({ key, film, languageLabel: label, clocks }) => ({ key, film, languageLabel: label, clocks }));
 }
 
 // ---------- checking showings ----------

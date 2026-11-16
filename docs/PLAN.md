@@ -862,6 +862,19 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   Still open: the automatic fetch of showtimes, the ticket link and the credit "Spielzeiten: Cineamo" (only with
   cineamo's yes).
 
+  **Test of the automatic fetch, built 2026-11-16 (owner's decision: a test for admins only, still no yes from
+  cineamo).** It is off unless `CINEMAS` is set in the VM's `.env` (`setup.sh` asks for it; the list is never in the
+  repository). Admin-only routes `/api/admin/cinemas` and `/api/admin/cinemas/:id/showings`, announced by the feature
+  `cinema_showtimes` (listed only when cinemas are configured). The server makes one request per cinema and day through
+  the guarded fetch, caches the answer for 6 hours in memory (failures for 5 minutes), limits answers to 2 MB and 10 s,
+  and accepts dates from yesterday to 21 days ahead. The app shows the films of the evening, fills the times field when
+  one is tapped, and shows the credit "Spielzeiten: Cineamo". The earlier decision "no automatic fetch without a yes"
+  still holds for everybody else: opening it to all users needs cineamo's yes and a new decision by the owner.
+  Still open: the ticket link on proposals and the credit on the finished poll (the server already returns
+  `ticketUrl`); the film length stays an entry by hand; paging beyond 100 showings a day is not built (only a log
+  warning); showings after midnight are found only if cineamo lists them under the next calendar day (not verified);
+  the load test (9f) was not rerun.
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV

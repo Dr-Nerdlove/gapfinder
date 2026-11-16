@@ -193,7 +193,7 @@ function cut(text: string, max: number): string {
  * feed in memory as long as one slice lives. Titles and names stay in the calendar cache, so without the copy every
  * cached calendar kept its full text (found by the load test, phase 9f: up to 10 MB per calendar).
  */
-function ownCopy(text: string): string {
+export function ownCopy(text: string): string {
   // UTF-16 keeps every string exactly as it was, even a broken one (UTF-8 would turn half an emoji into "�").
   return Buffer.from(text, "utf16le").toString("utf16le");
 }

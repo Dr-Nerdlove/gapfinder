@@ -5,6 +5,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- Test for admins only: in the cinema entry of a poll, admins can pick a cinema from a list and fetch its showtimes for
+  a day from Cineamo. They tap a film and its times fill the times field; typing by hand still works. This stays off
+  until cinemas are entered in the VM with `setup.sh` (see `docs/server-setup.md`). `deploy/vm/setup.sh` changed, so the
+  owner must rerun it to switch the test on.
+
 ## [2.5.2] - 2026-11-16
 
 Two security fixes: pages of other projects under the same web address can no longer open inside the Android app, and the

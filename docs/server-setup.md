@@ -419,6 +419,28 @@ key, the server runs as before and the 15-minute check carries on.
 **The key is not in the backups.** It lives only in `.env`, so that a stolen backup cannot ring anyone. If the
 VM is rebuilt, make a new key in Firebase and run step 2 again; until then the app checks every 15 minutes.
 
+## Cinema showtimes (test)
+
+Admins can fetch a cinema's showtimes for one day from the cineamo service (a test, phase 10d). It is off until you
+give the server a list of cinemas. Only admins can use it, the server asks cineamo for at most one cinema and day
+every 6 hours, and nothing is stored in the database.
+
+1. Find the cinema's id: open `https://api.cineamo.com/cinemas?search=<town>` in a browser and read the field `id`
+   of your cinema.
+2. Write the list as `<id>=<name>;<id>=<name>`, for example `12=Kino Eins;345=Kino Zwei` (at most 20 cinemas,
+   names up to 100 characters; umlauts and spaces are fine; no `'`).
+3. In the VM, run the setup again (see "When the files in `deploy/vm/` change"): `sudo bash setup.sh` asks for the
+   list ("Cinemas for the showtimes test"; Enter keeps what is there). Or give it without the question:
+   `sudo LUECKENFUELLER_CINEMAS='12=Kino Eins;345=Kino Zwei' bash setup.sh`. The script writes it into
+   `/opt/lueckenfueller/.env` as `CINEMAS='...'` and restarts the server.
+4. Check it: `cd /opt/lueckenfueller && sudo docker compose logs api | grep -i showtimes` must show
+   `Cinema showtimes test is on (2 cinemas)`; `is off: ...` names the problem (never the list).
+
+**Switch it off:** delete the `CINEMAS` line in `/opt/lueckenfueller/.env` (or make it empty) and restart the
+server (`sudo docker compose up -d`). A wrong list also switches the test off; the server keeps running.
+
+The list stays on the VM: do not put it into the repository.
+
 ## Forgot your own admin password
 
 Friends who forget their password ask you; you make a new link for them in the admin area of the app. If you

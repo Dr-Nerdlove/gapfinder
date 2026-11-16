@@ -23,6 +23,7 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   calendar_gone:
     "Unter diesem Link gibt es keinen Kalender (mehr). Bitte kopiere den Link neu aus deinem Kalender.",
   calendar_unreachable: "Der Kalenderanbieter antwortet gerade nicht. Versuch es gleich noch einmal.",
+  cinema_unavailable: "Die Spielzeiten konnten gerade nicht geholt werden. Trag die Zeiten von Hand ein.",
   calendar_not_ics: "Unter diesem Link liegt kein Kalender. Bitte nimm die Adresse im iCal-Format.",
   calendar_too_large: "Dieser Kalender ist zu groß (mehr als 10 MB).",
   calendar_limit: "Du hast schon 10 Kalender verknüpft. Entferne erst einen.",

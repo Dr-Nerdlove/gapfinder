@@ -24,6 +24,8 @@ export function testConfig(overrides: Partial<Config> = {}): Config {
     calendarKeyProblem: "CALENDAR_KEY is not set",
     fcm: null,
     fcmProblem: "FCM_SERVICE_ACCOUNT is not set",
+    cinemas: [],
+    cinemasProblem: "CINEMAS is not set",
     ...overrides,
   };
 }

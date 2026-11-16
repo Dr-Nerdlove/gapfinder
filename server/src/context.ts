@@ -5,6 +5,7 @@ import type { CalendarCache } from "./calendars/cache.js";
 import type { FetchResult } from "./calendars/fetch.js";
 import type { FastifyBaseLogger } from "fastify";
 import type { SendPush } from "./notifications/send.js";
+import type { CinemaService } from "./cinemas/cineamo.js";
 import type { Config } from "./config.js";
 import type { RingDevice } from "./notifications/ring.js";
 
@@ -21,6 +22,8 @@ export interface AppContext {
   calendarCache: CalendarCache;
   /** Fetches a calendar link. Every outgoing request for a user's link goes through here (tests swap it). */
   fetchCalendarText: (url: URL) => Promise<FetchResult>;
+  /** Showtimes of the configured cinemas (admin-only test, phase 10d); its cache is in memory only. */
+  cinemas: CinemaService;
   /** Sends one Web Push message to a browser (tests swap it; the real one talks to the browsers' push services). */
   sendPush: SendPush;
   /** The server's VAPID public key, which browsers need to subscribe. */

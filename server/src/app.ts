@@ -7,6 +7,7 @@ import { purgeExpired } from "./accounts/cleanup.js";
 import { RateLimiter } from "./auth/rate-limit.js";
 import { prepareCalendarKey } from "./calendar-key.js";
 import { CalendarCache } from "./calendars/cache.js";
+import { CINEAMO_MAX_BYTES, CINEAMO_TIMEOUT_MS, CINEAMO_USER_AGENT, createCinemaService } from "./cinemas/cineamo.js";
 import { fetchCalendarText, type FetchResult } from "./calendars/fetch.js";
 import type { Config } from "./config.js";
 import type { AppContext } from "./context.js";
@@ -40,6 +41,8 @@ export interface BuildAppOptions {
   logStream?: Writable;
   /** Fetches calendar links instead of the real, network-using fetcher (tests never touch the network). */
   fetchCalendarText?: (url: URL) => Promise<FetchResult>;
+  /** Fetches cineamo's answer instead of the real, network-using fetcher (tests never touch the network). */
+  fetchCinemaText?: (url: URL) => Promise<FetchResult>;
   /** Sends Web Push messages instead of the real sender (tests never touch the network). */
   sendPush?: SendPush;
   /** Rings Android phones instead of the real Firebase ringer; null switches the ring off (tests never touch the network). */
@@ -92,6 +95,11 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
   } else {
     app.log.warn(`Instant Android notifications are off: ${config.fcmProblem ?? "FCM_SERVICE_ACCOUNT is not set"}`);
   }
+  if (config.cinemas.length > 0) {
+    app.log.info(`Cinema showtimes test is on (${config.cinemas.length} cinemas)`);
+  } else {
+    app.log.info(`Cinema showtimes test is off: ${config.cinemasProblem ?? "CINEMAS is not set"}`);
+  }
   const vapid = loadVapidKeys(db);
   const ctx: AppContext = {
     config,
@@ -101,6 +109,19 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
     calendarKeyStatus,
     calendarCache: options.calendarCache ?? new CalendarCache(now),
     fetchCalendarText: options.fetchCalendarText ?? ((url) => fetchCalendarText(url)),
+    cinemas: createCinemaService({
+      fetchText:
+        options.fetchCinemaText ??
+        ((url) =>
+          fetchCalendarText(url, {
+            userAgent: CINEAMO_USER_AGENT,
+            maxBytes: CINEAMO_MAX_BYTES,
+            timeoutMs: CINEAMO_TIMEOUT_MS,
+            maxRedirects: 0,
+          })),
+      now,
+      log: app.log,
+    }),
     sendPush: options.sendPush ?? createWebPushSender(vapid, vapidSubject(config.corsOrigins)),
     vapidPublicKey: vapid.publicKey,
     ringDevice: options.ringDevice !== undefined ? options.ringDevice : config.fcm ? createFcmRinger(config.fcm) : null,
@@ -139,7 +160,12 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
       status: "ok",
       version: config.appVersion,
       time: now().toISOString(),
-      features: ["hidden_votes", "proposal_place", "minute_times"],
+      features: [
+        "hidden_votes",
+        "proposal_place",
+        "minute_times",
+        ...(config.cinemas.length > 0 ? (["cinema_showtimes"] as const) : []),
+      ],
     }),
   );
 

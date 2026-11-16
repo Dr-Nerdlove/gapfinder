@@ -3,6 +3,7 @@ export const API_VERSION = 1;
 
 export * from "./accounts.js";
 export * from "./calendars.js";
+export * from "./cinemas.js";
 export * from "./gaps.js";
 export * from "./groups.js";
 export * from "./notifications.js";
@@ -25,9 +26,10 @@ export interface HealthResponse {
 
 /**
  * `hidden_votes`: polls with hidden votes (phase 10b). `proposal_place`: an optional place for every proposal (phase
- * 10d). `minute_times`: timed proposals may start and end on any whole minute (phase 10d).
+ * 10d). `minute_times`: timed proposals may start and end on any whole minute (phase 10d). `cinema_showtimes`:
+ * admin-only test of fetching cinema showtimes (phase 10d); listed only when the server has cinemas configured.
  */
-export type ServerFeature = "hidden_votes" | "proposal_place" | "minute_times";
+export type ServerFeature = "hidden_votes" | "proposal_place" | "minute_times" | "cinema_showtimes";
 
 /**
  * `GET /api/admin/backup-status` (admin only): when the VM's backup script last did what, from the file it writes.
@@ -130,6 +132,8 @@ export type ErrorCode =
   | "group_limit"
   /** A guest's name is an account's username or another guest's name in this poll. */
   | "vote_name_taken"
+  /** The showtimes of a cinema could not be fetched or read right now (admin-only test, phase 10d). */
+  | "cinema_unavailable"
   /** Anything else (server errors, unknown routes). */
   | "error";
 

@@ -364,6 +364,12 @@ missing, with a recommendation, and let the people choose.
     From day 50 after the last commit on `main`, the run at 12:37 Berlin time fails once a day as a reminder
     (`scripts/inactivity-reminder.sh`, last step of the workflow); a run failed because of the reminder does not
     affect the outage marker.
+  - Cinema showtimes test (phase 10d, `docs/PLAN.md`): admins can fetch a cinema's showtimes from cineamo in the cinema
+    entry. `CINEMAS` in the VM's `.env` (set by `setup.sh`, never in the repository) lists the cinemas; without it the
+    routes answer an empty list or "not found" and the feature `cinema_showtimes` is not listed, so the app
+    shows no new controls. Only admins see it. The server must start with a bad `CINEMAS` value (the feature is then off),
+    never fail on it. Cineamo's interface is undocumented and has no yes for use by everybody: it may change or be
+    closed at any time, and opening it to all users needs the owner's new decision.
   - Proposals may carry a `place` and start/end on any minute since 10d (features `proposal_place`, `minute_times`);
     the app keeps quarter hours for normal proposals. The cinema logic lives in `web/src/lib/cinema.ts`; a showing's end
     includes the advert buffer, and times before 05:00 belong to the night after the chosen day.

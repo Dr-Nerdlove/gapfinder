@@ -29,6 +29,8 @@ export interface FetchOptions {
   timeoutMs?: number;
   maxBytes?: number;
   maxRedirects?: number;
+  /** Replaces the default `User-Agent` header. */
+  userAgent?: string;
   /** Replaces https on port 443, so a test can talk to a plain local `node:http` server. */
   transport?: { request: typeof http.request; port: number };
 }
@@ -73,6 +75,7 @@ interface Settings {
   isAllowedAddress: (ip: string) => boolean;
   maxBytes: number;
   maxRedirects: number;
+  userAgent: string;
   request: typeof http.request;
   port: number;
 }
@@ -84,6 +87,7 @@ export async function fetchCalendarText(url: URL, options: FetchOptions = {}): P
     isAllowedAddress: options.isAllowedAddress ?? isPublicAddress,
     maxBytes: options.maxBytes ?? MAX_CALENDAR_BYTES,
     maxRedirects: options.maxRedirects ?? MAX_REDIRECTS,
+    userAgent: options.userAgent ?? USER_AGENT,
     request: options.transport?.request ?? (https.request as typeof http.request),
     port: options.transport?.port ?? 443,
   };
@@ -184,7 +188,7 @@ function requestOnce(
           lookup: pinnedLookup as never,
           agent: false,
           headers: {
-            "User-Agent": USER_AGENT,
+            "User-Agent": settings.userAgent,
             Accept: "text/calendar, */*;q=0.5",
             "Accept-Encoding": "identity",
           },
