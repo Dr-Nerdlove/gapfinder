@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.5.2] - 2026-11-16
+
+Two security fixes: pages of other projects under the same web address can no longer open inside the Android app, and the
+server now trusts only the visitor address that Tailscale Funnel itself sets. The Android app offers the update by
+itself; the server updates itself within about an hour.
+
 ### Fixed
 
 - Android app: pages of other projects under the same web address can no longer open inside the app; they open in the browser. The app offers the update itself.
