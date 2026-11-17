@@ -12,7 +12,13 @@ const CINEAMO_ORIGIN = "https://api.cineamo.com";
 
 export const SUCCESS_TTL_MS = 6 * 60 * 60 * 1000;
 export const FAILURE_TTL_MS = 5 * 60 * 1000;
+export const ROOMS_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_CACHE_ENTRIES = 400;
+export const SHOWINGS_PER_PAGE = 100;
+export const MAX_SHOWINGS_PAGES = 5;
+export const ROOMS_PER_PAGE = 50;
+export const MAX_ROOMS_PAGES = 3;
+const MAX_ROOM_LENGTH = 60;
 const MAX_FILM_LENGTH = 200;
 const MAX_TICKET_URL_LENGTH = 500;
 
@@ -33,8 +39,24 @@ function ticketUrlOf(value: unknown): string | undefined {
   return ownCopy(url.href);
 }
 
-/** The showings and the page count of cineamo's answer, or null when it is not the expected JSON. */
-export function parseShowingsPage(text: string): { showings: CinemaShowing[]; pageCount: number } | null {
+/** One parsed showing and the id of its screen (null when cineamo gives none). */
+export interface ParsedShowing {
+  showing: CinemaShowing;
+  roomId: number | null;
+}
+
+function byStartAndFilm(a: ParsedShowing, b: ParsedShowing): number {
+  const x = a.showing;
+  const y = b.showing;
+  return x.start < y.start ? -1 : x.start > y.start ? 1 : x.film < y.film ? -1 : x.film > y.film ? 1 : 0;
+}
+
+function pageCountOf(json: Record<string, unknown>): number {
+  return typeof json._page_count === "number" && Number.isFinite(json._page_count) ? json._page_count : 1;
+}
+
+/** The showings (with their screen ids) and the page count of cineamo's answer, or null when it is not the expected JSON. */
+export function parseShowingsPage(text: string): { items: ParsedShowing[]; pageCount: number } | null {
   let json: unknown;
   try {
     json = JSON.parse(text);
@@ -42,7 +64,7 @@ export function parseShowingsPage(text: string): { showings: CinemaShowing[]; pa
     return null;
   }
   if (!isRecord(json) || !isRecord(json._embedded) || !Array.isArray(json._embedded.showings)) return null;
-  const showings: CinemaShowing[] = [];
+  const items: ParsedShowing[] = [];
   for (const entry of json._embedded.showings as unknown[]) {
     if (!isRecord(entry)) continue;
     if (typeof entry.state === "string" && entry.state !== "scheduled") continue;
@@ -56,18 +78,45 @@ export function parseShowingsPage(text: string): { showings: CinemaShowing[]; pa
     if (typeof entry.language === "string" && /^[a-z]{2,3}$/.test(entry.language)) {
       showing.language = ownCopy(entry.language);
     }
+    if (entry.isImax === true) showing.imax = true;
     const ticketUrl = ticketUrlOf(entry.onlineTicketUrl);
     if (ticketUrl !== undefined) showing.ticketUrl = ticketUrl;
-    showings.push(showing);
+    const roomId = typeof entry.cinemaRoomId === "number" && Number.isSafeInteger(entry.cinemaRoomId) ? entry.cinemaRoomId : null;
+    items.push({ showing, roomId });
   }
-  showings.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.film < b.film ? -1 : a.film > b.film ? 1 : 0));
-  const pageCount = typeof json._page_count === "number" ? json._page_count : 1;
-  return { showings, pageCount };
+  items.sort(byStartAndFilm);
+  return { items, pageCount: pageCountOf(json) };
 }
 
 /** The showings in cineamo's answer, sorted by start and film; null when it is not the expected JSON. */
 export function parseShowings(text: string): CinemaShowing[] | null {
-  return parseShowingsPage(text)?.showings ?? null;
+  return parseShowingsPage(text)?.items.map((item) => item.showing) ?? null;
+}
+
+/** The screens (id and name) of cineamo's answer and its page count; null when it is not the expected JSON. */
+export function parseRoomsPage(text: string): { items: [number, string][]; pageCount: number } | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!isRecord(json) || !isRecord(json._embedded)) return null;
+  // The key of the list is not documented: take the first list of objects.
+  const list = Object.values(json._embedded).find(
+    (value): value is unknown[] => Array.isArray(value) && value.length > 0 && value.every(isRecord),
+  );
+  const empty = Object.values(json._embedded).some((value) => Array.isArray(value) && value.length === 0);
+  if (list === undefined && !empty) return null;
+  const items: [number, string][] = [];
+  for (const entry of list ?? []) {
+    if (!isRecord(entry) || typeof entry.id !== "number" || !Number.isSafeInteger(entry.id)) continue;
+    if (typeof entry.name !== "string") continue;
+    const name = [...entry.name.trim()].slice(0, MAX_ROOM_LENGTH).join("").trim();
+    if (name === "") continue;
+    items.push([entry.id, ownCopy(name)]);
+  }
+  return { items, pageCount: pageCountOf(json) };
 }
 
 export interface CinemaService {
@@ -75,20 +124,24 @@ export interface CinemaService {
   showings(cinemaId: number, date: string): Promise<CinemaShowing[] | null>;
 }
 
-interface CacheEntry {
+interface CacheEntry<T> {
   expiresAt: number;
-  value: CinemaShowing[] | null;
+  value: T | null;
 }
+
+type RoomNames = Map<number, string>;
 
 export function createCinemaService(deps: {
   fetchText: (url: URL) => Promise<FetchResult>;
   now: () => Date;
   log: FastifyBaseLogger;
 }): CinemaService {
-  const cache = new Map<string, CacheEntry>();
-  const inflight = new Map<string, Promise<CinemaShowing[] | null>>();
+  const cache = new Map<string, CacheEntry<ParsedShowing[]>>();
+  const inflight = new Map<string, Promise<ParsedShowing[] | null>>();
+  const roomCache = new Map<number, CacheEntry<RoomNames>>();
+  const roomInflight = new Map<number, Promise<RoomNames | null>>();
 
-  function remember(key: string, value: CinemaShowing[] | null): void {
+  function remember(key: string, value: ParsedShowing[] | null): void {
     const nowMs = deps.now().getTime();
     cache.delete(key);
     if (cache.size >= MAX_CACHE_ENTRIES) {
@@ -102,48 +155,127 @@ export function createCinemaService(deps: {
     cache.set(key, { expiresAt: nowMs + (value === null ? FAILURE_TTL_MS : SUCCESS_TTL_MS), value });
   }
 
-  async function load(cinemaId: number, date: string): Promise<CinemaShowing[] | null> {
-    try {
-      const url = new URL("/showings", CINEAMO_ORIGIN);
-      url.searchParams.set("cinemaId", String(cinemaId));
-      url.searchParams.set("date", date);
-      url.searchParams.set("per_page", "100");
-      const result = await deps.fetchText(url);
+  /** All pages one after another (page 1 without a page parameter); null when any page fails or cannot be read. */
+  async function fetchPages<T>(
+    what: string,
+    makeUrl: (page: number) => URL,
+    parse: (text: string) => { items: T[]; pageCount: number } | null,
+    maxPages: number,
+  ): Promise<T[] | null> {
+    const all: T[] = [];
+    let pageCount = 1;
+    for (let page = 1; page <= Math.min(pageCount, maxPages); page++) {
+      const result = await deps.fetchText(makeUrl(page));
       if (!result.ok) {
-        deps.log.warn(`Cinema showtimes fetch failed: ${result.reason}`);
+        deps.log.warn(`${what} fetch failed: ${result.reason}`);
         return null;
       }
-      const page = parseShowingsPage(result.text);
-      if (page === null) {
-        deps.log.warn("Cinema showtimes fetch failed: unexpected answer");
+      const parsed = parse(result.text);
+      if (parsed === null) {
+        deps.log.warn(`${what} fetch failed: unexpected answer`);
         return null;
       }
-      if (page.pageCount > 1) deps.log.warn("Cinema showtimes have more than one page; only the first is used");
-      deps.log.info(`Cinema showtimes fetched: ok, ${page.showings.length} showings`);
-      return page.showings;
+      all.push(...parsed.items);
+      if (page === 1) {
+        pageCount = parsed.pageCount;
+        if (pageCount > maxPages) deps.log.warn(`${what} have more than ${maxPages} pages; only the first ${maxPages} are used`);
+      }
+    }
+    return all;
+  }
+
+  async function load(cinemaId: number, date: string): Promise<ParsedShowing[] | null> {
+    try {
+      const items = await fetchPages(
+        "Cinema showtimes",
+        (page) => {
+          const url = new URL("/showings", CINEAMO_ORIGIN);
+          url.searchParams.set("cinemaId", String(cinemaId));
+          url.searchParams.set("date", date);
+          url.searchParams.set("per_page", String(SHOWINGS_PER_PAGE));
+          if (page > 1) url.searchParams.set("page", String(page));
+          return url;
+        },
+        parseShowingsPage,
+        MAX_SHOWINGS_PAGES,
+      );
+      if (items === null) return null;
+      items.sort(byStartAndFilm);
+      deps.log.info(`Cinema showtimes fetched: ok, ${items.length} showings`);
+      return items;
     } catch {
       deps.log.warn("Cinema showtimes fetch failed: error");
       return null;
     }
   }
 
+  async function loadRooms(cinemaId: number): Promise<RoomNames | null> {
+    try {
+      const items = await fetchPages(
+        "Cinema screens",
+        (page) => {
+          const url = new URL("/cinema-rooms", CINEAMO_ORIGIN);
+          url.searchParams.set("cinemaId", String(cinemaId));
+          url.searchParams.set("perPage", String(ROOMS_PER_PAGE));
+          if (page > 1) url.searchParams.set("page", String(page));
+          return url;
+        },
+        parseRoomsPage,
+        MAX_ROOMS_PAGES,
+      );
+      return items === null ? null : new Map(items);
+    } catch {
+      deps.log.warn("Cinema screens fetch failed: error");
+      return null;
+    }
+  }
+
+  function roomsOf(cinemaId: number): Promise<RoomNames | null> {
+    const cached = roomCache.get(cinemaId);
+    if (cached !== undefined) {
+      if (cached.expiresAt > deps.now().getTime()) return Promise.resolve(cached.value);
+      roomCache.delete(cinemaId);
+    }
+    const running = roomInflight.get(cinemaId);
+    if (running !== undefined) return running;
+    const started = loadRooms(cinemaId).then((value) => {
+      roomCache.set(cinemaId, { expiresAt: deps.now().getTime() + (value === null ? FAILURE_TTL_MS : ROOMS_TTL_MS), value });
+      return value;
+    });
+    roomInflight.set(cinemaId, started);
+    void started.finally(() => roomInflight.delete(cinemaId));
+    return started;
+  }
+
+  function parsedShowings(cinemaId: number, date: string): Promise<ParsedShowing[] | null> {
+    const key = `${cinemaId}|${date}`;
+    const cached = cache.get(key);
+    if (cached !== undefined) {
+      if (cached.expiresAt > deps.now().getTime()) return Promise.resolve(cached.value);
+      cache.delete(key);
+    }
+    const running = inflight.get(key);
+    if (running !== undefined) return running;
+    const started = load(cinemaId, date).then((value) => {
+      remember(key, value);
+      return value;
+    });
+    inflight.set(key, started);
+    void started.finally(() => inflight.delete(key));
+    return started;
+  }
+
   return {
-    showings(cinemaId, date) {
-      const key = `${cinemaId}|${date}`;
-      const cached = cache.get(key);
-      if (cached !== undefined) {
-        if (cached.expiresAt > deps.now().getTime()) return Promise.resolve(cached.value);
-        cache.delete(key);
-      }
-      const running = inflight.get(key);
-      if (running !== undefined) return running;
-      const started = load(cinemaId, date).then((value) => {
-        remember(key, value);
-        return value;
+    async showings(cinemaId, date) {
+      const items = await parsedShowings(cinemaId, date);
+      if (items === null) return null;
+      if (!items.some((item) => item.roomId !== null)) return items.map((item) => item.showing);
+      // Without the screens the showings are still useful, just without a name.
+      const rooms = await roomsOf(cinemaId);
+      return items.map(({ showing, roomId }) => {
+        const room = roomId === null ? undefined : rooms?.get(roomId);
+        return room === undefined ? showing : { ...showing, room };
       });
-      inflight.set(key, started);
-      void started.finally(() => inflight.delete(key));
-      return started;
     },
   };
 }

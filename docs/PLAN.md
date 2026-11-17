@@ -871,9 +871,14 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   and accepts dates from yesterday to 21 days ahead. The app shows the films of the evening, fills the times field when
   one is tapped, and shows the credit "Spielzeiten: Cineamo". The earlier decision "no automatic fetch without a yes"
   still holds for everybody else: opening it to all users needs cineamo's yes and a new decision by the owner.
+  Paging is built (up to 5 pages of 100, one after another; a failed or unreadable page fails the whole fetch, never a
+  shortened list; found on 2026-11-17: one cinema had 108 showings a day). Screens: the showings carry the screen's name
+  where cineamo gives it (the rooms are fetched once a day per cinema; if that fails the showings come without names),
+  and a preferred screen per cinema in `CINEMAS` (`<id>=<name>|<screen>`) filters the list in the app (switch "Nur
+  Saal ...", on by default). Seen on 2026-11-17: two of the owner's three cinemas with a special screen name it per
+  showing; for the third cineamo knows the screen but no showing names one (the app then shows all showings).
   Still open: the ticket link on proposals and the credit on the finished poll (the server already returns
-  `ticketUrl`); the film length stays an entry by hand; paging beyond 100 showings a day is not built (only a log
-  warning); showings after midnight are found only if cineamo lists them under the next calendar day (not verified);
+  `ticketUrl`); the film length stays an entry by hand; showings after midnight are found only if cineamo lists them under the next calendar day (not verified);
   the load test (9f) was not rerun.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:

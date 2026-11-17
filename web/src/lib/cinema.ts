@@ -57,12 +57,15 @@ export function languageLabel(code: string | undefined): string | null {
   return c === "eng" ? "Englisch" : c.toUpperCase();
 }
 
-/** The films shown on the evening of `day` (Berlin time; the night before 05:00 belongs to the evening before), by film and language. */
-export function filmsOfEvening(showings: readonly CinemaShowing[], day: string): FetchedFilm[] {
+/** The films shown on the evening of `day` (Berlin time; the night before 05:00 belongs to the evening before), by film and language.
+ * With `room`, only showings in that screen are kept (compared trimmed and ignoring case); showings without a screen name are dropped. */
+export function filmsOfEvening(showings: readonly CinemaShowing[], day: string, room?: string): FetchedFilm[] {
   const nextDay = addDays(day, 1);
+  const wanted = room?.trim().toLowerCase();
   const groups = new Map<string, { film: string; language: string; clocks: Set<string> }>();
   for (const showing of showings) {
     if (Number.isNaN(Date.parse(showing.start))) continue;
+    if (wanted !== undefined && showing.room?.trim().toLowerCase() !== wanted) continue;
     const { date, time } = berlinParts(showing.start);
     const minutes = clockToMinutes(time);
     const inEvening = (date === day && minutes >= NIGHT_END_MINUTES) || (date === nextDay && minutes < NIGHT_END_MINUTES);

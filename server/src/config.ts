@@ -36,6 +36,7 @@ export interface Config {
 }
 
 export const MAX_CINEMAS = 20;
+export const MAX_CINEMA_ROOM_LENGTH = 60;
 
 export interface FcmAccount {
   projectId: string;
@@ -126,7 +127,7 @@ export function parseFcmAccount(value: string | undefined): { account: FcmAccoun
 }
 
 /**
- * Reads `CINEMAS`: `<cineamo id>=<name>;<id>=<name>`. Like the keys, a missing or invalid value is a problem text,
+ * Reads `CINEMAS`: `<cineamo id>=<name>;<id>=<name>`, each optionally with a preferred screen: `<id>=<name>|<screen>`. Like the keys, a missing or invalid value is a problem text,
  * never an error, and the text never contains the value. One broken entry makes the whole value invalid.
  */
 export function parseCinemas(value: string | undefined): { cinemas: CinemaInfo[]; problem: string | null } {
@@ -141,17 +142,23 @@ export function parseCinemas(value: string | undefined): { cinemas: CinemaInfo[]
   for (const entry of entries) {
     const at = entry.indexOf("=");
     const idText = at < 0 ? "" : entry.slice(0, at).trim();
-    const name = at < 0 ? "" : entry.slice(at + 1).trim();
+    const rest = at < 0 ? "" : entry.slice(at + 1);
+    const bar = rest.indexOf("|");
+    const name = (bar < 0 ? rest : rest.slice(0, bar)).trim();
+    const room = bar < 0 ? undefined : rest.slice(bar + 1).trim();
     if (!/^\d{1,9}$/.test(idText) || Number(idText) < 1) {
       return invalid("every entry must look like <id>=<name> with a whole number as id");
     }
     if (name === "" || [...name].length > PROPOSAL_PLACE_MAX_LENGTH) {
       return invalid(`every name must have 1 to ${PROPOSAL_PLACE_MAX_LENGTH} characters`);
     }
+    if (room !== undefined && (room === "" || room.includes("|") || [...room].length > MAX_CINEMA_ROOM_LENGTH)) {
+      return invalid(`a screen after "|" must have 1 to ${MAX_CINEMA_ROOM_LENGTH} characters and no second "|"`);
+    }
     const id = Number(idText);
     if (seen.has(id)) return invalid("an id is listed twice");
     seen.add(id);
-    cinemas.push({ id, name });
+    cinemas.push(room === undefined ? { id, name } : { id, name, room });
   }
   return { cinemas, problem: null };
 }

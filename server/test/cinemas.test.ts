@@ -44,6 +44,34 @@ describe("CINEMAS config", () => {
     expect(config.cinemasProblem).not.toContain(value);
   });
 
+  it("reads an optional preferred screen after a bar", () => {
+    const config = loadConfig({ CINEMAS: "12=Kino Eins|IMAX; 345 = Café Lichtspiele | Saal 2 ;7=Kino Drei" });
+    expect(config.cinemas).toEqual([
+      { id: 12, name: "Kino Eins", room: "IMAX" },
+      { id: 345, name: "Café Lichtspiele", room: "Saal 2" },
+      { id: 7, name: "Kino Drei" },
+    ]);
+    expect(config.cinemasProblem).toBeNull();
+  });
+
+  it.each([
+    ["empty screen", `12=Kino|`],
+    ["blank screen", `12=Kino|   `],
+    ["second bar", `12=Kino|A|${secret}`],
+    ["screen too long", `12=Kino|${"x".repeat(61)}${secret}`],
+    ["empty name before the bar", `12=|${secret}`],
+  ])("gives no cinemas for a bad screen: %s", (_why, value) => {
+    const config = loadConfig({ CINEMAS: value });
+    expect(config.cinemas).toEqual([]);
+    expect(config.cinemasProblem).toMatch(/^CINEMAS is not valid: /);
+    expect(config.cinemasProblem).not.toContain(secret);
+    expect(config.cinemasProblem).not.toContain(value);
+  });
+
+  it("accepts a screen of exactly 60 characters", () => {
+    expect(parseCinemas(`7=Kino|${"z".repeat(60)}`).problem).toBeNull();
+  });
+
   it("accepts exactly 20 cinemas and a name of exactly 100 characters", () => {
     const twenty = Array.from({ length: 20 }, (_, i) => `${i + 1}=Kino ${i}`).join(";");
     expect(parseCinemas(twenty).cinemas).toHaveLength(20);
@@ -130,6 +158,29 @@ describe("parseShowings", () => {
 
   it("accepts an empty list", () => {
     expect(parseShowings('{"_embedded":{"showings":[]}}')).toEqual([]);
+  });
+});
+
+const showingEntry = (id: number, name: string, start: string, extra: Record<string, unknown> = {}) => ({
+  id,
+  name,
+  startDatetime: start,
+  state: "scheduled",
+  ...extra,
+});
+const page = (showings: unknown[], pageNumber = 1, pageCount = 1) =>
+  JSON.stringify({ _embedded: { showings }, _page: pageNumber, _page_count: pageCount });
+const roomsAnswer = (rooms: unknown[], pageCount = 1) =>
+  JSON.stringify({ _total_items: rooms.length, _page: 1, _page_count: pageCount, _embedded: { cinemaRooms: rooms } });
+
+describe("parseShowings screens", () => {
+  it("marks IMAX only when isImax is true", () => {
+    const text = page([
+      showingEntry(1, "A", "2026-11-17T14:00:00Z", { isImax: true }),
+      showingEntry(2, "B", "2026-11-17T15:00:00Z", { isImax: null }),
+      showingEntry(3, "C", "2026-11-17T16:00:00Z", { isImax: "true" }),
+    ]);
+    expect(parseShowings(text)!.map((s) => s.imax)).toEqual([true, undefined, undefined]);
   });
 });
 
@@ -267,6 +318,186 @@ describe("admin cinema routes", () => {
     const response = await call(env, "GET", other, { token: admin });
     expect(response.statusCode).toBe(502);
     expect(response.json()).toMatchObject({ code: "cinema_unavailable" });
+  });
+});
+
+describe("admin cinema routes: pages and screens", () => {
+  let env: TestEnv;
+  let urls: string[];
+  let admin: string;
+  let answer: (url: URL) => FetchResult;
+  afterEach(async () => {
+    await env.app.close();
+  });
+
+  const DAY = "2026-11-02";
+  const showingsUrl = (cinema: number, date = DAY) => `/api/admin/cinemas/${cinema}/showings?date=${date}`;
+  const isRooms = (url: URL) => url.pathname === "/cinema-rooms";
+  const roomCalls = () => urls.filter((u) => u.includes("/cinema-rooms"));
+  const showingCalls = () => urls.filter((u) => u.includes("/showings"));
+
+  async function setup(): Promise<void> {
+    urls = [];
+    answer = () => ({ ok: true, text: page([]) });
+    env = await createTestEnv(
+      { cinemas: CINEMAS, cinemasProblem: null },
+      {
+        fetchCinemaText: async (url) => {
+          urls.push(url.href);
+          return answer(url);
+        },
+      },
+    );
+    admin = (await addUserWithSession(env, "Admin", { isAdmin: true })).token;
+  }
+
+  const get = async (cinema = 12, date = DAY) => call(env, "GET", showingsUrl(cinema, date), { token: admin });
+  const films = (response: { json: <T>() => T }) => response.json<{ showings: { film: string; room?: string; imax?: true }[] }>().showings;
+
+  it("joins two pages, sorted, asks for page 2 explicitly, and caches the whole round", async () => {
+    await setup();
+    answer = (url) =>
+      url.searchParams.get("page") === "2"
+        ? { ok: true, text: page([showingEntry(2, "Früh", "2026-11-02T08:00:00Z")], 2, 2) }
+        : { ok: true, text: page([showingEntry(1, "Spät", "2026-11-02T20:00:00Z")], 1, 2) };
+    const response = await get();
+    expect(response.statusCode).toBe(200);
+    expect(films(response).map((s) => s.film)).toEqual(["Früh", "Spät"]);
+    expect(urls).toEqual([
+      `https://api.cineamo.com/showings?cinemaId=12&date=${DAY}&per_page=100`,
+      `https://api.cineamo.com/showings?cinemaId=12&date=${DAY}&per_page=100&page=2`,
+    ]);
+    await get();
+    expect(urls).toHaveLength(2);
+  });
+
+  it("fails the whole fetch when a later page fails, and keeps the failure for 5 minutes", async () => {
+    await setup();
+    answer = (url) =>
+      url.searchParams.get("page") === "2"
+        ? { ok: false, reason: "unreachable" }
+        : { ok: true, text: page([showingEntry(1, "A", "2026-11-02T20:00:00Z")], 1, 2) };
+    const response = await get();
+    expect(response.statusCode).toBe(502);
+    expect(response.json()).toMatchObject({ code: "cinema_unavailable" });
+    await get();
+    expect(urls).toHaveLength(2);
+  });
+
+  it("fails the whole fetch when a later page cannot be read", async () => {
+    await setup();
+    answer = (url) =>
+      url.searchParams.get("page") === "2"
+        ? { ok: true, text: "<html>" }
+        : { ok: true, text: page([showingEntry(1, "A", "2026-11-02T20:00:00Z")], 1, 2) };
+    expect((await get()).statusCode).toBe(502);
+  });
+
+  it("reads at most 5 pages", async () => {
+    await setup();
+    answer = (url) => {
+      const n = Number(url.searchParams.get("page") ?? "1");
+      return { ok: true, text: page([showingEntry(n, `Film ${n}`, `2026-11-02T1${n}:00:00Z`)], n, 9) };
+    };
+    const response = await get();
+    expect(response.statusCode).toBe(200);
+    expect(films(response)).toHaveLength(5);
+    expect(urls).toHaveLength(5);
+  });
+
+  it("attaches the screen's name and IMAX, fetches the screens with perPage=50, and shows what has no screen as it is", async () => {
+    await setup();
+    answer = (url) =>
+      isRooms(url)
+        ? { ok: true, text: roomsAnswer([{ id: 134, name: "  Cinemagnum  ", cinemaId: 12 }, { id: 5, name: "Kino 2" }]) }
+        : {
+            ok: true,
+            text: page([
+              showingEntry(1, "A", "2026-11-02T18:00:00Z", { cinemaRoomId: 134, isImax: true }),
+              showingEntry(2, "B", "2026-11-02T19:00:00Z", { cinemaRoomId: 5 }),
+              showingEntry(3, "C", "2026-11-02T20:00:00Z", { cinemaRoomId: null }),
+              showingEntry(4, "D", "2026-11-02T21:00:00Z", { cinemaRoomId: 999 }),
+            ]),
+          };
+    const response = await get();
+    expect(response.statusCode).toBe(200);
+    expect(response.json<{ showings: unknown[] }>().showings).toEqual([
+      { film: "A", start: "2026-11-02T18:00:00.000Z", imax: true, room: "Cinemagnum" },
+      { film: "B", start: "2026-11-02T19:00:00.000Z", room: "Kino 2" },
+      { film: "C", start: "2026-11-02T20:00:00.000Z" },
+      { film: "D", start: "2026-11-02T21:00:00.000Z" },
+    ]);
+    expect(roomCalls()).toEqual(["https://api.cineamo.com/cinema-rooms?cinemaId=12&perPage=50"]);
+  });
+
+  it("cuts a long screen name to 60 characters", async () => {
+    await setup();
+    answer = (url) =>
+      isRooms(url)
+        ? { ok: true, text: roomsAnswer([{ id: 1, name: "x".repeat(80) }]) }
+        : { ok: true, text: page([showingEntry(1, "A", "2026-11-02T18:00:00Z", { cinemaRoomId: 1 })]) };
+    expect(films(await get())[0]!.room).toHaveLength(60);
+  });
+
+  it("reads further pages of the screens (at most 3)", async () => {
+    await setup();
+    answer = (url) => {
+      if (!isRooms(url)) return { ok: true, text: page([showingEntry(1, "A", "2026-11-02T18:00:00Z", { cinemaRoomId: 3 })]) };
+      const n = Number(url.searchParams.get("page") ?? "1");
+      return { ok: true, text: roomsAnswer([{ id: n, name: `Saal ${n}` }], 9) };
+    };
+    const response = await get();
+    expect(films(response)[0]!.room).toBe("Saal 3");
+    expect(roomCalls()).toHaveLength(3);
+  });
+
+  it("still returns the showings, without screens, when the screens cannot be fetched or read", async () => {
+    await setup();
+    let roomsReply: FetchResult = { ok: false, reason: "unreachable" };
+    answer = (url) =>
+      isRooms(url) ? roomsReply : { ok: true, text: page([showingEntry(1, "A", "2026-11-02T18:00:00Z", { cinemaRoomId: 3 })]) };
+    const first = await get();
+    expect(first.statusCode).toBe(200);
+    expect(films(first)).toEqual([{ film: "A", start: "2026-11-02T18:00:00.000Z" }]);
+    // Failure is kept for 5 minutes, then the screens are asked again and appear.
+    await get();
+    expect(roomCalls()).toHaveLength(1);
+    env.clock.advanceMinutes(6);
+    roomsReply = { ok: true, text: roomsAnswer([{ id: 3, name: "Saal 3" }]) };
+    expect(films(await get())[0]!.room).toBe("Saal 3");
+    roomsReply = { ok: true, text: "not json" };
+    env.clock.advanceHours(25);
+    const unreadable = await get();
+    expect(unreadable.statusCode).toBe(200);
+    expect(films(unreadable)[0]!.room).toBeUndefined();
+  });
+
+  it("fetches the screens once for several days of the same cinema, and again after 24 hours", async () => {
+    await setup();
+    answer = (url) =>
+      isRooms(url)
+        ? { ok: true, text: roomsAnswer([{ id: 3, name: "Saal 3" }]) }
+        : { ok: true, text: page([showingEntry(1, "A", "2026-11-02T18:00:00Z", { cinemaRoomId: 3 })]) };
+    await get(12, "2026-11-02");
+    await get(12, "2026-11-03");
+    expect(roomCalls()).toHaveLength(1);
+    await get(345, "2026-11-02");
+    expect(roomCalls()).toHaveLength(2);
+    env.clock.advanceHours(23);
+    await get(12, "2026-11-04");
+    expect(roomCalls()).toHaveLength(2);
+    env.clock.advanceHours(2);
+    await get(12, "2026-11-05");
+    expect(roomCalls()).toHaveLength(3);
+  });
+
+  it("does not ask for the screens when no showing has a screen id", async () => {
+    await setup();
+    answer = () => ({ ok: true, text: page([showingEntry(1, "A", "2026-11-02T18:00:00Z", { cinemaRoomId: null, isImax: true })]) });
+    const response = await get();
+    expect(films(response)).toEqual([{ film: "A", start: "2026-11-02T18:00:00.000Z", imax: true }]);
+    expect(roomCalls()).toEqual([]);
+    expect(showingCalls()).toHaveLength(1);
   });
 });
 

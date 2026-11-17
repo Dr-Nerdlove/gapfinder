@@ -4,6 +4,8 @@
 export interface CinemaInfo {
   id: number;
   name: string;
+  /** Preferred screen (`CINEMAS`: `<id>=<name>|<screen>`), as cineamo names it; the app shows only its showings. */
+  room?: string;
 }
 
 /** `GET /api/admin/cinemas` (admin only): the configured cinemas. */
@@ -18,6 +20,10 @@ export interface CinemaShowing {
   start: string;
   /** Language code of the version (e.g. `deu`, `eng`); missing when unknown. */
   language?: string;
+  /** The screen's name as cineamo gives it; missing when cineamo does not name the screen of this showing. */
+  room?: string;
+  /** True when cineamo marks the showing as IMAX; missing otherwise. */
+  imax?: true;
   /** `https://` address where tickets can be bought; missing when there is none. */
   ticketUrl?: string;
 }

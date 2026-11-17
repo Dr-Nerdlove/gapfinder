@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { PROPOSAL_PLACE_MAX_LENGTH, type CinemaInfo } from "@lueckenfueller/shared";
+  import { PROPOSAL_PLACE_MAX_LENGTH, type CinemaInfo, type CinemaShowing } from "@lueckenfueller/shared";
   import { untrack } from "svelte";
   import * as api from "../../lib/api";
   import { errorMessage } from "../../lib/messages";
@@ -26,6 +26,7 @@
   import Card from "../Card.svelte";
   import Message from "../Message.svelte";
   import SelectField from "../SelectField.svelte";
+  import Switch from "../Switch.svelte";
   import TextField from "../TextField.svelte";
 
   interface Props {
@@ -51,6 +52,10 @@
     /** "cinema|day" the fetched films belong to; "" when there are none. */
     fetchedFor: string;
     films: FetchedFilm[];
+    /** The showings as fetched, so the screen switch needs no new request. */
+    fetched: CinemaShowing[];
+    /** Show only the cinema's preferred screen (when it has one and cineamo names screens). */
+    onlyRoom: boolean;
     /** "cinema|day" of the request in flight; "" when none. */
     loadingFor: string;
     error: string;
@@ -69,6 +74,8 @@
     appliedCinemaId: cinemaId,
     fetchedFor: "",
     films: [],
+    fetched: [],
+    onlyRoom: true,
     loadingFor: "",
     error: "",
     errorFor: "",
@@ -91,6 +98,7 @@
       if (block.fetchedFor !== "" && block.fetchedFor !== fetchKey(block)) {
         block.fetchedFor = "";
         block.films = [];
+        block.fetched = [];
         block.pickedKey = "";
       }
       if (block.error !== "" && block.errorFor !== fetchKey(block)) block.error = "";
@@ -132,10 +140,26 @@
       block.errorFor = key;
       block.fetchedFor = "";
       block.films = [];
+      block.fetched = [];
       return;
     }
-    block.films = filmsOfEvening(result.data.showings, day);
+    block.fetched = result.data.showings;
     block.fetchedFor = key;
+    showFilms(block);
+    block.pickedKey = "";
+  }
+
+  const roomOf = (block: Block): string | undefined => cinemas.find((c) => String(c.id) === block.cinemaId)?.room;
+  const namesRooms = (block: Block): boolean => block.fetched.some((s) => s.room !== undefined);
+
+  function showFilms(block: Block): void {
+    const room = roomOf(block);
+    block.films = filmsOfEvening(block.fetched, block.day, room !== undefined && block.onlyRoom && namesRooms(block) ? room : undefined);
+  }
+
+  function setOnlyRoom(block: Block, on: boolean): void {
+    block.onlyRoom = on;
+    showFilms(block);
     block.pickedKey = "";
   }
 
@@ -183,7 +207,15 @@
         </div>
         {#if block.error !== ""}<Message text={block.error} />{/if}
         {#if block.fetchedFor === fetchKey(block)}
+          {@const room = roomOf(block)}
           <div class="films">
+            {#if room !== undefined}
+              {#if namesRooms(block)}
+                <Switch label="Nur Saal „{room}“" checked={block.onlyRoom} onchange={(on) => setOnlyRoom(block, on)} />
+              {:else}
+                <p class="hint">Cineamo nennt für dieses Kino keine Säle. Es werden alle Vorstellungen gezeigt.</p>
+              {/if}
+            {/if}
             {#each block.films as film (film.key)}
               {@const on = block.pickedKey === film.key}
               <button type="button" class="showing" class:fits={on} aria-pressed={on} onclick={() => pickFilm(block, film)}>
@@ -195,7 +227,11 @@
                 {#if on}<span class="chip ok">✓ gewählt</span>{/if}
               </button>
             {:else}
+              {#if room !== undefined && block.onlyRoom && namesRooms(block) && filmsOfEvening(block.fetched, block.day).length > 0}
+                <p class="hint">Für diesen Tag kennt Cineamo keine Vorstellungen im Saal „{room}“.</p>
+              {:else}
               <p class="hint">Für diesen Tag kennt Cineamo keine Vorstellungen. Das Programm ab Donnerstag steht oft erst kurz vorher fest. Du kannst die Zeiten von Hand eintragen.</p>
+              {/if}
             {/each}
             <p class="hint">Spielzeiten: Cineamo</p>
           </div>

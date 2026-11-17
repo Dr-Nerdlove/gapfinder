@@ -423,12 +423,17 @@ VM is rebuilt, make a new key in Firebase and run step 2 again; until then the a
 
 Admins can fetch a cinema's showtimes for one day from the cineamo service (a test, phase 10d). It is off until you
 give the server a list of cinemas. Only admins can use it, the server asks cineamo for at most one cinema and day
-every 6 hours, and nothing is stored in the database.
+every 6 hours (the screens of a cinema once a day), and nothing is stored in the database.
 
 1. Find the cinema's id: open `https://api.cineamo.com/cinemas?query=<town>` in a browser and read the field `id`
    of your cinema.
 2. Write the list as `<id>=<name>;<id>=<name>`, for example `12=Kino Eins;345=Kino Zwei` (at most 20 cinemas,
    names up to 100 characters; umlauts and spaces are fine; no `'`).
+   Optional preferred screen: add `|<screen>` to an entry, for example `12=Kino Eins|IMAX;345=Kino Zwei`. Write the
+   screen's name as cineamo calls it: open `https://api.cineamo.com/cinema-rooms?cinemaId=<id>&perPage=50` and read the
+   field `name` (up to 60 characters; no second `|`). The app then shows a switch "Nur Saal ..." (on by default) that
+   keeps only the showings in that screen. Cineamo does not name the screen of the showings for every cinema; then the
+   app says so and shows all showings.
 3. In the VM, run the setup again (see "When the files in `deploy/vm/` change"): `sudo bash setup.sh` asks for the
    list ("Cinemas for the showtimes test"; Enter keeps what is there). Or give it without the question:
    `sudo LUECKENFUELLER_CINEMAS='12=Kino Eins;345=Kino Zwei' bash setup.sh`. The script writes it into
