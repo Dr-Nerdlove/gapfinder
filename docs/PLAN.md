@@ -868,7 +868,8 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   repository). Admin-only routes `/api/admin/cinemas` and `/api/admin/cinemas/:id/showings`, announced by the feature
   `cinema_showtimes` (listed only when cinemas are configured). The server makes one request per cinema and day through
   the guarded fetch, caches the answer for 6 hours in memory (failures for 5 minutes), limits answers to 2 MB and 10 s,
-  and accepts dates from yesterday to 21 days ahead. The app shows the films of the evening, fills the times field when
+  and accepts dates from yesterday to 60 days ahead (21 until 2.6.0; raised so an evening can be planned for a film that
+  starts weeks later, once its presale has times). The app shows the films of the evening, fills the times field when
   one is tapped, and shows the credit "Spielzeiten: Cineamo". The earlier decision "no automatic fetch without a yes"
   still holds for everybody else: opening it to all users needs cineamo's yes and a new decision by the owner.
   Paging is built (up to 5 pages of 100, one after another; a failed or unreadable page fails the whole fetch, never a

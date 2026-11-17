@@ -242,7 +242,7 @@ describe("admin cinema routes", () => {
     ["not a real day", "?date=2026-02-30"],
     ["with a time", "?date=2026-11-02T10:00"],
     ["two days ago", "?date=2026-10-30"],
-    ["22 days ahead", "?date=2026-11-23"],
+    ["61 days ahead", "?date=2027-01-01"],
   ])("answers 400 for a bad date: %s", async (_why, query) => {
     const { admin } = await setup();
     const response = await call(env, "GET", `/api/admin/cinemas/12/showings${query}`, { token: admin });
@@ -251,9 +251,9 @@ describe("admin cinema routes", () => {
     expect(urls).toEqual([]);
   });
 
-  it("accepts yesterday and 21 days ahead", async () => {
+  it("accepts yesterday and 60 days ahead", async () => {
     const { admin } = await setup();
-    for (const date of ["2026-10-31", "2026-11-22"]) {
+    for (const date of ["2026-10-31", "2026-11-22", "2026-12-31"]) {
       const response = await call(env, "GET", `/api/admin/cinemas/12/showings?date=${date}`, { token: admin });
       expect(response.statusCode).toBe(200);
     }
