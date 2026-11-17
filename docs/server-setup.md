@@ -425,7 +425,7 @@ Admins can fetch a cinema's showtimes for one day from the cineamo service (a te
 give the server a list of cinemas. Only admins can use it, the server asks cineamo for at most one cinema and day
 every 6 hours, and nothing is stored in the database.
 
-1. Find the cinema's id: open `https://api.cineamo.com/cinemas?search=<town>` in a browser and read the field `id`
+1. Find the cinema's id: open `https://api.cineamo.com/cinemas?query=<town>` in a browser and read the field `id`
    of your cinema.
 2. Write the list as `<id>=<name>;<id>=<name>`, for example `12=Kino Eins;345=Kino Zwei` (at most 20 cinemas,
    names up to 100 characters; umlauts and spaces are fine; no `'`).

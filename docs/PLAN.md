@@ -800,7 +800,8 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   not named here).** Seen: `GET api.cineamo.com/showings?cinemaId=<id>&date=<YYYY-MM-DD>&per_page=100` returns all
   showings of one cinema for one day in a single answer (22 showings of 14 films for one cinema), so one request per
   cinema and day is enough and the worry about 36 pages is gone; `startDatetime[gte]`-style filters answer 400.
-  `api.cineamo.com/cinemas?search=<town>` finds a cinema's id. Every showing seen had an `onlineTicketUrl` (the
+  `api.cineamo.com/cinemas?query=<town>` finds a cinema's id (corrected on 2026-11-17: `search=` is ignored and
+  returns the whole list of about 1900 cinemas; `query=` and `city=` filter). Every showing seen had an `onlineTicketUrl` (the
   cinema's own booking page or kinoheld's; the links were not opened). Limits found: (1) the new cinema week (from
   Thursday) was not complete on Monday evening: Thursday and Friday showed only the advance sale of one film, while
   Wednesday was complete, so times for a weekend are usable only shortly before; (2) `endDatetime` was filled for
