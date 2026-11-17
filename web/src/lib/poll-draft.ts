@@ -116,6 +116,8 @@ export interface PollSource {
   hidden?: boolean;
   /** Cinema entry: the whole hours result; `picks` is empty then. */
   cinema?: CinemaSource;
+  /** Own cinema-night flow of admins (`#/kinoabend`): the cinemas ticked there; `manual` opens the entry by hand directly. */
+  cinemaFlow?: { cinemaIds: number[]; manual: boolean };
 }
 
 let handedOver: PollSource | null = null;

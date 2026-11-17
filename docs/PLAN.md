@@ -965,13 +965,20 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   - Step 1 "Wer, wann, welche Kinos": people (the search's people picker), a freely chosen period (two date fields,
     from today up to 60 days ahead, the server's limit for showtimes) and the cinemas. No time window and no minimum
     length to choose.
-  - Behind the button the app runs an hours search over the whole day (window 05:00 to 04:59, so a time before 05:00
-    belongs to the night before, as everywhere in 10d), with 90 minutes and no buffer, and fetches showtimes only for
+  - Behind the button the app runs an hours search over the whole day (window 05:00 to 04:45: the server takes only
+    quarter hours and refuses start = end; a time before 05:00 belongs to the night before, as everywhere in 10d), with
+    90 minutes and no buffer, and fetches showtimes only for
     the days on which everybody is free for 1½ hours at a stretch. Every showing whose film plus advert buffer lies
     within a free time then fits; a film shorter than 70 minutes could miss a day (accepted). Requests: at most one per
     cinema and fetched day (3 cinemas and 20 days: at most 60, then the 6-hour cache).
   - Steps 2 and 3 are the film choice as before. Step 3 shows only the fitting showings; the others are behind
     "Nicht passende einblenden (n)", with their reason.
+
+  Built 2026-11-17: `web/src/pages/CinemaNight.svelte` (step 1, keeps its choices in `nightChoice` for "Andere Kinos
+  wählen"), logic in `web/src/lib/cinema-night.ts`; it hands over to the poll page with `PollSource.cinemaFlow`, and
+  `CinemaFilmChoice` then starts at step 2. The hiding in step 3 (`visibleShowings` in `cinema.ts`) applies to the
+  film choice in general; the entry by hand still lists every showing. Only tried with the docs screenshots' made-up
+  server and cineamo, not at the real server.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter

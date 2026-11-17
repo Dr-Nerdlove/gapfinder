@@ -4,6 +4,7 @@ import {
   ADVERT_MINUTES_OPTIONS,
   CINEMA_PROBLEM_TEXTS,
   FILM_MINUTES_OPTIONS,
+  visibleShowings,
   checkShowings,
   cinemaRequest,
   cinemaSourceOf,
@@ -377,5 +378,32 @@ describe("filmsOfEvening", () => {
 
   it("labels languages", () => {
     expect([languageLabel(undefined), languageLabel("deu"), languageLabel("eng"), languageLabel("fra")]).toEqual([null, null, "Englisch", "FRA"]);
+  });
+});
+
+describe("visibleShowings", () => {
+  const list = [
+    { key: "a", fits: true },
+    { key: "b", fits: false },
+    { key: "c", fits: true },
+    { key: "d", fits: false },
+  ];
+
+  it("hides the ones that do not fit by default and counts them", () => {
+    const view = visibleShowings(list, false);
+    expect(view.shown.map((s) => s.key)).toEqual(["a", "c"]);
+    expect(view.fitting).toBe(2);
+    expect(view.notFitting).toBe(2);
+  });
+
+  it("shows all in their place when asked", () => {
+    expect(visibleShowings(list, true).shown.map((s) => s.key)).toEqual(["a", "b", "c", "d"]);
+  });
+
+  it("shows nothing but still counts when none fits", () => {
+    const view = visibleShowings([{ fits: false }, { fits: false }], false);
+    expect(view.shown).toEqual([]);
+    expect(view.fitting).toBe(0);
+    expect(view.notFitting).toBe(2);
   });
 });

@@ -7,6 +7,13 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ### Changed
 
+- Test for admins only: "Kinoabend planen" is now a flow of its own (button at the top of the search page, page
+  `#/kinoabend`). Step 1 asks who comes, a freely chosen period (up to 60 days ahead) and the cinemas. There is no daily
+  time window any more: every showing counts at which everybody has time by calendar, and showtimes are fetched for
+  every day in the period on which everybody is free for at least 90 minutes in a row. Before, showings fell out
+  because of the time window and showtimes were only fetched for the days of an hours search. In the last step,
+  showings that do not fit are hidden; "Nicht passende einblenden" shows them with the reason. Everybody else keeps
+  the entry by hand under the search result.
 - Test for admins only: when choosing a film, the list of showtimes that could not be fetched is now folded away
   ("Einige Spielzeiten fehlen") and opens on a tap. Days too far ahead now say "noch keine Spielzeiten" instead of
   "Bitte prüfe deine Eingaben.", with a note that cinemas usually publish their times only one or two weeks ahead.

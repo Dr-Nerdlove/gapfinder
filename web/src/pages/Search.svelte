@@ -66,9 +66,13 @@
   let answer = $state<Answer | null>(null);
   // The cinema entry needs a server that knows places and minute times (an older one would ignore them).
   let canCinema = $state(false);
+  // Admins of a server with showtimes and film choice get the own cinema-night flow instead (the old button stays for everybody else).
+  let serverHasNight = $state(false);
+  const canNight = $derived(serverHasNight && user?.isAdmin === true);
   onMount(() => {
     void checkHealth(API_URL).then((result) => {
       canCinema = result.kind === "online" && hasFeature(result.features, "proposal_place") && hasFeature(result.features, "minute_times");
+      serverHasNight = result.kind === "online" && hasFeature(result.features, "cinema_film_choice") && hasFeature(result.features, "cinema_showtimes");
     });
   });
 
@@ -196,10 +200,13 @@
       <p>Sobald der Server wieder wach ist, kannst du hier Freunde auswählen. Deine letzte Auswahl bleibt erhalten.</p>
     </Card>
   {:else}
+    {#if canNight}
+      <div class="cinema"><Button variant="tonal" onclick={() => navigate("#/kinoabend")} disabled={locked}>Kinoabend planen</Button></div>
+    {/if}
     <SearchForm bind:settings {others} {groups} ongroups={(next) => (groups = next)} {today} {searching} {locked} {problem} onsearch={search} />
     {#if answer}
       <div bind:this={resultBox} class="scroll-target">
-        {#if canCinema && answer.cinema}
+        {#if canCinema && answer.cinema && !canNight}
           <div class="cinema"><Button variant="tonal" onclick={planCinema} disabled={locked}>Kinoabend planen</Button></div>
         {/if}
         <SearchResults

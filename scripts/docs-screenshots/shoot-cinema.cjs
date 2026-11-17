@@ -5,6 +5,9 @@ const fs = require("fs");
 const { cardTop } = require("./lib.cjs");
 const { BASE } = require("./lib.cjs");
 
+/** Today in Germany, "YYYY-MM-DD". */
+const berlinToday = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Berlin" }).format(new Date());
+
 const API = "http://localhost:8080";
 const TEAL = "#00796B"; // the seed colour of the approved mock-up: not the default, so another colour is checked too
 const CIRCLE = ["Anna", "Tobi", "Emil", "Berta"]; // with Vincent, who searches
@@ -144,7 +147,7 @@ module.exports = async function cinema({ state, out, login }) {
 const PINK = "#C2185B"; // a second seed colour for the film choice (the app takes each user's colour)
 
 /**
- * The three steps of the film choice (needs the server started with the cinemas of `cinema.mjs`, see run.sh): light and
+ * The three steps of the cinema-night flow (`#/kinoabend`, then the film choice; needs the server started with the cinemas of `cinema.mjs`, see run.sh): light and
  * dark in teal, and step 2 in another colour. `docs/screenshots/cinema/film-choice-*.png`.
  */
 module.exports.filmChoice = async function filmChoice({ state, out, login }) {
@@ -159,9 +162,15 @@ module.exports.filmChoice = async function filmChoice({ state, out, login }) {
     const b = await login("Vincent", { dark });
     const page = b.page;
     const shot = (name) => page.screenshot({ path: `${out}/cinema/film-choice-${name}${suffix}.png`, fullPage: true });
-    await search(page);
+    // The own flow of admins: the button at the top of the search page leads to the page "Kinoabend planen".
+    await page.goto(BASE + "#/suche");
+    await page.waitForTimeout(1200);
     await page.getByRole("button", { name: "Kinoabend planen" }).click();
-    await page.getByRole("heading", { name: "Kinos wählen" }).waitFor();
+    await page.getByRole("heading", { name: "Zeitraum" }).waitFor();
+    await page.getByRole("checkbox", { name: "Anna", exact: true }).waitFor();
+    for (const name of CIRCLE) await page.getByRole("checkbox", { name, exact: true }).check();
+    await page.getByLabel("Von").fill(berlinToday());
+    await page.getByLabel("Bis").fill(state.cinemaDay);
     for (const name of ["Stadtkino am Markt", "Filmpalast Nord", "Cinema Bahnhof"]) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
     await page.waitForTimeout(300);
     if (steps.includes(1)) await shot("1-cinemas");
@@ -178,7 +187,12 @@ module.exports.filmChoice = async function filmChoice({ state, out, login }) {
       const fits = page.locator("button.showing.fits");
       await fits.nth(1).click(); // one passing showing left out
       await page.waitForTimeout(300);
-      await shot("3-showings");
+      await shot("3-showings"); // the showings that do not fit stay hidden
+      if (!dark && !color.includes("C2185B")) {
+        await page.getByRole("button", { name: /^Nicht passende einblenden/ }).click();
+        await page.waitForTimeout(300);
+        await shot("3-showings-all");
+      }
     }
     await b.browser.close();
   };

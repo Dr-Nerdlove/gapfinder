@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { CinemaInfo, CinemaShowing } from "@lueckenfueller/shared";
+  import { onMount, untrack } from "svelte";
   import * as api from "../../lib/api";
   import { errorMessage } from "../../lib/messages";
   import { session } from "../../lib/session.svelte";
@@ -11,8 +12,10 @@
     minutesLabel,
     shortSearchHint,
     summaryLines,
+    visibleShowings,
     type CheckedShowing,
   } from "../../lib/cinema";
+  import { fetchedDaysLine, periodDays } from "../../lib/cinema-night";
   import {
     checkFilm,
     daysToFetch,
@@ -26,6 +29,7 @@
     type FilmShowing,
   } from "../../lib/cinema-film";
   import { formatClock, formatDay } from "../../lib/gap-search";
+  import { navigate } from "../../lib/router";
   import type { CinemaSource } from "../../lib/poll-draft";
   import Button from "../Button.svelte";
   import Card from "../Card.svelte";
@@ -40,14 +44,20 @@
     chosen?: CheckedShowing[];
     /** True from step 3 on (and in the entry by hand): only then the page offers its submit button. */
     ready?: boolean;
+    /** Own cinema-night flow (`#/kinoabend`): step 1 was done there; the films of these cinemas are fetched at once. */
+    flow?: { cinemaIds: number[]; manual: boolean; summary: string } | undefined;
   }
 
-  let { source, cinemas, chosen = $bindable([]), ready = $bindable(false) }: Props = $props();
+  let { source, cinemas, chosen = $bindable([]), ready = $bindable(false), flow }: Props = $props();
 
-  let step = $state<1 | 2 | 3>(1);
-  let manual = $state(false);
+  // The flow does not change while this page is open: only its first value counts for the start.
+  const startFlow = untrack(() => flow);
+  let step = $state<1 | 2 | 3>(startFlow && !startFlow.manual ? 2 : 1);
+  let manual = $state(startFlow?.manual === true);
   let ticked = $state<number[]>([]);
-  let loading = $state(false);
+  let loading = $state(startFlow !== undefined && !startFlow.manual);
+  /** Not fitting showings are hidden until the person asks for them. */
+  let showAll = $state(false);
   let problem = $state("");
   /** Cinema and day that could not be fetched, with the reason. */
   let failures = $state<Failure[]>([]);
@@ -68,7 +78,8 @@
   let settled = $state<number[]>([]);
 
   const days = $derived(daysToFetch(source));
-  const lines = $derived(summaryLines(source, days));
+  const lines = $derived(flow ? [flow.summary] : summaryLines(source, days));
+  const fetchedLine = $derived(fetchedDaysLine(days.length, periodDays(source.from, source.to)));
   const films = $derived(groupFilms(showings));
   const cards = $derived(rankFilms(films, { source, runtimes, advertMinutes: Number(advert), now: new Date() }, query));
   const selected = $derived(films.find((f) => f.key === selectedKey));
@@ -76,7 +87,8 @@
   const STEP_NAMES = ["Kinos wählen", "Film wählen", "Vorstellungen"];
 
   const check = $derived(selected ? checkFilm(selected, { source, filmMinutes: Number(film), advertMinutes: Number(advert), now: new Date() }) : null);
-  const groups = $derived(groupShowings(check?.checked ?? []));
+  const visible = $derived(visibleShowings(check?.checked ?? [], showAll));
+  const groups = $derived(groupShowings(visible.shown));
   const filmOptions = $derived(
     [...new Set([...FILM_MINUTES_OPTIONS, Number(film)])].sort((a, b) => a - b).map((m) => ({ value: String(m), label: minutesLabel(m) })),
   );
@@ -96,6 +108,12 @@
   // The length follows cineamo's answer until the person changes it.
   $effect(() => {
     if (step === 3 && selected && !filmTouched) film = String(filmMinutesOf(selected, runtimes));
+  });
+
+  onMount(() => {
+    if (flow === undefined || flow.manual) return;
+    ticked = flow.cinemaIds.filter((id) => cinemas.some((c) => c.id === id));
+    void showFilms();
   });
 
   function toggleCinema(id: number): void {
@@ -124,7 +142,12 @@
   }
 
   async function showFilms(): Promise<void> {
-    if (loading || ticked.length === 0) return;
+    if (loading && !flow) return;
+    if (ticked.length === 0) {
+      loading = false;
+      problem = "Es ist kein Kino ausgewählt.";
+      return;
+    }
     problem = "";
     failures = [];
     loading = true;
@@ -137,7 +160,9 @@
     if (!gotAny) {
       problem =
         days.length === 0
-          ? "In der Suche gibt es keinen Tag, an dem alle frei sind."
+          ? flow
+            ? "Im Zeitraum gibt es keinen Tag, an dem ihr alle mindestens 1½ Stunden am Stück frei seid."
+            : "In der Suche gibt es keinen Tag, an dem alle frei sind."
           : `Die Spielzeiten konnten nicht geholt werden. ${errors[0]?.text ?? ""} Versuche es später noch einmal oder trage die Zeiten selbst ein.`.trim();
       return;
     }
@@ -183,12 +208,15 @@
 </script>
 
 {#if manual}
-  <div><button type="button" class="link" onclick={() => (manual = false)}>Zurück zur Auswahl der Kinos</button></div>
+  <div>
+    <button type="button" class="link" onclick={() => (flow ? navigate("#/kinoabend") : (manual = false))}>Zurück zur Auswahl der Kinos</button>
+  </div>
   <CinemaEntry {source} bind:chosen {cinemas} />
 {:else}
   <Card title="Kino-Vorschläge">
     {#each lines as line (line)}<p class="hint">{line}</p>{/each}
     <p class="hint">Schritt {step} von 3 · {STEP_NAMES[step - 1]}</p>
+    {#if flow && step === 2 && !loading && problem === ""}<p class="hint">{fetchedLine}</p>{/if}
   </Card>
 
   {#if step === 1}
@@ -220,6 +248,17 @@
       <p class="hint">Spielzeiten: Cineamo</p>
       {#if !loading}<button type="button" class="link" onclick={() => (manual = true)}>Zeiten selbst eintragen</button>{/if}
     </div>
+  {:else if step === 2 && flow && showings.length === 0 && (loading || problem !== "")}
+    <Card title="Film wählen">
+      {#if loading}
+        <p class="hint" role="status">Die Spielzeiten werden geholt …</p>
+      {:else}
+        <Message text={problem} />
+      {/if}
+    </Card>
+    {#if !loading}
+      <div class="center"><Button full href="#/kinoabend">Andere Kinos wählen</Button></div>
+    {/if}
   {:else if step === 2}
     <Card title="Film wählen">
       {#if failures.length > 0}
@@ -263,7 +302,7 @@
     </Card>
     <div class="center">
       <Button full onclick={goToShowings} disabled={!selected}>{selected ? `Weiter mit „${selected.title}“` : "Weiter"}</Button>
-      <button type="button" class="link" onclick={() => (step = 1)}>Anderes Kino wählen</button>
+      <button type="button" class="link" onclick={() => (flow ? navigate("#/kinoabend") : (step = 1))}>Andere Kinos wählen</button>
     </div>
   {:else if selected}
     <Card title={selected.title}>
@@ -310,8 +349,19 @@
           {/if}
         {/each}
       {/each}
+      {#if visible.fitting === 0}
+        <p class="hint" role="status">Keine Vorstellung passt in eure freien Zeiten.</p>
+      {/if}
+      {#if visible.notFitting > 0}
+        <Button variant="outlined" full onclick={() => (showAll = !showAll)}>
+          {showAll ? "Nicht passende ausblenden" : `Nicht passende einblenden (${visible.notFitting})`}
+        </Button>
+      {/if}
       <p class="hint">
         Zeiten inklusive {advert} Min. Werbepuffer. Nur die passenden Vorstellungen werden zu Terminen der Abstimmung. Tippe auf eine passende Vorstellung, um sie wegzulassen.
+        {showAll
+          ? "Nicht passende stehen mit dem Grund dabei („Lena hat da keine Zeit“)."
+          : "Nicht passende sind ausgeblendet; eingeblendet stehen sie mit Grund dabei („Lena hat da keine Zeit“)."}
       </p>
       <p class="hint">Spielzeiten: Cineamo</p>
     </Card>
