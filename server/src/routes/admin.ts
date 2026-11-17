@@ -10,6 +10,7 @@ import {
   type BackupStatus,
   type CalendarSizes,
   type CinemaListResponse,
+  type CinemaMovieResponse,
   type CinemaShowingsResponse,
   type CreateInviteRequest,
   type CreatedInvite,
@@ -90,6 +91,14 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
         return { showings };
       },
     );
+
+    admin.get<{ Params: { id: string } }>("/api/admin/movies/:id", async (request): Promise<CinemaMovieResponse> => {
+      if (ctx.config.cinemas.length === 0) throw notFound();
+      if (!/^[1-9][0-9]{0,9}$/.test(request.params.id)) throw validation("id");
+      const movie = await ctx.cinemas.movie(Number(request.params.id));
+      if (movie === null) throw new ApiError(502, "cinema_unavailable");
+      return movie;
+    });
 
     admin.patch<{ Body: AdminRenameUserRequest }>(
       "/api/admin/users/:id",

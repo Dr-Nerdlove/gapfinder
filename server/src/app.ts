@@ -173,7 +173,7 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
         "hidden_votes",
         "proposal_place",
         "minute_times",
-        ...(config.cinemas.length > 0 ? (["cinema_showtimes"] as const) : []),
+        ...(config.cinemas.length > 0 ? (["cinema_showtimes", "cinema_film_choice"] as const) : []),
       ],
     }),
   );
