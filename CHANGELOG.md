@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-11-17
+
+A test for admins only: planning a cinema evening can fetch showtimes from Cineamo. After an hours search, admins tick cinemas, choose a film from their programme and get the showings that fit everybody's free times as proposals of a poll. Nothing changes for anybody else. The test stays off until the owner enters the cinemas on the server: `deploy/vm/setup.sh` changed, so it must be run again once (see `docs/server-setup.md`). The server updates itself within about an hour; the Android app needs no update.
+
 ### Added
 
 - Test for admins only: in the cinema entry of a poll, admins can pick a cinema from a list and fetch its showtimes for
