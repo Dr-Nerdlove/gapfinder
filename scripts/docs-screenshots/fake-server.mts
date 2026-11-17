@@ -5,7 +5,7 @@
 import { existsSync } from "node:fs";
 import { buildApp } from "../../server/src/app.ts";
 import { loadConfig } from "../../server/src/config.ts";
-import { CINEMA_PEOPLE, TOBI_BUSY, berlinInstant, cinemaDay } from "./cinema.mjs";
+import { CINEMA_PEOPLE, FILM_CINEMAS, TOBI_BUSY, berlinInstant, cineamoAnswer, cinemaDay } from "./cinema.mjs";
 
 const dir = process.env.SHOTS_DIR;
 if (!dir) throw new Error("SHOTS_DIR is not set (run.sh sets it)");
@@ -27,6 +27,8 @@ export function sophieBusy(day: Date): boolean {
   return Math.floor(day.getTime() / 86400000 / 7) % 2 === 0;
 }
 
+const filmRound = existsSync(`${dir}/cinemas-on`);
+
 function calendarFor(name: string): string {
   const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//screenshots//EN", `X-WR-CALNAME:${name}`];
   const start = new Date();
@@ -39,6 +41,7 @@ function calendarFor(name: string): string {
   // On the cinema day (phase 10d) the circle of the cinema pictures has no random events (the random numbers are still
   // drawn, so every other day stays as it was), and Tobi has one fixed appointment.
   const day10d = cinemaDay();
+  const thursday = new Date(Date.parse(`${day10d}T00:00:00Z`) - 2 * 86400000).toISOString().slice(0, 10);
   let quiet = false;
   const event = (uid: string, from: Date, to: Date): void => {
     if (quiet) return;
@@ -49,7 +52,11 @@ function calendarFor(name: string): string {
     const weekday = d.getUTCDay(); // 0 Sunday, 6 Saturday
     const weekend = weekday === 0 || weekday === 6;
     const roll = rnd();
-    quiet = CINEMA_PEOPLE.includes(name) && d.toISOString().slice(0, 10) === day10d;
+    const dayText = d.toISOString().slice(0, 10);
+    // Round two (the film choice) has only two days with a free evening for the circle: the cinema day and the Thursday
+    // before it (Tobi is busy all day on every other day), like the mock-up's "Do 19., Sa 21.".
+    quiet = CINEMA_PEOPLE.includes(name) && (dayText === day10d || (filmRound && dayText === thursday));
+    if (filmRound && name === "Tobi" && !quiet) event(`${name}-film-${day}`, d, new Date(d.getTime() + 24 * 3600000 - 60000));
     if (quiet && name === "Tobi") {
       lines.push("BEGIN:VEVENT", "UID:Tobi-cinema@screenshots", "DTSTAMP:20261101T000000Z", `DTSTART:${icsTime(berlinInstant(day10d, TOBI_BUSY.from))}`, `DTEND:${icsTime(berlinInstant(day10d, TOBI_BUSY.to))}`, "SUMMARY:Termin", "END:VEVENT");
     }
@@ -67,8 +74,15 @@ function calendarFor(name: string): string {
   return lines.join("\r\n");
 }
 
+// The film choice pictures (run.sh creates this marker for its second round) need configured cinemas; the others do not.
+if (existsSync(`${dir}/cinemas-on`)) process.env.CINEMAS = FILM_CINEMAS;
 const config = loadConfig();
 const app = await buildApp(config, {
+  // A made-up cineamo: the server never reaches api.cineamo.com here.
+  fetchCinemaText: async (url) => {
+    const text = cineamoAnswer(url);
+    return text === null ? { ok: false, reason: "unreachable" } : { ok: true, text };
+  },
   fetchCalendarText: async (url) => {
     const match = /\/([^/]+)\.ics$/.exec(url.pathname);
     if (!match) return { ok: false, reason: "invalid_link" };
