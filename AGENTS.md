@@ -365,7 +365,7 @@ missing, with a recommendation, and let the people choose.
     (`scripts/inactivity-reminder.sh`, last step of the workflow); a run failed because of the reminder does not
     affect the outage marker.
   - Cinema showtimes test (phase 10d, `docs/PLAN.md`): admins can fetch a cinema's showtimes from cineamo in the cinema
-    entry. `CINEMAS` in the VM's `.env` (set by `setup.sh`, never in the repository) lists the cinemas (`<id>=<name>`, optionally `<id>=<name>|<screen>` for a preferred screen); without it the
+    entry. `CINEMAS` in the VM's `.env` (set by `setup.sh`, never in the repository) lists the cinemas (`<id>=<name>`, optionally `<id>=<name>|<screen>` for a preferred screen, and `|<screen>@<https address of a screen page>`: the address never leaves the server); without it the
     routes answer an empty list or "not found" and the feature `cinema_showtimes` is not listed, so the app
     shows no new controls. Only admins see it. The server must start with a bad `CINEMAS` value (the feature is then off),
     never fail on it. Cineamo's interface is undocumented and has no yes for use by everybody: it may change or be

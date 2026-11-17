@@ -119,9 +119,33 @@ export function parseRoomsPage(text: string): { items: [number, string][]; pageC
   return { items, pageCount: pageCountOf(json) };
 }
 
+/** What the service needs to know of a configured cinema. `roomPage` is the address of a page of the cinema's own site that lists only the preferred screen's showings. */
+export interface CinemaTarget {
+  id: number;
+  room?: string;
+  roomPage?: string;
+}
+
 export interface CinemaService {
   /** The showings of one cinema on one day (`YYYY-MM-DD`), or null when they could not be fetched or read. */
-  showings(cinemaId: number, date: string): Promise<CinemaShowing[] | null>;
+  showings(cinema: CinemaTarget, date: string): Promise<CinemaShowing[] | null>;
+}
+
+const PERFORMANCE_PATTERN = /[?&;]performance=([A-Za-z0-9]{6,64})/g;
+
+/** The `performance` ids that the ticket links of a screen page carry (the page writes `&` as `&` and as `&amp;`). Copies, not slices of the page. */
+export function parsePerformanceIds(text: string): Set<string> {
+  const ids = new Set<string>();
+  for (const match of text.matchAll(PERFORMANCE_PATTERN)) ids.add(ownCopy(match[1]!));
+  return ids;
+}
+
+function performanceOf(ticketUrl: string): string | null {
+  try {
+    return new URL(ticketUrl).searchParams.get("performance");
+  } catch {
+    return null;
+  }
 }
 
 interface CacheEntry<T> {
@@ -133,6 +157,8 @@ type RoomNames = Map<number, string>;
 
 export function createCinemaService(deps: {
   fetchText: (url: URL) => Promise<FetchResult>;
+  /** Fetches a screen page of a cinema's own site; `fetchText` when not given. */
+  fetchPage?: (url: URL) => Promise<FetchResult>;
   now: () => Date;
   log: FastifyBaseLogger;
 }): CinemaService {
@@ -140,6 +166,8 @@ export function createCinemaService(deps: {
   const inflight = new Map<string, Promise<ParsedShowing[] | null>>();
   const roomCache = new Map<number, CacheEntry<RoomNames>>();
   const roomInflight = new Map<number, Promise<RoomNames | null>>();
+  const pageCache = new Map<number, CacheEntry<Set<string>>>();
+  const pageInflight = new Map<number, Promise<Set<string> | null>>();
 
   function remember(key: string, value: ParsedShowing[] | null): void {
     const nowMs = deps.now().getTime();
@@ -247,6 +275,39 @@ export function createCinemaService(deps: {
     return started;
   }
 
+  async function loadPageIds(roomPage: string): Promise<Set<string> | null> {
+    try {
+      const result = await (deps.fetchPage ?? deps.fetchText)(new URL(roomPage));
+      if (!result.ok) {
+        deps.log.warn(`Cinema screen page fetch failed: ${result.reason}`);
+        return null;
+      }
+      const ids = parsePerformanceIds(result.text);
+      deps.log.info(`Cinema screen page fetched: ok, ${ids.size} performance ids`);
+      return ids;
+    } catch {
+      deps.log.warn("Cinema screen page fetch failed: error");
+      return null;
+    }
+  }
+
+  function pageIdsOf(cinemaId: number, roomPage: string): Promise<Set<string> | null> {
+    const cached = pageCache.get(cinemaId);
+    if (cached !== undefined) {
+      if (cached.expiresAt > deps.now().getTime()) return Promise.resolve(cached.value);
+      pageCache.delete(cinemaId);
+    }
+    const running = pageInflight.get(cinemaId);
+    if (running !== undefined) return running;
+    const started = loadPageIds(roomPage).then((value) => {
+      pageCache.set(cinemaId, { expiresAt: deps.now().getTime() + (value === null ? FAILURE_TTL_MS : SUCCESS_TTL_MS), value });
+      return value;
+    });
+    pageInflight.set(cinemaId, started);
+    void started.finally(() => pageInflight.delete(cinemaId));
+    return started;
+  }
+
   function parsedShowings(cinemaId: number, date: string): Promise<ParsedShowing[] | null> {
     const key = `${cinemaId}|${date}`;
     const cached = cache.get(key);
@@ -266,15 +327,29 @@ export function createCinemaService(deps: {
   }
 
   return {
-    async showings(cinemaId, date) {
+    async showings(cinema, date) {
+      const cinemaId = cinema.id;
       const items = await parsedShowings(cinemaId, date);
       if (items === null) return null;
-      if (!items.some((item) => item.roomId !== null)) return items.map((item) => item.showing);
-      // Without the screens the showings are still useful, just without a name.
-      const rooms = await roomsOf(cinemaId);
-      return items.map(({ showing, roomId }) => {
+      let rooms: RoomNames | null = null;
+      if (items.some((item) => item.roomId !== null)) {
+        // Without the screens the showings are still useful, just without a name.
+        rooms = await roomsOf(cinemaId);
+      }
+      const named = items.map(({ showing, roomId }) => {
         const room = roomId === null ? undefined : rooms?.get(roomId);
         return room === undefined ? showing : { ...showing, room };
+      });
+      if (cinema.room === undefined || cinema.roomPage === undefined || named.every((showing) => showing.room !== undefined)) {
+        return named;
+      }
+      const ids = await pageIdsOf(cinemaId, cinema.roomPage);
+      if (ids === null) return named;
+      const screen = cinema.room;
+      return named.map((showing) => {
+        if (showing.room !== undefined || showing.ticketUrl === undefined) return showing;
+        const id = performanceOf(showing.ticketUrl);
+        return id !== null && ids.has(id) ? { ...showing, room: screen } : showing;
       });
     },
   };

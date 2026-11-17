@@ -213,7 +213,7 @@
               {#if namesRooms(block)}
                 <Switch label="Nur Saal „{room}“" checked={block.onlyRoom} onchange={(on) => setOnlyRoom(block, on)} />
               {:else}
-                <p class="hint">Cineamo nennt für dieses Kino keine Säle. Es werden alle Vorstellungen gezeigt.</p>
+                <p class="hint">Für diesen Tag ist bei keiner Vorstellung ein Saal bekannt. Es werden alle Vorstellungen gezeigt.</p>
               {/if}
             {/if}
             {#each block.films as film (film.key)}

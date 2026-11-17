@@ -176,11 +176,13 @@ fi
 step "Cinema showtimes (test, optional)"
 # Admins can fetch a cinema's showtimes from cineamo (test). The list is not secret but personal, so it lives only
 # in .env, never in the repository. Format: <cineamo id>=<name>;<id>=<name>, each with an optional preferred screen
-# (<id>=<name>|<screen>, the screen's name as cineamo calls it). Enter keeps what is there (or skips).
+# (<id>=<name>|<screen>, the screen's name as cineamo calls it), and the screen may be followed by the https address of
+# a page of the cinema's site that lists only that screen's showings (<id>=<name>|<screen>@https://www.kino.example/saal/).
+# Enter keeps what is there (or skips).
 # This step never fails the setup. To switch the test off, delete the CINEMAS line in .env.
 cinemas_input="${LUECKENFUELLER_CINEMAS:-}"
 if [[ -z "$cinemas_input" ]]; then
-  read -r -p "Cinemas for the showtimes test (<id>=<name>[|<screen>];...), or Enter to skip/keep: " cinemas_input || cinemas_input=""
+  read -r -p "Cinemas for the showtimes test (<id>=<name>[|<screen>[@<page address>]];...), or Enter to skip/keep: " cinemas_input || cinemas_input=""
 fi
 if [[ -z "$cinemas_input" ]]; then
   if grep -q '^CINEMAS=' "$APP_DIR/.env"; then
@@ -196,7 +198,7 @@ else
   sed -i '/^# Cinemas for the showtimes test/d;/^CINEMAS=/d' "$APP_DIR/.env"
   [[ -z "$(tail -c 1 "$APP_DIR/.env")" ]] || echo >>"$APP_DIR/.env"
   {
-    echo "# Cinemas for the showtimes test of the admins: <cineamo id>=<name>[|<screen>];... Delete the line to switch it off."
+    echo "# Cinemas for the showtimes test of the admins: <cineamo id>=<name>[|<screen>[@<page address>]];... Delete the line to switch it off."
     echo "CINEMAS='$cinemas_input'"
   } >>"$APP_DIR/.env"
   chmod 0600 "$APP_DIR/.env"

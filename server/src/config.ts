@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { normalizeCalendarUrl } from "./calendars/fetch.js";
 import { PROPOSAL_PLACE_MAX_LENGTH, type CinemaInfo } from "@lueckenfueller/shared";
 import { decodeCalendarKey } from "./calendar-key.js";
 
@@ -30,12 +31,18 @@ export interface Config {
   /** Why `fcm` is null (never contains the value); null when the key is usable. */
   fcmProblem: string | null;
   /** Cinemas for the admin-only showtimes test (`CINEMAS`); empty when not set or invalid (the feature is then off). */
-  cinemas: CinemaInfo[];
+  cinemas: CinemaConfig[];
   /** Why `cinemas` is empty (never contains the value); null when cinemas are configured. */
   cinemasProblem: string | null;
 }
 
+/** A configured cinema as the server knows it: `roomPage` (the address of a page of the cinema's site) never leaves the server. */
+export interface CinemaConfig extends CinemaInfo {
+  roomPage?: string;
+}
+
 export const MAX_CINEMAS = 20;
+export const MAX_CINEMA_ROOM_PAGE_LENGTH = 300;
 export const MAX_CINEMA_ROOM_LENGTH = 60;
 
 export interface FcmAccount {
@@ -127,17 +134,17 @@ export function parseFcmAccount(value: string | undefined): { account: FcmAccoun
 }
 
 /**
- * Reads `CINEMAS`: `<cineamo id>=<name>;<id>=<name>`, each optionally with a preferred screen: `<id>=<name>|<screen>`. Like the keys, a missing or invalid value is a problem text,
+ * Reads `CINEMAS`: `<cineamo id>=<name>;<id>=<name>`, each optionally with a preferred screen: `<id>=<name>|<screen>`, and the screen with the address of a page that lists its showings: `<id>=<name>|<screen>@<https address>`. Like the keys, a missing or invalid value is a problem text,
  * never an error, and the text never contains the value. One broken entry makes the whole value invalid.
  */
-export function parseCinemas(value: string | undefined): { cinemas: CinemaInfo[]; problem: string | null } {
+export function parseCinemas(value: string | undefined): { cinemas: CinemaConfig[]; problem: string | null } {
   const text = value?.trim() ?? "";
   if (text === "") return { cinemas: [], problem: "CINEMAS is not set" };
   const invalid = (why: string) => ({ cinemas: [], problem: `CINEMAS is not valid: ${why}` });
   const entries = text.split(";").map((entry) => entry.trim()).filter((entry) => entry !== "");
   if (entries.length === 0) return invalid("it has no entries");
   if (entries.length > MAX_CINEMAS) return invalid(`at most ${MAX_CINEMAS} cinemas are allowed`);
-  const cinemas: CinemaInfo[] = [];
+  const cinemas: CinemaConfig[] = [];
   const seen = new Set<number>();
   for (const entry of entries) {
     const at = entry.indexOf("=");
@@ -145,7 +152,10 @@ export function parseCinemas(value: string | undefined): { cinemas: CinemaInfo[]
     const rest = at < 0 ? "" : entry.slice(at + 1);
     const bar = rest.indexOf("|");
     const name = (bar < 0 ? rest : rest.slice(0, bar)).trim();
-    const room = bar < 0 ? undefined : rest.slice(bar + 1).trim();
+    const afterBar = bar < 0 ? undefined : rest.slice(bar + 1);
+    const atSign = afterBar?.indexOf("@") ?? -1;
+    const room = afterBar === undefined ? undefined : (atSign < 0 ? afterBar : afterBar.slice(0, atSign)).trim();
+    const pageText = afterBar === undefined || atSign < 0 ? undefined : afterBar.slice(atSign + 1).trim();
     if (!/^\d{1,9}$/.test(idText) || Number(idText) < 1) {
       return invalid("every entry must look like <id>=<name> with a whole number as id");
     }
@@ -155,10 +165,18 @@ export function parseCinemas(value: string | undefined): { cinemas: CinemaInfo[]
     if (room !== undefined && (room === "" || room.includes("|") || [...room].length > MAX_CINEMA_ROOM_LENGTH)) {
       return invalid(`a screen after "|" must have 1 to ${MAX_CINEMA_ROOM_LENGTH} characters and no second "|"`);
     }
+    let roomPage: string | undefined;
+    if (pageText !== undefined) {
+      const url = pageText.length > MAX_CINEMA_ROOM_PAGE_LENGTH ? null : normalizeCalendarUrl(pageText);
+      if (url === null) {
+        return invalid(`an address after "@" must be a public https address of at most ${MAX_CINEMA_ROOM_PAGE_LENGTH} characters`);
+      }
+      roomPage = url.href;
+    }
     const id = Number(idText);
     if (seen.has(id)) return invalid("an id is listed twice");
     seen.add(id);
-    cinemas.push(room === undefined ? { id, name } : { id, name, room });
+    cinemas.push({ id, name, ...(room === undefined ? {} : { room }), ...(roomPage === undefined ? {} : { roomPage }) });
   }
   return { cinemas, problem: null };
 }

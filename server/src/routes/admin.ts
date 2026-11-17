@@ -68,7 +68,10 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
 
     admin.get("/api/admin/calendar-sizes", async (): Promise<CalendarSizes> => readCalendarSizes(ctx.db));
 
-    admin.get("/api/admin/cinemas", async (): Promise<CinemaListResponse> => ({ cinemas: ctx.config.cinemas }));
+    admin.get("/api/admin/cinemas", async (): Promise<CinemaListResponse> => ({
+      // The address of a cinema's page stays on the server.
+      cinemas: ctx.config.cinemas.map(({ id, name, room }) => ({ id, name, ...(room === undefined ? {} : { room }) })),
+    }));
 
     admin.get<{ Params: { id: string }; Querystring: { date?: string } }>(
       "/api/admin/cinemas/:id/showings",
@@ -82,7 +85,7 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
         const first = addDaysToDate(today, -1);
         const last = addDaysToDate(today, SHOWTIMES_DAYS_AHEAD);
         if (dayNumber(date) < dayNumber(first) || dayNumber(date) > dayNumber(last)) throw validation("date");
-        const showings = await ctx.cinemas.showings(cinema.id, formatDateParts(date));
+        const showings = await ctx.cinemas.showings(cinema, formatDateParts(date));
         if (showings === null) throw new ApiError(502, "cinema_unavailable");
         return { showings };
       },

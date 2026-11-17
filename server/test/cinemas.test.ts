@@ -409,7 +409,7 @@ describe("admin cinema routes: pages and screens", () => {
     await setup();
     answer = (url) =>
       isRooms(url)
-        ? { ok: true, text: roomsAnswer([{ id: 134, name: "  Cinemagnum  ", cinemaId: 12 }, { id: 5, name: "Kino 2" }]) }
+        ? { ok: true, text: roomsAnswer([{ id: 134, name: "  Saal Eins  ", cinemaId: 12 }, { id: 5, name: "Kino 2" }]) }
         : {
             ok: true,
             text: page([
@@ -422,7 +422,7 @@ describe("admin cinema routes: pages and screens", () => {
     const response = await get();
     expect(response.statusCode).toBe(200);
     expect(response.json<{ showings: unknown[] }>().showings).toEqual([
-      { film: "A", start: "2026-11-02T18:00:00.000Z", imax: true, room: "Cinemagnum" },
+      { film: "A", start: "2026-11-02T18:00:00.000Z", imax: true, room: "Saal Eins" },
       { film: "B", start: "2026-11-02T19:00:00.000Z", room: "Kino 2" },
       { film: "C", start: "2026-11-02T20:00:00.000Z" },
       { film: "D", start: "2026-11-02T21:00:00.000Z" },
@@ -498,6 +498,227 @@ describe("admin cinema routes: pages and screens", () => {
     expect(films(response)).toEqual([{ film: "A", start: "2026-11-02T18:00:00.000Z", imax: true }]);
     expect(roomCalls()).toEqual([]);
     expect(showingCalls()).toHaveLength(1);
+  });
+});
+
+describe("CINEMAS config: screen page", () => {
+  const PAGE = "https://www.kino.example/programm/saal-eins/";
+  it("reads the address after the first @ of the screen part", () => {
+    const config = loadConfig({
+      CINEMAS: `345=Kino Zwei|Saal Eins@${PAGE}; 12=Kino Eins|IMAX`,
+    });
+    expect(config.cinemas).toEqual([
+      { id: 345, name: "Kino Zwei", room: "Saal Eins", roomPage: PAGE },
+      { id: 12, name: "Kino Eins", room: "IMAX" },
+    ]);
+    expect(config.cinemasProblem).toBeNull();
+  });
+
+  const secret = "SECRET-HOST";
+  it.each([
+    ["http address", `7=Kino|Saal@http://${secret}.example/a`],
+    ["address with a port", `7=Kino|Saal@https://${secret}.example:8443/a`],
+    ["address with credentials", `7=Kino|Saal@https://user:pw@${secret}.example/a`],
+    ["private IP literal", `7=Kino|Saal@https://10.0.0.5/${secret}`],
+    ["loopback literal", `7=Kino|Saal@https://127.0.0.1/${secret}`],
+    ["address too long", `7=Kino|Saal@https://${secret}.example/${"x".repeat(300)}`],
+    ["not an address", `7=Kino|Saal@${secret}`],
+    ["empty address", `7=Kino|Saal@`],
+    ["@ without a screen", `7=Kino|@https://${secret}.example/a`],
+  ])("gives no cinemas and a problem without the value: %s", (_why, value) => {
+    const config = loadConfig({ CINEMAS: value });
+    expect(config.cinemas).toEqual([]);
+    expect(config.cinemasProblem).toMatch(/^CINEMAS is not valid: /);
+    expect(config.cinemasProblem).not.toContain(secret);
+    expect(config.cinemasProblem).not.toContain(value);
+  });
+
+  it("accepts an address of exactly 300 characters", () => {
+    const base = "https://www.kino.example/";
+    expect(parseCinemas(`7=Kino|Saal@${base}${"x".repeat(300 - base.length)}`).problem).toBeNull();
+  });
+});
+
+describe("admin cinema routes: screen page", () => {
+  let env: TestEnv;
+  let urls: string[];
+  let admin: string;
+  let pageReply: () => FetchResult;
+  afterEach(async () => {
+    await env.app.close();
+  });
+
+  const DAY = "2026-11-02";
+  const PAGE = "https://www.kino.example/programm/saal-eins/";
+  const WITH_PAGE = [{ id: 777, name: "Kino Zwei", room: "Saal Eins", roomPage: PAGE }];
+  const ticket = (id: string, sep = "&") => `https://tickets.example/shop?cinema=1${sep}performance=${id}${sep}lang=de`;
+  let showingsText: string;
+  const pageCalls = () => urls.filter((u) => u.startsWith(PAGE));
+
+  async function setup(): Promise<void> {
+    urls = [];
+    pageReply = () => ({ ok: true, text: "<html></html>" });
+    showingsText = page([]);
+    env = await createTestEnv(
+      { cinemas: [...CINEMAS, ...WITH_PAGE], cinemasProblem: null },
+      {
+        fetchCinemaText: async (url) => {
+          urls.push(url.href);
+          return url.hostname === "www.kino.example" ? pageReply() : { ok: true, text: showingsText };
+        },
+      },
+    );
+    admin = (await addUserWithSession(env, "Admin", { isAdmin: true })).token;
+  }
+  const get = async (cinema = 777, date = DAY) =>
+    call(env, "GET", `/api/admin/cinemas/${cinema}/showings?date=${date}`, {
+      token: admin,
+    });
+  const rooms = (response: { json: <T>() => T }) =>
+    Object.fromEntries(
+      response.json<{ showings: { film: string; room?: string }[] }>().showings.map((s) => [s.film, s.room ?? null]),
+    );
+  const entries = () => [
+    showingEntry(1, "Auf der Seite", "2026-11-02T14:00:00Z", {
+      onlineTicketUrl: ticket("AAAA1111"),
+    }),
+    showingEntry(2, "Auch auf der Seite", "2026-11-02T16:00:00Z", {
+      onlineTicketUrl: ticket("BBBB2222"),
+    }),
+    showingEntry(3, "Nicht auf der Seite", "2026-11-02T18:00:00Z", {
+      onlineTicketUrl: ticket("CCCC3333"),
+    }),
+    showingEntry(4, "Ohne Link", "2026-11-02T20:00:00Z"),
+  ];
+
+  it("does not list the address", async () => {
+    await setup();
+    const response = await call(env, "GET", "/api/admin/cinemas", {
+      token: admin,
+    });
+    expect(response.json()).toEqual({
+      cinemas: [...CINEMAS, { id: 777, name: "Kino Zwei", room: "Saal Eins" }],
+    });
+    expect(response.body).not.toContain("kino.example");
+  });
+
+  it("gives the screen to showings whose performance id is on the page, whatever the spelling of &", async () => {
+    await setup();
+    showingsText = page(entries());
+    pageReply = () => ({
+      ok: true,
+      text: `<a href="https://tickets.example/shop?cinema=1&amp;performance=AAAA1111&amp;lang=de">x</a>
+             <a href='https://tickets.example/shop?cinema=1&performance=BBBB2222'>y</a>
+             <a href="https://tickets.example/shop?performance=SHORT">z</a>`,
+    });
+    const response = await get();
+    expect(response.statusCode).toBe(200);
+    expect(rooms(response)).toEqual({
+      "Auf der Seite": "Saal Eins",
+      "Auch auf der Seite": "Saal Eins",
+      "Nicht auf der Seite": null,
+      "Ohne Link": null,
+    });
+    expect(pageCalls()).toEqual([PAGE]);
+  });
+
+  it("lets a screen that cineamo names win, and does not fetch the page when every showing has one", async () => {
+    await setup();
+    showingsText = page([
+      showingEntry(1, "Mit Saal", "2026-11-02T14:00:00Z", {
+        cinemaRoomId: 5,
+        onlineTicketUrl: ticket("AAAA1111"),
+      }),
+    ]);
+    await env.app.close();
+    urls = [];
+    env = await createTestEnv(
+      { cinemas: WITH_PAGE, cinemasProblem: null },
+      {
+        fetchCinemaText: async (url) => {
+          urls.push(url.href);
+          if (url.hostname === "www.kino.example") return { ok: true, text: `?performance=AAAA1111` };
+          if (url.pathname === "/cinema-rooms") return { ok: true, text: roomsAnswer([{ id: 5, name: "Kino 5" }]) };
+          return { ok: true, text: showingsText };
+        },
+      },
+    );
+    admin = (await addUserWithSession(env, "Admin", { isAdmin: true })).token;
+    expect(rooms(await get())).toEqual({ "Mit Saal": "Kino 5" });
+    expect(pageCalls()).toEqual([]);
+  });
+
+  it("does not fetch the page for an empty answer, and keeps a cineamo screen next to matched showings", async () => {
+    await setup();
+    await get();
+    expect(pageCalls()).toEqual([]);
+    await env.app.close();
+    urls = [];
+    env = await createTestEnv(
+      { cinemas: WITH_PAGE, cinemasProblem: null },
+      {
+        fetchCinemaText: async (url) => {
+          urls.push(url.href);
+          if (url.hostname === "www.kino.example")
+            return {
+              ok: true,
+              text: `?performance=AAAA1111 &performance=BBBB2222`,
+            };
+          if (url.pathname === "/cinema-rooms") return { ok: true, text: roomsAnswer([{ id: 5, name: "Kino 5" }]) };
+          return {
+            ok: true,
+            text: page([
+              showingEntry(1, "Cineamo", "2026-11-02T14:00:00Z", {
+                cinemaRoomId: 5,
+                onlineTicketUrl: ticket("AAAA1111"),
+              }),
+              showingEntry(2, "Seite", "2026-11-02T16:00:00Z", {
+                onlineTicketUrl: ticket("BBBB2222"),
+              }),
+            ]),
+          };
+        },
+      },
+    );
+    admin = (await addUserWithSession(env, "Admin", { isAdmin: true })).token;
+    expect(rooms(await get())).toEqual({
+      Cineamo: "Kino 5",
+      Seite: "Saal Eins",
+    });
+  });
+
+  it("still answers 200 with the showings, without those screens, when the page cannot be fetched", async () => {
+    await setup();
+    showingsText = page(entries());
+    pageReply = () => ({ ok: false, reason: "unreachable" });
+    const response = await get();
+    expect(response.statusCode).toBe(200);
+    expect(Object.values(rooms(response))).toEqual([null, null, null, null]);
+    pageReply = () => {
+      throw new Error("boom");
+    };
+    env.clock.advanceMinutes(6);
+    expect((await get()).statusCode).toBe(200);
+  });
+
+  it("reads the page once for two days of the same cinema, and again after 6 hours", async () => {
+    await setup();
+    showingsText = page(entries());
+    pageReply = () => ({ ok: true, text: "?performance=AAAA1111" });
+    await get(777, "2026-11-02");
+    const second = await get(777, "2026-11-03");
+    expect(rooms(second)["Auf der Seite"]).toBe("Saal Eins");
+    expect(pageCalls()).toHaveLength(1);
+    env.clock.advanceHours(7);
+    await get(777, "2026-11-04");
+    expect(pageCalls()).toHaveLength(2);
+  });
+
+  it("does not use a page for a cinema without one", async () => {
+    await setup();
+    showingsText = page(entries());
+    expect(rooms(await get(12))["Auf der Seite"]).toBeNull();
+    expect(pageCalls()).toEqual([]);
   });
 });
 

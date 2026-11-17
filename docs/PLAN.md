@@ -877,9 +877,22 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   and a preferred screen per cinema in `CINEMAS` (`<id>=<name>|<screen>`) filters the list in the app (switch "Nur
   Saal ...", on by default). Seen on 2026-11-17: two of the owner's three cinemas with a special screen name it per
   showing; for the third cineamo knows the screen but no showing names one (the app then shows all showings).
+  Built 2026-11-17 on the owner's wish: a screen page. For a cinema whose showings carry no screen at cineamo, the
+  cinema's own site has a public page that lists only the programme of its special screen, and every showing there links
+  to the ticket shop with `performance=<id>`, the same id as in cineamo's `onlineTicketUrl` of that showing.
+  `CINEMAS` takes `<id>=<name>|<screen>@<https address>`; a showing without a screen counts as in the preferred screen
+  when its ticket link's `performance` id stands on that page (read at most every 6 hours per cinema, ids kept as own
+  copies). On the one day tried, 3 of 14 showings matched. The page's robots.txt allows reading and no terms of use were
+  found on the three pages looked at, so legally it is as unsettled as cineamo. It breaks silently when the cinema
+  changes its page or its ticket links: then all showings are shown, with the hint. The cinema is not named here
+  (public repository). A fourth cinema names its special screen at cineamo, so it needs only `|<screen>`.
   Still open: the ticket link on proposals and the credit on the finished poll (the server already returns
   `ticketUrl`); the film length stays an entry by hand; showings after midnight are found only if cineamo lists them under the next calendar day (not verified);
   the load test (9f) was not rerun.
+  Tried on 2026-11-17 with the built service: cineamo's real answers and the real screen page gave 3 showings
+  of 14 in the special screen on each of two days, with one page fetch for both. A cloud session cannot resolve the
+  cinema site's name for Node's own lookup (only the session's proxy reaches it), so the page was fetched with curl
+  there and handed to the service; the guarded fetch of that page itself is first exercised on the VM.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter

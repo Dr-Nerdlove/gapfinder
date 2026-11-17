@@ -434,6 +434,13 @@ every 6 hours (the screens of a cinema once a day), and nothing is stored in the
    field `name` (up to 60 characters; no second `|`). The app then shows a switch "Nur Saal ..." (on by default) that
    keeps only the showings in that screen. Cineamo does not name the screen of the showings for every cinema; then the
    app says so and shows all showings.
+   If the cinema's own site has a page that lists only that screen's showings, add its address after an `@`, for
+   example `345=Kino Zwei|Saal Eins@https://www.kino.example/programm/saal-eins/` (https only, up to 300 characters).
+   The server then reads this page and counts a showing as in that screen when its ticket link carries a
+   `performance=<number>` that also stands on the page. This fits only a page that lists one screen's showings with
+   such ticket links; the server reads the page at most every 6 hours per cinema. If the cinema changes its page or its
+   ticket links, no showing matches any more and the app shows all showings with a hint. The address never leaves the
+   server.
 3. In the VM, run the setup again (see "When the files in `deploy/vm/` change"): `sudo bash setup.sh` asks for the
    list ("Cinemas for the showtimes test"; Enter keeps what is there). Or give it without the question:
    `sudo LUECKENFUELLER_CINEMAS='12=Kino Eins;345=Kino Zwei' bash setup.sh`. The script writes it into

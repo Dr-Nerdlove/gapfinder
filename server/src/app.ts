@@ -119,6 +119,15 @@ export async function buildApp(config: Config, options: BuildAppOptions = {}): P
             timeoutMs: CINEAMO_TIMEOUT_MS,
             maxRedirects: 0,
           })),
+      fetchPage:
+        options.fetchCinemaText ??
+        ((url) =>
+          fetchCalendarText(url, {
+            userAgent: CINEAMO_USER_AGENT,
+            maxBytes: CINEAMO_MAX_BYTES,
+            timeoutMs: CINEAMO_TIMEOUT_MS,
+            maxRedirects: 2,
+          })),
       now,
       log: app.log,
     }),
