@@ -33,7 +33,7 @@ import { addDaysToDate, berlinDateOf, dayNumber, formatDateParts, parseDateParts
 import { checkedUsername, idParam } from "./shared.js";
 
 /** The showtimes test looks from yesterday up to this many days after today. */
-const SHOWTIMES_DAYS_AHEAD = 21;
+const SHOWTIMES_DAYS_AHEAD = 60;
 
 const renameBody = {
   type: "object",

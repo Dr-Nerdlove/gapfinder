@@ -10,6 +10,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 - Test for admins only: when choosing a film, the list of showtimes that could not be fetched is now folded away
   ("Einige Spielzeiten fehlen") and opens on a tap. Days too far ahead now say "noch keine Spielzeiten" instead of
   "Bitte prüfe deine Eingaben.", with a note that cinemas usually publish their times only one or two weeks ahead.
+- Test for admins only: showtimes can now be fetched for up to 60 days ahead instead of 21, so a cinema evening can be
+  planned for a film that starts in a few weeks, as soon as the cinemas sell tickets for it. Days without published
+  times still show "noch keine Spielzeiten". This needs the server update, which the server installs itself within
+  about an hour.
 
 ## [2.6.0] - 2026-11-17
 
