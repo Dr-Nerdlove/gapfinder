@@ -925,6 +925,24 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   - *Fragility:* all of this is the same undocumented interface as the test; if cineamo changes ids, filters or paging,
     the film choice fails and the entry by hand remains. The rule "only with cineamo's yes for everybody" is unchanged.
 
+  **Chosen 2026-11-17: cinemas first, then the film (variant B; not built yet).** Of three variants (A: one film list
+  from all cinemas, about 80 to 90 requests on first use; B: tick the cinemas first, then choose a film from theirs;
+  C: today's entry plus "show this film in the other cinemas"), the owner chose B: fewer requests and a quicker list,
+  nearly "film first". **Mock-up approved 2026-11-17:** `docs/mockups/10d-cinema-film-choice.jpg` (light above, dark
+  below, seed colour teal `#00796B`; made-up cinemas and films). Three steps after "Kinoabend planen" under an hours
+  search, with the free-time summary on top and "Schritt n von 3":
+  1. *Kinos wählen:* the configured cinemas with check boxes (a preferred screen shown as "Saal: …"); showtimes are
+     fetched only for the days of the search that have free times; button "Filme anzeigen (n Kinos)"; the link
+     "Zeiten selbst eintragen" leads to today's entry by hand.
+  2. *Film wählen:* a search field, then the films of the ticked cinemas grouped by `contentId` (never by name), each
+     with its language versions, "läuft in x von n Kinos", the length and the number of showings that fit the free
+     times; films without a fitting showing greyed at the bottom; "Weiter mit „…“" and "Anderes Kino wählen".
+  3. *Vorstellungen:* the film length filled in from cineamo (`runtime` of `/movies/<movieId>`, editable, 120 minutes
+     when missing) and the advert buffer, then the showings by day and cinema, fitting and not fitting with the reason as
+     today, a fitting one can be left out; button "Abstimmung mit n Zeiten erstellen" and the credit "Spielzeiten:
+     Cineamo".
+  The whole flow stays admin-only behind the feature `cinema_showtimes`; for everybody else nothing changes.
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
