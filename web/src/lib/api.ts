@@ -9,6 +9,7 @@ import type {
   BackupStatus,
   CalendarSizes,
   CinemaListResponse,
+  CinemaMovieResponse,
   CinemaShowingsResponse,
   DoorbellStatus,
   Calendar,
@@ -255,6 +256,9 @@ export const listCinemas = (o: CallOptions = {}) => request<CinemaListResponse>(
 /** The showings of one cinema on one day ("YYYY-MM-DD"); 502 `cinema_unavailable` when cineamo does not answer. */
 export const getCinemaShowings = (id: number, date: string, o: CallOptions = {}) =>
   request<CinemaShowingsResponse>(`/api/admin/cinemas/${segment(id)}/showings?date=${encodeURIComponent(date)}`, o);
+
+/** The length of a film in minutes (`runtime` is missing when cineamo does not know it); 502 `cinema_unavailable` on failure. Feature `cinema_film_choice`. */
+export const cinemaMovie = (id: number, o: CallOptions = {}) => request<CinemaMovieResponse>(`/api/admin/movies/${segment(id)}`, o);
 
 export const listInvites = (o: CallOptions = {}) => request<AdminInvite[]>("/api/admin/invites", o);
 
