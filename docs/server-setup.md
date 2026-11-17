@@ -419,6 +419,40 @@ key, the server runs as before and the 15-minute check carries on.
 **The key is not in the backups.** It lives only in `.env`, so that a stolen backup cannot ring anyone. If the
 VM is rebuilt, make a new key in Firebase and run step 2 again; until then the app checks every 15 minutes.
 
+## Cinema showtimes (test)
+
+Admins can fetch a cinema's showtimes for one day from the cineamo service (a test, phase 10d). It is off until you
+give the server a list of cinemas. Only admins can use it, the server asks cineamo for at most one cinema and day
+every 6 hours (the screens of a cinema once a day), and nothing is stored in the database.
+
+1. Find the cinema's id: open `https://api.cineamo.com/cinemas?query=<town>` in a browser and read the field `id`
+   of your cinema.
+2. Write the list as `<id>=<name>;<id>=<name>`, for example `12=Kino Eins;345=Kino Zwei` (at most 20 cinemas,
+   names up to 100 characters; umlauts and spaces are fine; no `'`).
+   Optional preferred screen: add `|<screen>` to an entry, for example `12=Kino Eins|IMAX;345=Kino Zwei`. Write the
+   screen's name as cineamo calls it: open `https://api.cineamo.com/cinema-rooms?cinemaId=<id>&perPage=50` and read the
+   field `name` (up to 60 characters; no second `|`). The app then shows a switch "Nur Saal ..." (on by default) that
+   keeps only the showings in that screen. Cineamo does not name the screen of the showings for every cinema; then the
+   app says so and shows all showings.
+   If the cinema's own site has a page that lists only that screen's showings, add its address after an `@`, for
+   example `345=Kino Zwei|Saal Eins@https://www.kino.example/programm/saal-eins/` (https only, up to 300 characters).
+   The server then reads this page and counts a showing as in that screen when its ticket link carries a
+   `performance=<number>` that also stands on the page. This fits only a page that lists one screen's showings with
+   such ticket links; the server reads the page at most every 6 hours per cinema. If the cinema changes its page or its
+   ticket links, no showing matches any more and the app shows all showings with a hint. The address never leaves the
+   server.
+3. In the VM, run the setup again (see "When the files in `deploy/vm/` change"): `sudo bash setup.sh` asks for the
+   list ("Cinemas for the showtimes test"; Enter keeps what is there). Or give it without the question:
+   `sudo LUECKENFUELLER_CINEMAS='12=Kino Eins;345=Kino Zwei' bash setup.sh`. The script writes it into
+   `/opt/lueckenfueller/.env` as `CINEMAS='...'` and restarts the server.
+4. Check it: `cd /opt/lueckenfueller && sudo docker compose logs api | grep -i showtimes` must show
+   `Cinema showtimes test is on (2 cinemas)`; `is off: ...` names the problem (never the list).
+
+**Switch it off:** delete the `CINEMAS` line in `/opt/lueckenfueller/.env` (or make it empty) and restart the
+server (`sudo docker compose up -d`). A wrong list also switches the test off; the server keeps running.
+
+The list stays on the VM: do not put it into the repository.
+
 ## Forgot your own admin password
 
 Friends who forget their password ask you; you make a new link for them in the admin area of the app. If you

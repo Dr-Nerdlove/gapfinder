@@ -8,6 +8,8 @@ import type {
   ApiErrorBody,
   BackupStatus,
   CalendarSizes,
+  CinemaListResponse,
+  CinemaShowingsResponse,
   DoorbellStatus,
   Calendar,
   CalendarList,
@@ -113,6 +115,7 @@ const KNOWN_CODES: Record<ErrorCode, true> = {
   calendar_link_blocked: true,
   calendar_gone: true,
   calendar_unreachable: true,
+  cinema_unavailable: true,
   calendar_not_ics: true,
   calendar_too_large: true,
   calendar_limit: true,
@@ -245,6 +248,13 @@ export const getBackupStatus = (o: CallOptions = {}) => request<BackupStatus>("/
 /** Not on servers older than the instant ring: they answer 404. */
 export const getCalendarSizes = (o: CallOptions = {}) => request<CalendarSizes>("/api/admin/calendar-sizes", o);
 export const getDoorbellStatus = (o: CallOptions = {}) => request<DoorbellStatus>("/api/admin/doorbell-status", o);
+
+/** Admin-only test (phase 10d); only when the health answer lists `cinema_showtimes`. */
+export const listCinemas = (o: CallOptions = {}) => request<CinemaListResponse>("/api/admin/cinemas", o);
+
+/** The showings of one cinema on one day ("YYYY-MM-DD"); 502 `cinema_unavailable` when cineamo does not answer. */
+export const getCinemaShowings = (id: number, date: string, o: CallOptions = {}) =>
+  request<CinemaShowingsResponse>(`/api/admin/cinemas/${segment(id)}/showings?date=${encodeURIComponent(date)}`, o);
 
 export const listInvites = (o: CallOptions = {}) => request<AdminInvite[]>("/api/admin/invites", o);
 

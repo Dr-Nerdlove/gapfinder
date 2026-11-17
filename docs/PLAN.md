@@ -800,7 +800,8 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   not named here).** Seen: `GET api.cineamo.com/showings?cinemaId=<id>&date=<YYYY-MM-DD>&per_page=100` returns all
   showings of one cinema for one day in a single answer (22 showings of 14 films for one cinema), so one request per
   cinema and day is enough and the worry about 36 pages is gone; `startDatetime[gte]`-style filters answer 400.
-  `api.cineamo.com/cinemas?search=<town>` finds a cinema's id. Every showing seen had an `onlineTicketUrl` (the
+  `api.cineamo.com/cinemas?query=<town>` finds a cinema's id (corrected on 2026-11-17: `search=` is ignored and
+  returns the whole list of about 1900 cinemas; `query=` and `city=` filter). Every showing seen had an `onlineTicketUrl` (the
   cinema's own booking page or kinoheld's; the links were not opened). Limits found: (1) the new cinema week (from
   Thursday) was not complete on Monday evening: Thursday and Friday showed only the advance sale of one film, while
   Wednesday was complete, so times for a weekend are usable only shortly before; (2) `endDatetime` was filled for
@@ -861,6 +862,37 @@ the owner (choices with a recommendation, a preview mock-up where something is v
     the search finds only gaps at least that long (shorter gaps that the film would fit into are missing).
   Still open: the automatic fetch of showtimes, the ticket link and the credit "Spielzeiten: Cineamo" (only with
   cineamo's yes).
+
+  **Test of the automatic fetch, built 2026-11-16 (owner's decision: a test for admins only, still no yes from
+  cineamo).** It is off unless `CINEMAS` is set in the VM's `.env` (`setup.sh` asks for it; the list is never in the
+  repository). Admin-only routes `/api/admin/cinemas` and `/api/admin/cinemas/:id/showings`, announced by the feature
+  `cinema_showtimes` (listed only when cinemas are configured). The server makes one request per cinema and day through
+  the guarded fetch, caches the answer for 6 hours in memory (failures for 5 minutes), limits answers to 2 MB and 10 s,
+  and accepts dates from yesterday to 21 days ahead. The app shows the films of the evening, fills the times field when
+  one is tapped, and shows the credit "Spielzeiten: Cineamo". The earlier decision "no automatic fetch without a yes"
+  still holds for everybody else: opening it to all users needs cineamo's yes and a new decision by the owner.
+  Paging is built (up to 5 pages of 100, one after another; a failed or unreadable page fails the whole fetch, never a
+  shortened list; found on 2026-11-17: one cinema had 108 showings a day). Screens: the showings carry the screen's name
+  where cineamo gives it (the rooms are fetched once a day per cinema; if that fails the showings come without names),
+  and a preferred screen per cinema in `CINEMAS` (`<id>=<name>|<screen>`) filters the list in the app (switch "Nur
+  Saal ...", on by default). Seen on 2026-11-17: two of the owner's three cinemas with a special screen name it per
+  showing; for the third cineamo knows the screen but no showing names one (the app then shows all showings).
+  Built 2026-11-17 on the owner's wish: a screen page. For a cinema whose showings carry no screen at cineamo, the
+  cinema's own site has a public page that lists only the programme of its special screen, and every showing there links
+  to the ticket shop with `performance=<id>`, the same id as in cineamo's `onlineTicketUrl` of that showing.
+  `CINEMAS` takes `<id>=<name>|<screen>@<https address>`; a showing without a screen counts as in the preferred screen
+  when its ticket link's `performance` id stands on that page (read at most every 6 hours per cinema, ids kept as own
+  copies). On the one day tried, 3 of 14 showings matched. The page's robots.txt allows reading and no terms of use were
+  found on the three pages looked at, so legally it is as unsettled as cineamo. It breaks silently when the cinema
+  changes its page or its ticket links: then all showings are shown, with the hint. The cinema is not named here
+  (public repository). A fourth cinema names its special screen at cineamo, so it needs only `|<screen>`.
+  Still open: the ticket link on proposals and the credit on the finished poll (the server already returns
+  `ticketUrl`); the film length stays an entry by hand; showings after midnight are found only if cineamo lists them under the next calendar day (not verified);
+  the load test (9f) was not rerun.
+  Tried on 2026-11-17 with the built service: cineamo's real answers and the real screen page gave 3 showings
+  of 14 in the special screen on each of two days, with one page fetch for both. A cloud session cannot resolve the
+  cinema site's name for Node's own lookup (only the session's proxy reaches it), so the page was fetched with curl
+  there and handed to the service; the guarded fetch of that page itself is first exercised on the VM.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter

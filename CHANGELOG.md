@@ -5,6 +5,16 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Added
+
+- Test for admins only: in the cinema entry of a poll, admins can pick a cinema from a list and fetch its showtimes for
+  a day from Cineamo. They tap a film and its times fill the times field; typing by hand still works. This stays off
+  until cinemas are entered in the VM with `setup.sh` (see `docs/server-setup.md`). `deploy/vm/setup.sh` changed, so the
+  owner must rerun it to switch the test on. Days with more than 100 showings are read completely, and a cinema in the
+  list can name a preferred screen (`<id>=<name>|<screen>`): the app then offers a switch "Nur Saal ..." that shows only
+  that screen's showings, where Cineamo names the screens. Where it does not, a cinema can also name a page of its own
+  site that lists only that screen's showings, and the showings found there count as in that screen.
+
 ## [2.5.2] - 2026-11-16
 
 Two security fixes: pages of other projects under the same web address can no longer open inside the Android app, and the

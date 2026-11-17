@@ -9,6 +9,8 @@ import {
   cinemaSourceOf,
   cinemaSubmitLabel,
   defaultCinemaDay,
+  filmsOfEvening,
+  languageLabel,
   freeTimeSummary,
   groupShowings,
   hoursMinutesLabel,
@@ -299,5 +301,81 @@ describe("cinemaSourceOf", () => {
     expect(pollSource.get()?.picks).toEqual([]);
     pollSource.clear();
     expect(pollSource.get()).toBeNull();
+  });
+});
+
+describe("filmsOfEvening", () => {
+  const show = (film: string, start: string, language?: string) => ({ film, start, ...(language ? { language } : {}) });
+
+  it("converts UTC to Berlin time in winter (UTC+1) and summer (UTC+2)", () => {
+    const winter = filmsOfEvening([show("A", "2026-12-11T19:15:00.000Z")], "2026-12-11");
+    expect(winter[0]?.clocks).toEqual(["20:15"]);
+    const summer = filmsOfEvening([show("A", "2026-07-11T18:15:00.000Z")], "2026-07-11");
+    expect(summer[0]?.clocks).toEqual(["20:15"]);
+  });
+
+  it("uses the Berlin date, not the UTC date", () => {
+    // 23:30 UTC in winter is 00:30 on the next Berlin day: night after 2026-12-11.
+    expect(filmsOfEvening([show("A", "2026-12-11T23:30:00.000Z")], "2026-12-11")[0]?.clocks).toEqual(["00:30"]);
+    expect(filmsOfEvening([show("A", "2026-12-11T23:30:00.000Z")], "2026-12-12")).toEqual([]);
+  });
+
+  it("applies the night rule on both sides of 05:00", () => {
+    const list = [
+      show("Nacht", "2026-12-12T03:59:00.000Z"), // 04:59 on the 12th: night of the 11th
+      show("Morgen", "2026-12-12T04:00:00.000Z"), // 05:00 on the 12th: morning of the 12th, not the 11th
+      show("Vornacht", "2026-12-11T03:59:00.000Z"), // 04:59 on the 11th: night of the 10th
+      show("Abend", "2026-12-11T04:00:00.000Z"), // 05:00 on the 11th: evening of the 11th
+    ];
+    expect(filmsOfEvening(list, "2026-12-11").map((f) => [f.film, f.clocks])).toEqual([
+      ["Abend", ["05:00"]],
+      ["Nacht", ["04:59"]],
+    ]);
+    expect(filmsOfEvening(list, "2026-12-12").map((f) => f.film)).toEqual(["Morgen"]);
+  });
+
+  it("puts the night after the evening times", () => {
+    const list = [show("A", "2026-12-11T23:15:00.000Z"), show("A", "2026-12-11T16:00:00.000Z")];
+    expect(filmsOfEvening(list, "2026-12-11")[0]?.clocks).toEqual(["17:00", "00:15"]);
+  });
+
+  it("keeps only the asked screen (trimmed, ignoring case) and drops showings without a screen name", () => {
+    const inRoom = (film: string, start: string, room?: string) => ({ film, start, ...(room ? { room } : {}) });
+    const list = [
+      inRoom("Imax-Film", "2026-12-11T19:00:00.000Z", "IMAX"),
+      inRoom("Klein", "2026-12-11T19:00:00.000Z", "Kino 2"),
+      inRoom("Ohne", "2026-12-11T19:00:00.000Z"),
+      inRoom("Imax-Film", "2026-12-11T21:00:00.000Z", " imax "),
+    ];
+    expect(filmsOfEvening(list, "2026-12-11", "imax").map((f) => [f.film, f.clocks])).toEqual([["Imax-Film", ["20:00", "22:00"]]]);
+    expect(filmsOfEvening(list, "2026-12-11", "Saal 9")).toEqual([]);
+    expect(filmsOfEvening(list, "2026-12-11").map((f) => f.film)).toEqual(["Imax-Film", "Klein", "Ohne"]);
+  });
+
+  it("groups by film and language, lists a clock once and sorts", () => {
+    const list = [
+      show("Zebra", "2026-12-11T19:00:00.000Z", "deu"),
+      show("Ärger", "2026-12-11T18:00:00.000Z", "eng"),
+      show("Ärger", "2026-12-11T19:00:00.000Z"),
+      show("Ärger", "2026-12-11T19:00:00.000Z", "deu"),
+      show("Ärger", "2026-12-11T16:30:00.000Z", "eng"),
+      show("Ärger", "2026-12-11T16:30:00.000Z", "eng"),
+      show("Ärger", "2026-12-11T16:30:00.000Z", "fra"),
+    ];
+    const films = filmsOfEvening(list, "2026-12-11");
+    expect(films.map((f) => [f.film, f.languageLabel, f.clocks])).toEqual([
+      ["Ärger", null, ["20:00"]],
+      ["Ärger", "Englisch", ["17:30", "19:00"]],
+      ["Ärger", "FRA", ["17:30"]],
+      ["Zebra", null, ["20:00"]],
+    ]);
+  });
+
+  it("leaves out other days", () => {
+    expect(filmsOfEvening([show("A", "2026-12-10T19:00:00.000Z"), show("B", "2026-12-13T19:00:00.000Z")], "2026-12-11")).toEqual([]);
+  });
+
+  it("labels languages", () => {
+    expect([languageLabel(undefined), languageLabel("deu"), languageLabel("eng"), languageLabel("fra")]).toEqual([null, null, "Englisch", "FRA"]);
   });
 });

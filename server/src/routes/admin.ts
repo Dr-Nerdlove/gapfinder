@@ -9,6 +9,8 @@ import {
   type AdminUser,
   type BackupStatus,
   type CalendarSizes,
+  type CinemaListResponse,
+  type CinemaShowingsResponse,
   type CreateInviteRequest,
   type CreatedInvite,
   type CreatedPasswordReset,
@@ -26,7 +28,11 @@ import { readCalendarSizes } from "../calendars/size.js";
 import { isUniqueViolation } from "../db.js";
 import type { AppContext } from "../context.js";
 import { ApiError, notFound, validation } from "../errors.js";
+import { addDaysToDate, berlinDateOf, dayNumber, formatDateParts, parseDateParts } from "../time.js";
 import { checkedUsername, idParam } from "./shared.js";
+
+/** The showtimes test looks from yesterday up to this many days after today. */
+const SHOWTIMES_DAYS_AHEAD = 21;
 
 const renameBody = {
   type: "object",
@@ -61,6 +67,29 @@ export function registerAdminRoutes(app: FastifyInstance, ctx: AppContext): void
     }));
 
     admin.get("/api/admin/calendar-sizes", async (): Promise<CalendarSizes> => readCalendarSizes(ctx.db));
+
+    admin.get("/api/admin/cinemas", async (): Promise<CinemaListResponse> => ({
+      // The address of a cinema's page stays on the server.
+      cinemas: ctx.config.cinemas.map(({ id, name, room }) => ({ id, name, ...(room === undefined ? {} : { room }) })),
+    }));
+
+    admin.get<{ Params: { id: string }; Querystring: { date?: string } }>(
+      "/api/admin/cinemas/:id/showings",
+      async (request): Promise<CinemaShowingsResponse> => {
+        // The id sent to cineamo is taken from the configured list, never from the request text.
+        const cinema = ctx.config.cinemas.find((entry) => String(entry.id) === request.params.id);
+        if (cinema === undefined) throw notFound();
+        const date = typeof request.query.date === "string" ? parseDateParts(request.query.date) : null;
+        if (date === null) throw validation("date");
+        const today = berlinDateOf(ctx.now());
+        const first = addDaysToDate(today, -1);
+        const last = addDaysToDate(today, SHOWTIMES_DAYS_AHEAD);
+        if (dayNumber(date) < dayNumber(first) || dayNumber(date) > dayNumber(last)) throw validation("date");
+        const showings = await ctx.cinemas.showings(cinema, formatDateParts(date));
+        if (showings === null) throw new ApiError(502, "cinema_unavailable");
+        return { showings };
+      },
+    );
 
     admin.patch<{ Body: AdminRenameUserRequest }>(
       "/api/admin/users/:id",
