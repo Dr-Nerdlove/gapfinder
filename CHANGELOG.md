@@ -5,6 +5,10 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-11-17
+
+A test for admins only: planning a cinema evening is now a flow of its own, started from a button at the top of the search page. Admins choose who comes, any period up to 60 days ahead and the cinemas; there is no daily time window any more, so every showing counts at which everybody has time by calendar. Showings that do not fit are hidden until asked for. Showtimes can be fetched up to 60 days ahead. Nothing changes for anybody else. The server updates itself within about an hour; `setup.sh` need not be run again and the Android app needs no update.
+
 ### Changed
 
 - Test for admins only: "Kinoabend planen" is now a flow of its own (button at the top of the search page, page
