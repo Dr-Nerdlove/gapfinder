@@ -221,6 +221,15 @@ export function groupShowings(showings: readonly CheckedShowing[]): { key: strin
   return groups.map((g, i) => ({ g, i })).sort((a, b) => (a.g.day < b.g.day ? -1 : a.g.day > b.g.day ? 1 : a.i - b.i)).map(({ g }) => g);
 }
 
+/**
+ * The showings of the check list: by default only those that fit (they stay in their order, so "weggelassen" ones are
+ * still listed); with `showAll` the ones that do not fit appear in their place. `notFitting` is how many do not fit.
+ */
+export function visibleShowings<T extends { fits: boolean }>(showings: readonly T[], showAll: boolean): { shown: T[]; fitting: number; notFitting: number } {
+  const fitting = showings.filter((s) => s.fits).length;
+  return { shown: showAll ? [...showings] : showings.filter((s) => s.fits), fitting, notFitting: showings.length - fitting };
+}
+
 /** The first searched day with a free time for everyone, or the first searched day. */
 export function defaultCinemaDay(source: CinemaSource): string {
   const days = source.days.filter((d) => d.slots.length > 0).map((d) => d.date).sort();

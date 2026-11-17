@@ -2,6 +2,7 @@
   import { onMount } from "svelte";
   import Admin from "./pages/Admin.svelte";
   import Calendars from "./pages/Calendars.svelte";
+  import CinemaNight from "./pages/CinemaNight.svelte";
   import Invite from "./pages/Invite.svelte";
   import Login from "./pages/Login.svelte";
   import NotFound from "./pages/NotFound.svelte";
@@ -55,6 +56,8 @@
     {#if sessionState.user}<Polls />{:else}<Login />{/if}
   {:else if route.name === "poll-new"}
     {#if sessionState.user}<PollNew />{:else}<Login />{/if}
+  {:else if route.name === "cinema-night"}
+    {#if sessionState.user}<CinemaNight />{:else}<Login />{/if}
   {:else if route.name === "poll"}
     <Poll token={route.token} />
   {:else if route.name === "privacy"}

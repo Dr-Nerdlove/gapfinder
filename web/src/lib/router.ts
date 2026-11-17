@@ -8,6 +8,7 @@ export type Route =
   | { name: "search" }
   | { name: "polls" }
   | { name: "poll-new" }
+  | { name: "cinema-night" }
   | { name: "poll"; token: string }
   | { name: "admin" }
   | { name: "privacy" }
@@ -35,6 +36,8 @@ export function parseRoute(hash: string): Route {
       return { name: "polls" };
     case "/abstimmung-neu":
       return { name: "poll-new" };
+    case "/kinoabend":
+      return { name: "cinema-night" };
     case "/verwaltung":
       return { name: "admin" };
     case "/privatsphaere":

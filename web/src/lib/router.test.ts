@@ -33,6 +33,7 @@ describe("parseRoute", () => {
     expect(parseRoute("#/abstimmungen")).toEqual({ name: "polls" });
     expect(parseRoute("#/abstimmungen/")).toEqual({ name: "polls" });
     expect(parseRoute("#/abstimmung-neu")).toEqual({ name: "poll-new" });
+    expect(parseRoute("#/kinoabend")).toEqual({ name: "cinema-night" });
   });
 
   it("reads the share token of a poll link", () => {
