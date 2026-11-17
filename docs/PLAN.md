@@ -925,7 +925,7 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   - *Fragility:* all of this is the same undocumented interface as the test; if cineamo changes ids, filters or paging,
     the film choice fails and the entry by hand remains. The rule "only with cineamo's yes for everybody" is unchanged.
 
-  **Chosen 2026-11-17: cinemas first, then the film (variant B; not built yet).** Of three variants (A: one film list
+  **Chosen 2026-11-17: cinemas first, then the film (variant B; built 2026-11-17, see below).** Of three variants (A: one film list
   from all cinemas, about 80 to 90 requests on first use; B: tick the cinemas first, then choose a film from theirs;
   C: today's entry plus "show this film in the other cinemas"), the owner chose B: fewer requests and a quicker list,
   nearly "film first". **Mock-up approved 2026-11-17:** `docs/mockups/10d-cinema-film-choice.jpg` (light above, dark
@@ -942,6 +942,15 @@ the owner (choices with a recommendation, a preview mock-up where something is v
      today, a fitting one can be left out; button "Abstimmung mit n Zeiten erstellen" and the credit "Spielzeiten:
      Cineamo".
   The whole flow stays admin-only behind the feature `cinema_showtimes`; for everybody else nothing changes.
+  Built 2026-11-17: the server's showings carry `contentId`, `movieId` and `originalLanguage`; the admin-only route
+  `GET /api/admin/movies/:id` gives `runtime` (cached 24 hours, failures 5 minutes); at most three requests to cineamo
+  run at the same time in the server, and the app asks at most three at a time. Announced by the feature
+  `cinema_film_choice` (listed with `cinema_showtimes`); without it the app shows today's entry. Logic in
+  `web/src/lib/cinema-film.ts`, the steps in `web/src/components/polls/CinemaFilmChoice.svelte`. Runtimes are asked for
+  every film of the list (one request per film, then the server's cache), so the counts of fitting showings use the real
+  length. Tried at the real interface: three of the owner's cinemas on one day gave 40 showings and 17 films; seven
+  films ran in two cinemas, two of them under different names there, and all were grouped correctly. Not done: the
+  ticket link on the proposals, showings after midnight listed under a day that is not fetched.
 
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter

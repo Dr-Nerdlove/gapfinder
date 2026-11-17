@@ -14,6 +14,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
   list can name a preferred screen (`<id>=<name>|<screen>`): the app then offers a switch "Nur Saal ..." that shows only
   that screen's showings, where Cineamo names the screens. Where it does not, a cinema can also name a page of its own
   site that lists only that screen's showings, and the showings found there count as in that screen.
+- Test for admins only: "Kinoabend planen" after an hours search now goes in three steps when the server supports it:
+  tick the cinemas, choose a film from their programme (the same film counts once even when the cinemas name it
+  differently; with its language versions, how many cinemas show it, its length and how many showings fit), then check
+  its showings against the free times and create the poll. The film length comes from Cineamo and can be changed (120
+  minutes when Cineamo does not know it). Showtimes are fetched only for the ticked cinemas and the days with free
+  times. "Zeiten selbst eintragen" still leads to the entry by hand. Nothing changes for anybody who is not an admin.
 
 ## [2.5.2] - 2026-11-16
 
