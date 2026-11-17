@@ -894,6 +894,55 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   cinema site's name for Node's own lookup (only the session's proxy reaches it), so the page was fetched with curl
   there and handed to the service; the guarded fetch of that page itself is first exercised on the VM.
 
+  **Film first, then cinemas: feasibility checked on 2026-11-17 (nothing built, the owner chooses a variant first).**
+  The idea: after the hours search, choose a current film first, then the cinemas to offer, then the showings that fit
+  the free times, then the poll. Checked at cineamo's real interface with 23 requests (one day, six of the owner's
+  cinemas):
+  - *Same film across cinemas:* `contentId`, `movieId` and `cineamoMovieId` are identical across cinemas and for the
+    original and the German version of a film (seen for four films in four to five cinemas each, and for one film in
+    many cinemas nationwide). Only the showing's `name` differs (dash, colon, "&"/"und", "(Imax)", English title,
+    trailing space), so names must not be matched. `contentId` was present on every showing; `movieId` and
+    `cineamoMovieId` were missing on a few obscure items and live events. Group by `contentId`.
+  - *Language:* `language` is `eng`, `deu`, `fra`, ... but `null` on many showings of one cinema (12 of 22 for one
+    film); `originalLanguage` was always present. Original version = `language` equals `originalLanguage`; `null`
+    stays "unknown".
+  - *No list of current films for a region:* `GET /` is 404; `/movies` and `/contents` list everything (hundreds of
+    thousands). `/showings` filters by `contentId`, `movieId` or `cineamoMovieId`, but without `cinemaId` it returns
+    every cinema in the country (3504 showings of one film on one day, 36 pages of about 370 KB). Several cinemas in one
+    request do not work (a comma list keeps the first id, a repeated parameter the last, `cinemaId[]` is refused with
+    400). `dateFrom`/`dateTo` are ignored silently (they returned all future showings, about five weeks); other names
+    for a range were not tried. So the film list must come from the existing request per cinema and day.
+  - *Cost of that list:* about 4.5 KB per showing (the film's description is repeated in every showing); one cinema
+    and day took 0.4 to 1.9 s and 8 to 470 KB (the largest needs two pages). For eleven cinemas and seven days that is
+    about 80 to 90 requests and roughly 15 MB on the first use, then the 6-hour cache. One after another: about one
+    minute; a few at a time (e.g. three): about 20 to 30 s. No rate limit or cache headers were seen (CloudFront,
+    uncached). Showings of the whole period without a date (as with `dateFrom`) were about 40 for a small cinema and
+    would be one request per cinema, but for a large cinema that is many pages.
+  - *Film length:* `endDatetime` was set by only one cinema of six (start to end includes the adverts);
+    `content.duration` was empty for the current films. `GET /movies/<movieId>` has `runtime` in minutes (from TMDB;
+    159, 91, 115 for three current films), one more request per film (13 to 125 KB). With it the length could be
+    filled in; the field stays editable and falls back to 120 minutes.
+  - *Fragility:* all of this is the same undocumented interface as the test; if cineamo changes ids, filters or paging,
+    the film choice fails and the entry by hand remains. The rule "only with cineamo's yes for everybody" is unchanged.
+
+  **Chosen 2026-11-17: cinemas first, then the film (variant B; not built yet).** Of three variants (A: one film list
+  from all cinemas, about 80 to 90 requests on first use; B: tick the cinemas first, then choose a film from theirs;
+  C: today's entry plus "show this film in the other cinemas"), the owner chose B: fewer requests and a quicker list,
+  nearly "film first". **Mock-up approved 2026-11-17:** `docs/mockups/10d-cinema-film-choice.jpg` (light above, dark
+  below, seed colour teal `#00796B`; made-up cinemas and films). Three steps after "Kinoabend planen" under an hours
+  search, with the free-time summary on top and "Schritt n von 3":
+  1. *Kinos wählen:* the configured cinemas with check boxes (a preferred screen shown as "Saal: …"); showtimes are
+     fetched only for the days of the search that have free times; button "Filme anzeigen (n Kinos)"; the link
+     "Zeiten selbst eintragen" leads to today's entry by hand.
+  2. *Film wählen:* a search field, then the films of the ticked cinemas grouped by `contentId` (never by name), each
+     with its language versions, "läuft in x von n Kinos", the length and the number of showings that fit the free
+     times; films without a fitting showing greyed at the bottom; "Weiter mit „…“" and "Anderes Kino wählen".
+  3. *Vorstellungen:* the film length filled in from cineamo (`runtime` of `/movies/<movieId>`, editable, 120 minutes
+     when missing) and the advert buffer, then the showings by day and cinema, fitting and not fitting with the reason as
+     today, a fitting one can be left out; button "Abstimmung mit n Zeiten erstellen" and the credit "Spielzeiten:
+     Cineamo".
+  The whole flow stays admin-only behind the feature `cinema_showtimes`; for everybody else nothing changes.
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
