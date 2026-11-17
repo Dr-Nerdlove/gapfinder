@@ -953,6 +953,26 @@ the owner (choices with a recommendation, a preview mock-up where something is v
   films ran in two cinemas, two of them under different names there, and all were grouped correctly. Not done: the
   ticket link on the proposals, showings after midnight listed under a day that is not fetched.
 
+  **Own cinema-night flow, chosen 2026-11-17 (mock-up approved the same day: `docs/mockups/10d-cinema-flow.jpg`,
+  light above, dark below, seed colour teal `#00796B`).** The owner found two problems with starting from an hours
+  search: its daily time window and minimum length drop showings although everybody is free by calendar (a showing at
+  16:45, one ending 23:30, a gap shorter than the searched length), and showtimes were fetched only for the days that
+  search found. Choosing the film first (variant A) was offered again; the owner kept "cinemas first, then the film"
+  to keep the requests to cineamo low. Decided:
+  - An own page `#/kinoabend`, for admins only (same features as the film choice), started from a button at the top
+    of the search page. For admins it replaces the button under an hours result; for everybody else that button stays
+    and leads to the entry by hand as before.
+  - Step 1 "Wer, wann, welche Kinos": people (the search's people picker), a freely chosen period (two date fields,
+    from today up to 60 days ahead, the server's limit for showtimes) and the cinemas. No time window and no minimum
+    length to choose.
+  - Behind the button the app runs an hours search over the whole day (window 05:00 to 04:59, so a time before 05:00
+    belongs to the night before, as everywhere in 10d), with 90 minutes and no buffer, and fetches showtimes only for
+    the days on which everybody is free for 1½ hours at a stretch. Every showing whose film plus advert buffer lies
+    within a free time then fits; a film shorter than 70 minutes could miss a day (accepted). Requests: at most one per
+    cinema and fetched day (3 cinemas and 20 days: at most 60, then the 6-hour cache).
+  - Steps 2 and 3 are the film choice as before. Step 3 shows only the fitting showings; the others are behind
+    "Nicht passende einblenden (n)", with their reason.
+
 Checked and not needed: an "everyone has voted" notification already exists (`all_voted`, phase 6). Not taken over:
 filling in free times by hand (the owner doubts friends would do it; guests already vote on the proposals; a lighter
 "I am away that day" may come if someone asks), e-mail reminders (no e-mail addresses by design), time zones, CSV
