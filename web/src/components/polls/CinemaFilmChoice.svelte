@@ -50,7 +50,7 @@
   let loading = $state(false);
   let problem = $state("");
   /** Cinema and day that could not be fetched, with the reason. */
-  let failures = $state<string[]>([]);
+  let failures = $state<Failure[]>([]);
   let showings = $state.raw<FilmShowing[]>([]);
   let query = $state("");
   let selectedKey = $state("");
@@ -102,14 +102,24 @@
     ticked = ticked.includes(id) ? ticked.filter((i) => i !== id) : [...ticked, id];
   }
 
-  async function fetchOne(cinema: CinemaInfo, day: string): Promise<string | null> {
+  /** A line for the failure list; `notYet` marks days the cinema has probably not published yet. */
+  interface Failure {
+    text: string;
+    notYet: boolean;
+  }
+
+  async function fetchOne(cinema: CinemaInfo, day: string): Promise<Failure | null> {
     try {
       const result = await session.run((o) => api.getCinemaShowings(cinema.id, day, o));
-      if (!result.ok) return `${cinema.name}, ${formatDay(day)}: ${errorMessage(result)}`;
+      if (!result.ok) {
+        // The server refuses days too far ahead with "validation"; cinemas publish times only 1-2 weeks ahead.
+        if (result.kind === "error" && result.code === "validation") return { text: `${cinema.name}, ${formatDay(day)}: noch keine Spielzeiten`, notYet: true };
+        return { text: `${cinema.name}, ${formatDay(day)}: ${errorMessage(result)}`, notYet: false };
+      }
       cache.set(`${cinema.id}|${day}`, result.data.showings);
       return null;
     } catch {
-      return `${cinema.name}, ${formatDay(day)}: Die Spielzeiten konnten nicht geholt werden.`;
+      return { text: `${cinema.name}, ${formatDay(day)}: Die Spielzeiten konnten nicht geholt werden.`, notYet: false };
     }
   }
 
@@ -121,14 +131,14 @@
     const jobs = tickedCinemas.flatMap((c) => days.filter((d) => !cache.has(`${c.id}|${d}`)).map((d) => () => fetchOne(c, d)));
     const results = await runLimited(jobs);
     loading = false;
-    const errors = results.filter((r): r is string => r !== null);
+    const errors = results.filter((r): r is Failure => r !== null);
     const all: FilmShowing[] = tickedCinemas.flatMap((c) => days.flatMap((d) => eveningShowings(c, d, cache.get(`${c.id}|${d}`) ?? [])));
     const gotAny = tickedCinemas.some((c) => days.some((d) => cache.has(`${c.id}|${d}`)));
     if (!gotAny) {
       problem =
         days.length === 0
           ? "In der Suche gibt es keinen Tag, an dem alle frei sind."
-          : `Die Spielzeiten konnten nicht geholt werden. ${errors[0] ?? ""} Versuche es später noch einmal oder trage die Zeiten selbst ein.`.trim();
+          : `Die Spielzeiten konnten nicht geholt werden. ${errors[0]?.text ?? ""} Versuche es später noch einmal oder trage die Zeiten selbst ein.`.trim();
       return;
     }
     failures = errors;
@@ -213,10 +223,14 @@
   {:else if step === 2}
     <Card title="Film wählen">
       {#if failures.length > 0}
-        <div class="warn">
+        <details class="warn">
+          <summary>Einige Spielzeiten fehlen ({failures.length})</summary>
+          {#if failures.some((f) => f.notYet)}
+            <p>Vermutlich haben die Kinos für diese Tage noch keine Spielzeiten veröffentlicht. Das geschieht meist erst ein bis zwei Wochen vorher.</p>
+          {/if}
           <p>Diese Spielzeiten konnten nicht geholt werden und fehlen in der Liste:</p>
-          <ul>{#each failures as failure (failure)}<li>{failure}</li>{/each}</ul>
-        </div>
+          <ul>{#each failures as failure (failure.text)}<li>{failure.text}</li>{/each}</ul>
+        </details>
       {/if}
       <div class="search">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M15.5 14h-.8l-.3-.3A6.5 6.5 0 1 0 14 15.5l.3.3v.8l5 5 1.5-1.5zm-6 0a4.5 4.5 0 1 1 0-9 4.5 4.5 0 0 1 0 9z" /></svg>
@@ -333,6 +347,22 @@
     background: var(--md-sys-color-secondary-container);
     color: var(--md-sys-color-on-secondary-container);
     font-size: 0.875rem;
+  }
+
+  .warn summary {
+    min-height: 32px;
+    display: flex;
+    align-items: center;
+    font-weight: 600;
+    cursor: pointer;
+  }
+
+  .warn[open] summary {
+    margin-bottom: 4px;
+  }
+
+  .warn p {
+    margin: 0 0 4px;
   }
 
   .warn ul {

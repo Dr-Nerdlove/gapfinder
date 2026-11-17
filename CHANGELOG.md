@@ -5,6 +5,12 @@ versions follow `vMAJOR.MINOR.PATCH`.
 
 ## [Unreleased]
 
+### Changed
+
+- Test for admins only: when choosing a film, the list of showtimes that could not be fetched is now folded away
+  ("Einige Spielzeiten fehlen") and opens on a tap. Days too far ahead now say "noch keine Spielzeiten" instead of
+  "Bitte prüfe deine Eingaben.", with a note that cinemas usually publish their times only one or two weeks ahead.
+
 ## [2.6.0] - 2026-11-17
 
 A test for admins only: planning a cinema evening can fetch showtimes from Cineamo. After an hours search, admins tick cinemas, choose a film from their programme and get the showings that fit everybody's free times as proposals of a poll. Nothing changes for anybody else. The test stays off until the owner enters the cinemas on the server: `deploy/vm/setup.sh` changed, so it must be run again once (see `docs/server-setup.md`). The server updates itself within about an hour; the Android app needs no update.
