@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { loadConfig, parseCinemas } from "../src/config.js";
-import { parseShowings } from "../src/cinemas/cineamo.js";
+import type { FastifyBaseLogger } from "fastify";
+import { CINEAMO_MAX_PARALLEL, MAX_CACHE_ENTRIES, createCinemaService, parseShowings } from "../src/cinemas/cineamo.js";
 import { buildApp } from "../src/app.js";
 import type { FetchResult } from "../src/calendars/fetch.js";
 import { addUserWithSession, call, createTestEnv, testConfig, type TestEnv } from "./helpers.js";
@@ -737,5 +738,284 @@ describe("GET /api/health feature cinema_showtimes", () => {
     expect(await features({})).not.toContain("cinema_showtimes");
     await app?.close();
     expect(await features({ cinemas: CINEMAS, cinemasProblem: null })).toContain("cinema_showtimes");
+  });
+});
+
+describe("parseShowings film ids", () => {
+  const first = (extra: Record<string, unknown>) => parseShowings(page([showingEntry(1, "A", "2026-11-17T14:00:00Z", extra)]))![0]!;
+
+  it("reads contentId, movieId and originalLanguage", () => {
+    const showing = first({ contentId: 5001, movieId: 7002, originalLanguage: "eng" });
+    expect(showing).toMatchObject({ contentId: 5001, movieId: 7002, originalLanguage: "eng" });
+  });
+
+  it.each([
+    ["zero", 0],
+    ["negative", -4],
+    ["fraction", 1.5],
+    ["a string", "12"],
+    ["unsafe", 2 ** 53],
+    ["null", null],
+  ])("leaves out an invalid contentId and movieId: %s", (_why, value) => {
+    const showing = first({ contentId: value, movieId: value });
+    expect(showing).not.toHaveProperty("contentId");
+    expect(showing).not.toHaveProperty("movieId");
+  });
+
+  it.each(["ENG", "e", "engl", "en-US", "", 5])("leaves out an invalid originalLanguage: %s", (value) => {
+    expect(first({ originalLanguage: value })).not.toHaveProperty("originalLanguage");
+  });
+});
+
+const quietLog = () => {
+  const noop = () => {};
+  return { info: noop, warn: noop, error: noop, debug: noop } as unknown as FastifyBaseLogger;
+};
+
+describe("cinema service: movies and parallel limit", () => {
+  let current = new Date("2026-11-01T10:00:00Z");
+  const now = () => current;
+  const advanceHours = (hours: number) => {
+    current = new Date(current.getTime() + hours * 3_600_000);
+  };
+  const advanceMinutes = (minutes: number) => advanceHours(minutes / 60);
+
+  it("reads the runtime, and keeps it only as a whole number from 1 to 600", async () => {
+    const answers: Record<string, string> = {
+      "101": '{"runtime":128,"title":"x"}',
+      "102": "{}",
+      "103": '{"runtime":0}',
+      "104": '{"runtime":601}',
+      "105": '{"runtime":90.5}',
+      "106": '{"runtime":"90"}',
+      "107": '{"runtime":1}',
+      "108": '{"runtime":600}',
+    };
+    const service = createCinemaService({
+      fetchText: async (url) => ({ ok: true, text: answers[url.pathname.split("/").pop()!]! }),
+      now,
+      log: quietLog(),
+    });
+    expect(await service.movie(101)).toEqual({ runtime: 128 });
+    expect(await service.movie(102)).toEqual({});
+    expect(await service.movie(103)).toEqual({});
+    expect(await service.movie(104)).toEqual({});
+    expect(await service.movie(105)).toEqual({});
+    expect(await service.movie(106)).toEqual({});
+    expect(await service.movie(107)).toEqual({ runtime: 1 });
+    expect(await service.movie(108)).toEqual({ runtime: 600 });
+  });
+
+  it("asks /movies/<id>, caches 24 hours, shares simultaneous calls and keeps a failure 5 minutes", async () => {
+    const urls: string[] = [];
+    let ok = true;
+    const service = createCinemaService({
+      fetchText: async (url) => {
+        urls.push(url.href);
+        return ok ? { ok: true, text: '{"runtime":100}' } : { ok: false, reason: "unreachable" };
+      },
+      now,
+      log: quietLog(),
+    });
+    await Promise.all([service.movie(7), service.movie(7), service.movie(7)]);
+    expect(urls).toEqual(["https://api.cineamo.com/movies/7"]);
+    advanceHours(23);
+    await service.movie(7);
+    expect(urls).toHaveLength(1);
+    advanceHours(2);
+    await service.movie(7);
+    expect(urls).toHaveLength(2);
+    ok = false;
+    advanceHours(25);
+    expect(await service.movie(7)).toBeNull();
+    expect(await service.movie(7)).toBeNull();
+    expect(urls).toHaveLength(3);
+    advanceMinutes(6);
+    ok = true;
+    expect(await service.movie(7)).toEqual({ runtime: 100 });
+    expect(urls).toHaveLength(4);
+  });
+
+  it("answers null for an unreadable answer or a throwing fetch, and never throws", async () => {
+    let mode: "text" | "throw" | "array" = "text";
+    const service = createCinemaService({
+      fetchText: async () => {
+        if (mode === "throw") throw new Error("boom");
+        return { ok: true, text: mode === "text" ? "<html>" : "[1]" };
+      },
+      now,
+      log: quietLog(),
+    });
+    expect(await service.movie(1)).toBeNull();
+    mode = "array";
+    expect(await service.movie(2)).toBeNull();
+    mode = "throw";
+    expect(await service.movie(3)).toBeNull();
+  });
+
+  it("keeps at most 400 movies and drops the oldest first", async () => {
+    const urls: string[] = [];
+    const service = createCinemaService({
+      fetchText: async (url) => {
+        urls.push(url.pathname);
+        return { ok: true, text: "{}" };
+      },
+      now,
+      log: quietLog(),
+    });
+    for (let id = 1; id <= MAX_CACHE_ENTRIES + 1; id++) await service.movie(id);
+    expect(urls).toHaveLength(MAX_CACHE_ENTRIES + 1);
+    await service.movie(MAX_CACHE_ENTRIES + 1);
+    expect(urls).toHaveLength(MAX_CACHE_ENTRIES + 1);
+    await service.movie(1);
+    expect(urls).toHaveLength(MAX_CACHE_ENTRIES + 2);
+  });
+
+  it("never has more than 3 requests to cineamo in flight, across showings, screens and movies", async () => {
+    expect(CINEAMO_MAX_PARALLEL).toBe(3);
+    let active = 0;
+    let peak = 0;
+    let started = 0;
+    const releases: (() => void)[] = [];
+    const service = createCinemaService({
+      fetchText: async (url) => {
+        active++;
+        started++;
+        peak = Math.max(peak, active);
+        await new Promise<void>((resolve) => releases.push(resolve));
+        active--;
+        if (url.pathname === "/showings") return { ok: true, text: page([showingEntry(1, "A", "2026-11-17T14:00:00Z", { cinemaRoomId: 3 })]) };
+        if (url.pathname === "/cinema-rooms") return { ok: true, text: roomsAnswer([{ id: 3, name: "Saal" }]) };
+        return { ok: true, text: "{}" };
+      },
+      now,
+      log: quietLog(),
+    });
+    const results = Promise.all([
+      ...[1, 2, 3, 4, 5].map((id) => service.movie(id)),
+      service.showings({ id: 12 }, "2026-11-02"),
+      service.showings({ id: 13 }, "2026-11-02"),
+    ]);
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 5));
+    await settle();
+    expect(started).toBe(3);
+    // Finish requests one by one until everything is done, including those started later (screens).
+    const late: Promise<unknown>[] = [];
+    for (let guard = 0; guard < 50 && releases.length > 0; guard++) {
+      releases.shift()!();
+      // New requests arriving while others wait must queue behind them, not slip past the limit.
+      if (guard === 0) late.push(service.movie(20), service.movie(21));
+      await settle();
+      if (releases.length === 0) await settle();
+    }
+    const done = await results;
+    await Promise.all(late);
+    expect(peak).toBe(3);
+    expect(done.slice(0, 5)).toEqual([{}, {}, {}, {}, {}]);
+    expect(done[5]).toHaveLength(1);
+    expect(started).toBeGreaterThan(7);
+  });
+
+  it("goes on with the queue when a request throws", async () => {
+    let calls = 0;
+    const service = createCinemaService({
+      fetchText: async () => {
+        calls++;
+        if (calls <= 4) throw new Error("boom");
+        return { ok: true, text: "{}" };
+      },
+      now,
+      log: quietLog(),
+    });
+    const all = await Promise.all([1, 2, 3, 4, 5, 6].map((id) => service.movie(id)));
+    expect(all).toEqual([null, null, null, null, {}, {}]);
+  });
+});
+
+describe("admin movie route", () => {
+  let env: TestEnv;
+  let urls: string[];
+  let reply: () => FetchResult;
+  afterEach(async () => {
+    await env.app.close();
+  });
+
+  async function setup(overrides: Parameters<typeof createTestEnv>[0] = { cinemas: CINEMAS, cinemasProblem: null }) {
+    urls = [];
+    reply = () => ({ ok: true, text: '{"runtime":128}' });
+    env = await createTestEnv(overrides, {
+      fetchCinemaText: async (url) => {
+        urls.push(url.href);
+        return reply();
+      },
+    });
+    const admin = await addUserWithSession(env, "Admin", { isAdmin: true });
+    const user = await addUserWithSession(env, "Normal");
+    return { admin: admin.token, user: user.token };
+  }
+
+  it("refuses normal users and visitors", async () => {
+    const { user } = await setup();
+    expect((await call(env, "GET", "/api/admin/movies/5", { token: user })).statusCode).toBe(403);
+    expect((await call(env, "GET", "/api/admin/movies/5")).statusCode).toBe(401);
+    expect(urls).toEqual([]);
+  });
+
+  it("answers 404 when no cinemas are configured", async () => {
+    const { admin } = await setup({});
+    const response = await call(env, "GET", "/api/admin/movies/5", { token: admin });
+    expect(response.statusCode).toBe(404);
+    expect(response.json()).toMatchObject({ code: "not_found" });
+    expect(urls).toEqual([]);
+  });
+
+  it.each(["0", "012", "abc", "1e1", "-5", "12345678901", "5.5"])("answers 400 for a bad id: %s", async (id) => {
+    const { admin } = await setup();
+    const response = await call(env, "GET", `/api/admin/movies/${id}`, { token: admin });
+    expect(response.statusCode).toBe(400);
+    expect(response.json()).toMatchObject({ code: "validation", field: "id" });
+    expect(urls).toEqual([]);
+  });
+
+  it("returns the runtime and asks cineamo for exactly that movie", async () => {
+    const { admin } = await setup();
+    const response = await call(env, "GET", "/api/admin/movies/9876543210", { token: admin });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({ runtime: 128 });
+    expect(urls).toEqual(["https://api.cineamo.com/movies/9876543210"]);
+  });
+
+  it("answers 200 with an empty object when cineamo knows no runtime", async () => {
+    const { admin } = await setup();
+    reply = () => ({ ok: true, text: "{}" });
+    const response = await call(env, "GET", "/api/admin/movies/5", { token: admin });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({});
+  });
+
+  it("answers 502 cinema_unavailable when the fetch fails", async () => {
+    const { admin } = await setup();
+    reply = () => ({ ok: false, reason: "unreachable" });
+    const response = await call(env, "GET", "/api/admin/movies/5", { token: admin });
+    expect(response.statusCode).toBe(502);
+    expect(response.json()).toMatchObject({ code: "cinema_unavailable" });
+  });
+});
+
+describe("GET /api/health feature cinema_film_choice", () => {
+  let app: Awaited<ReturnType<typeof buildApp>> | undefined;
+  afterEach(async () => {
+    await app?.close();
+    app = undefined;
+  });
+  const features = async (overrides: Parameters<typeof testConfig>[0]) => {
+    app = await buildApp(testConfig(overrides));
+    return (await app.inject({ method: "GET", url: "/api/health" })).json<{ features: string[] }>().features;
+  };
+
+  it("is listed only when cinemas are configured", async () => {
+    expect(await features({})).not.toContain("cinema_film_choice");
+    await app?.close();
+    expect(await features({ cinemas: CINEMAS, cinemasProblem: null })).toContain("cinema_film_choice");
   });
 });

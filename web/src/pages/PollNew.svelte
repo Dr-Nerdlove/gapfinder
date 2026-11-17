@@ -23,6 +23,7 @@
   import OfflineNotice from "../components/OfflineNotice.svelte";
   import Page from "../components/Page.svelte";
   import CinemaEntry from "../components/polls/CinemaEntry.svelte";
+  import CinemaFilmChoice from "../components/polls/CinemaFilmChoice.svelte";
   import DraftItem from "../components/polls/DraftItem.svelte";
   import Switch from "../components/Switch.svelte";
   import TextField from "../components/TextField.svelte";
@@ -48,6 +49,9 @@
 
   // The cinemas of the admin-only test of fetching showtimes; empty for everybody else and on any failure.
   let cinemas = $state<CinemaInfo[]>([]);
+  // The film choice (three steps) instead of the entry by hand: only when the server offers it too. `choiceReady`: the choice has reached its last step.
+  let filmChoice = $state(false);
+  let choiceReady = $state(false);
 
   onMount(() => {
     void checkHealth(API_URL).then((result) => {
@@ -57,7 +61,10 @@
         void session
           .run((o) => api.listCinemas(o))
           .then((list) => {
-            if (list.ok) cinemas = list.data.cinemas;
+            if (list.ok) {
+              cinemas = list.data.cinemas;
+              filmChoice = cinemas.length > 0 && hasFeature(result.features, "cinema_film_choice");
+            }
           })
           .catch(() => {});
       }
@@ -172,7 +179,11 @@
       </Card>
 
       {#if source.cinema}
-        <CinemaEntry source={source.cinema} bind:chosen={chosenShowings} {cinemas} />
+        {#if filmChoice}
+          <CinemaFilmChoice source={source.cinema} bind:chosen={chosenShowings} bind:ready={choiceReady} {cinemas} />
+        {:else}
+          <CinemaEntry source={source.cinema} bind:chosen={chosenShowings} {cinemas} />
+        {/if}
         <p class="hint">{invited}</p>
       {:else}
         <Card title="Termine">
@@ -185,7 +196,9 @@
       {/if}
 
       <Message text={problem} />
-      <Button type="submit" disabled={busy || sessionState.offline} full>{busy ? "Wird erstellt …" : source.cinema ? cinemaSubmitLabel(chosenShowings.length) : "Abstimmung erstellen"}</Button>
+      {#if !(source.cinema && filmChoice && !choiceReady)}
+        <Button type="submit" disabled={busy || sessionState.offline} full>{busy ? "Wird erstellt …" : source.cinema ? cinemaSubmitLabel(chosenShowings.length) : "Abstimmung erstellen"}</Button>
+      {/if}
     </form>
   {/if}
 </Page>

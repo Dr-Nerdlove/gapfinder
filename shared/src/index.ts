@@ -28,8 +28,10 @@ export interface HealthResponse {
  * `hidden_votes`: polls with hidden votes (phase 10b). `proposal_place`: an optional place for every proposal (phase
  * 10d). `minute_times`: timed proposals may start and end on any whole minute (phase 10d). `cinema_showtimes`:
  * admin-only test of fetching cinema showtimes (phase 10d); listed only when the server has cinemas configured.
+ * `cinema_film_choice`: showings carry `contentId`, `movieId` and `originalLanguage`, and `GET /api/admin/movies/:id`
+ * gives a film's length (phase 10d, variant B); listed together with `cinema_showtimes`.
  */
-export type ServerFeature = "hidden_votes" | "proposal_place" | "minute_times" | "cinema_showtimes";
+export type ServerFeature = "hidden_votes" | "proposal_place" | "minute_times" | "cinema_showtimes" | "cinema_film_choice";
 
 /**
  * `GET /api/admin/backup-status` (admin only): when the VM's backup script last did what, from the file it writes.

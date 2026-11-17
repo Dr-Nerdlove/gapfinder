@@ -174,6 +174,7 @@ describe("typed endpoints", () => {
     expect(await call((o) => api.createPasswordReset(7, o))).toMatchObject({ url: "http://api.test/api/admin/users/7/password-reset", method: "POST" });
     expect(await call((o) => api.listCinemas(o))).toMatchObject({ url: "http://api.test/api/admin/cinemas" });
     expect(await call((o) => api.getCinemaShowings(12, "2026-12-11", o))).toMatchObject({ url: "http://api.test/api/admin/cinemas/12/showings?date=2026-12-11" });
+    expect(await call((o) => api.cinemaMovie(77, o))).toMatchObject({ url: "http://api.test/api/admin/movies/77" });
     expect(await call((o) => api.listInvites(o))).toMatchObject({ url: "http://api.test/api/admin/invites" });
     expect(await call((o) => api.createInvite(api.inviteRequest("Anna K"), o))).toMatchObject({ url: "http://api.test/api/admin/invites", method: "POST", body: '{"username":"Anna K","name":"Anna K"}' });
     expect(await call((o) => api.deleteInvite(3, o))).toMatchObject({ url: "http://api.test/api/admin/invites/3", method: "DELETE" });

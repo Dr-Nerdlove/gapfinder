@@ -9,6 +9,21 @@ const API = "http://localhost:8080";
 const TEAL = "#00796B"; // the seed colour of the approved mock-up: not the default, so another colour is checked too
 const CIRCLE = ["Anna", "Tobi", "Emil", "Berta"]; // with Vincent, who searches
 
+/** Hours search of the circle on the cinema day: 2 hours at least, 17:00 to 23:00. */
+async function search(page) {
+  await page.goto(BASE + "#/suche");
+  await page.waitForTimeout(1200);
+  for (const name of CIRCLE) await page.getByRole("checkbox", { name, exact: true }).check();
+  const select = page.locator("select"); // duration, buffer, window from, window to
+  await select.nth(0).selectOption("120");
+  await select.nth(2).selectOption("17:00");
+  await select.nth(3).selectOption("23:00");
+  await page.getByRole("button", { name: "Lücken suchen" }).click();
+  await page.getByRole("button", { name: "Kinoabend planen" }).waitFor();
+  await page.waitForTimeout(1500);
+}
+
+
 module.exports = async function cinema({ state, out, login }) {
   fs.mkdirSync(`${out}/cinema`, { recursive: true });
   const shot = (page, name, options = {}) => page.screenshot({ path: `${out}/cinema/${name}`, fullPage: true, ...options });
@@ -24,20 +39,6 @@ module.exports = async function cinema({ state, out, login }) {
   };
   const vincent = state.tokens.Vincent;
   await call("PATCH", "/api/me", vincent, { seedColor: TEAL });
-
-  /** Hours search of the circle on the cinema day: 2 hours at least, 17:00 to 23:00. */
-  async function search(page) {
-    await page.goto(BASE + "#/suche");
-    await page.waitForTimeout(1200);
-    for (const name of CIRCLE) await page.getByRole("checkbox", { name, exact: true }).check();
-    const select = page.locator("select"); // duration, buffer, window from, window to
-    await select.nth(0).selectOption("120");
-    await select.nth(2).selectOption("17:00");
-    await select.nth(3).selectOption("23:00");
-    await page.getByRole("button", { name: "Lücken suchen" }).click();
-    await page.getByRole("button", { name: "Kinoabend planen" }).waitFor();
-    await page.waitForTimeout(1500);
-  }
 
   /** The entry, filled in as in the mock-up: Kino am Markt, the day, pasted times, 130 minutes, 20 minutes of adverts. */
   async function fillEntry(page) {
@@ -139,3 +140,73 @@ module.exports = async function cinema({ state, out, login }) {
 
   await call("PATCH", "/api/me", vincent, { seedColor: null });
 };
+
+const PINK = "#C2185B"; // a second seed colour for the film choice (the app takes each user's colour)
+
+/**
+ * The three steps of the film choice (needs the server started with the cinemas of `cinema.mjs`, see run.sh): light and
+ * dark in teal, and step 2 in another colour. `docs/screenshots/cinema/film-choice-*.png`.
+ */
+module.exports.filmChoice = async function filmChoice({ state, out, login }) {
+  fs.mkdirSync(`${out}/cinema`, { recursive: true });
+  const vincent = state.tokens.Vincent;
+  const setColor = async (color) => {
+    const response = await fetch(API + "/api/me", { method: "PATCH", headers: { "content-type": "application/json", authorization: `Bearer ${vincent}` }, body: JSON.stringify({ seedColor: color }) });
+    if (!response.ok) throw new Error(`PATCH /api/me ${response.status}`);
+  };
+  const run = async ({ dark, color, suffix, steps }) => {
+    await setColor(color);
+    const b = await login("Vincent", { dark });
+    const page = b.page;
+    const shot = (name) => page.screenshot({ path: `${out}/cinema/film-choice-${name}${suffix}.png`, fullPage: true });
+    await search(page);
+    await page.getByRole("button", { name: "Kinoabend planen" }).click();
+    await page.getByRole("heading", { name: "Kinos wählen" }).waitFor();
+    for (const name of ["Stadtkino am Markt", "Filmpalast Nord", "Cinema Bahnhof"]) await page.getByRole("checkbox", { name: new RegExp(name) }).check();
+    await page.waitForTimeout(300);
+    if (steps.includes(1)) await shot("1-cinemas");
+    await page.getByRole("button", { name: /^Filme anzeigen/ }).click();
+    await page.getByRole("heading", { name: "Film wählen" }).waitFor();
+    await page.waitForTimeout(1500); // the film lengths arrive one by one
+    await page.getByRole("button", { name: /Der letzte Leuchtturm/ }).click();
+    await page.waitForTimeout(300);
+    if (steps.includes(2)) await shot("2-film");
+    if (steps.includes(3)) {
+      await page.getByRole("button", { name: /^Weiter mit/ }).click();
+      await page.getByRole("heading", { name: "Passt in eure freien Zeiten?" }).waitFor();
+      await page.waitForTimeout(800);
+      const fits = page.locator("button.showing.fits");
+      await fits.nth(1).click(); // one passing showing left out
+      await page.waitForTimeout(300);
+      await shot("3-showings");
+    }
+    await b.browser.close();
+  };
+  await run({ dark: false, color: TEAL, suffix: "", steps: [1, 2, 3] });
+  await run({ dark: true, color: TEAL, suffix: "-dark", steps: [1, 2, 3] });
+  await run({ dark: false, color: PINK, suffix: "-pink", steps: [2] });
+  await setColor(null);
+};
+
+// Second round of run.sh (server started with the cinemas): only the film choice, copied with --install.
+if (require.main === module) {
+  const path = require("path");
+  const dir = process.env.SHOTS_DIR;
+  const out = `${dir}/out`;
+  const state = JSON.parse(fs.readFileSync(`${dir}/state.json`, "utf8"));
+  const { open } = require("./lib.cjs");
+  module.exports.filmChoice({ state, out, login: (user, options = {}) => open(user, { password: state.password, ...options }) })
+    .then(() => {
+      const names = fs.readdirSync(`${out}/cinema`).filter((n) => n.startsWith("film-choice-"));
+      if (process.argv.includes("--install")) {
+        const target = path.resolve(__dirname, "../../docs/screenshots/cinema");
+        fs.mkdirSync(target, { recursive: true });
+        for (const n of names) fs.copyFileSync(`${out}/cinema/${n}`, `${target}/${n}`);
+        console.log(`copied ${names.length} film choice pictures to ${target}`);
+      } else console.log(`film choice pictures are in ${out}/cinema`);
+    })
+    .catch((error) => {
+      console.error(error);
+      process.exit(1);
+    });
+}

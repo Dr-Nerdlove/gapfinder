@@ -54,4 +54,12 @@ kill "$server_pid"
 wait "$server_pid" 2>/dev/null || true
 start_server
 
-node "$here/shoot.cjs" "$@"
+if [ -z "${ONLY_FILM_CHOICE:-}" ]; then node "$here/shoot.cjs" "$@"; fi
+
+# Second round for the film choice (phase 10d): the server restarts with the made-up cinemas, so the pictures above keep
+# the entry by hand. ONLY_FILM_CHOICE=1 skips the first round.
+touch "$SHOTS_DIR/cinemas-on"
+kill "$server_pid"
+wait "$server_pid" 2>/dev/null || true
+start_server
+node "$here/shoot-cinema.cjs" "$@"

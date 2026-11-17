@@ -1,6 +1,6 @@
 // Cinema showtimes from cineamo (phase 10d, admin-only test). The parser is pure; the service adds a small
 // in-memory cache so a click on "fetch" never hits cineamo twice for the same cinema and day. Never throws.
-import type { CinemaShowing } from "@lueckenfueller/shared";
+import type { CinemaMovieResponse, CinemaShowing } from "@lueckenfueller/shared";
 import type { FastifyBaseLogger } from "fastify";
 import { ownCopy } from "../calendars/ics.js";
 import type { FetchResult } from "../calendars/fetch.js";
@@ -13,7 +13,11 @@ const CINEAMO_ORIGIN = "https://api.cineamo.com";
 export const SUCCESS_TTL_MS = 6 * 60 * 60 * 1000;
 export const FAILURE_TTL_MS = 5 * 60 * 1000;
 export const ROOMS_TTL_MS = 24 * 60 * 60 * 1000;
+export const MOVIE_TTL_MS = 24 * 60 * 60 * 1000;
 export const MAX_CACHE_ENTRIES = 400;
+/** At most this many requests to cineamo are in flight at the same time, across the whole service. */
+export const CINEAMO_MAX_PARALLEL = 3;
+const MAX_RUNTIME_MINUTES = 600;
 export const SHOWINGS_PER_PAGE = 100;
 export const MAX_SHOWINGS_PAGES = 5;
 export const ROOMS_PER_PAGE = 50;
@@ -78,6 +82,15 @@ export function parseShowingsPage(text: string): { items: ParsedShowing[]; pageC
     if (typeof entry.language === "string" && /^[a-z]{2,3}$/.test(entry.language)) {
       showing.language = ownCopy(entry.language);
     }
+    if (typeof entry.contentId === "number" && Number.isSafeInteger(entry.contentId) && entry.contentId > 0) {
+      showing.contentId = entry.contentId;
+    }
+    if (typeof entry.movieId === "number" && Number.isSafeInteger(entry.movieId) && entry.movieId > 0) {
+      showing.movieId = entry.movieId;
+    }
+    if (typeof entry.originalLanguage === "string" && /^[a-z]{2,3}$/.test(entry.originalLanguage)) {
+      showing.originalLanguage = ownCopy(entry.originalLanguage);
+    }
     if (entry.isImax === true) showing.imax = true;
     const ticketUrl = ticketUrlOf(entry.onlineTicketUrl);
     if (ticketUrl !== undefined) showing.ticketUrl = ticketUrl;
@@ -119,6 +132,22 @@ export function parseRoomsPage(text: string): { items: [number, string][]; pageC
   return { items, pageCount: pageCountOf(json) };
 }
 
+/** The film's length from cineamo's answer for one movie; null when it is not a JSON object. */
+export function parseMovie(text: string): CinemaMovieResponse | null {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return null;
+  }
+  if (!isRecord(json)) return null;
+  const runtime = json.runtime;
+  if (typeof runtime === "number" && Number.isSafeInteger(runtime) && runtime >= 1 && runtime <= MAX_RUNTIME_MINUTES) {
+    return { runtime };
+  }
+  return {};
+}
+
 /** What the service needs to know of a configured cinema. `roomPage` is the address of a page of the cinema's own site that lists only the preferred screen's showings. */
 export interface CinemaTarget {
   id: number;
@@ -129,6 +158,8 @@ export interface CinemaTarget {
 export interface CinemaService {
   /** The showings of one cinema on one day (`YYYY-MM-DD`), or null when they could not be fetched or read. */
   showings(cinema: CinemaTarget, date: string): Promise<CinemaShowing[] | null>;
+  /** What cineamo knows of one movie (its length), or null when it could not be fetched or read. */
+  movie(movieId: number): Promise<CinemaMovieResponse | null>;
 }
 
 const PERFORMANCE_PATTERN = /[?&;]performance=([A-Za-z0-9]{6,64})/g;
@@ -162,10 +193,28 @@ export function createCinemaService(deps: {
   now: () => Date;
   log: FastifyBaseLogger;
 }): CinemaService {
+  // Every request to cineamo waits here until fewer than CINEAMO_MAX_PARALLEL are running.
+  let running = 0;
+  const waiting: (() => void)[] = [];
+  async function fetchCineamo(url: URL): Promise<FetchResult> {
+    if (running >= CINEAMO_MAX_PARALLEL) await new Promise<void>((resolve) => waiting.push(resolve));
+    else running++;
+    try {
+      return await deps.fetchText(url);
+    } finally {
+      // Hand the place to the next in line, or free it.
+      const next = waiting.shift();
+      if (next === undefined) running--;
+      else next();
+    }
+  }
+
   const cache = new Map<string, CacheEntry<ParsedShowing[]>>();
   const inflight = new Map<string, Promise<ParsedShowing[] | null>>();
   const roomCache = new Map<number, CacheEntry<RoomNames>>();
   const roomInflight = new Map<number, Promise<RoomNames | null>>();
+  const movieCache = new Map<number, CacheEntry<CinemaMovieResponse>>();
+  const movieInflight = new Map<number, Promise<CinemaMovieResponse | null>>();
   const pageCache = new Map<number, CacheEntry<Set<string>>>();
   const pageInflight = new Map<number, Promise<Set<string> | null>>();
 
@@ -193,7 +242,7 @@ export function createCinemaService(deps: {
     const all: T[] = [];
     let pageCount = 1;
     for (let page = 1; page <= Math.min(pageCount, maxPages); page++) {
-      const result = await deps.fetchText(makeUrl(page));
+      const result = await fetchCineamo(makeUrl(page));
       if (!result.ok) {
         deps.log.warn(`${what} fetch failed: ${result.reason}`);
         return null;
@@ -275,6 +324,39 @@ export function createCinemaService(deps: {
     return started;
   }
 
+  async function loadMovie(movieId: number): Promise<CinemaMovieResponse | null> {
+    try {
+      const result = await fetchCineamo(new URL(`/movies/${movieId}`, CINEAMO_ORIGIN));
+      if (!result.ok) {
+        deps.log.warn(`Cinema movie fetch failed: ${result.reason}`);
+        return null;
+      }
+      const movie = parseMovie(result.text);
+      if (movie === null) {
+        deps.log.warn("Cinema movie fetch failed: unexpected answer");
+        return null;
+      }
+      deps.log.info("Cinema movie fetched: ok");
+      return movie;
+    } catch {
+      deps.log.warn("Cinema movie fetch failed: error");
+      return null;
+    }
+  }
+
+  function rememberMovie(movieId: number, value: CinemaMovieResponse | null): void {
+    const nowMs = deps.now().getTime();
+    movieCache.delete(movieId);
+    if (movieCache.size >= MAX_CACHE_ENTRIES) {
+      for (const [other, entry] of movieCache) if (entry.expiresAt <= nowMs) movieCache.delete(other);
+      for (const other of movieCache.keys()) {
+        if (movieCache.size < MAX_CACHE_ENTRIES) break;
+        movieCache.delete(other);
+      }
+    }
+    movieCache.set(movieId, { expiresAt: nowMs + (value === null ? FAILURE_TTL_MS : MOVIE_TTL_MS), value });
+  }
+
   async function loadPageIds(roomPage: string): Promise<Set<string> | null> {
     try {
       const result = await (deps.fetchPage ?? deps.fetchText)(new URL(roomPage));
@@ -327,6 +409,22 @@ export function createCinemaService(deps: {
   }
 
   return {
+    movie(movieId) {
+      const cached = movieCache.get(movieId);
+      if (cached !== undefined) {
+        if (cached.expiresAt > deps.now().getTime()) return Promise.resolve(cached.value);
+        movieCache.delete(movieId);
+      }
+      const pending = movieInflight.get(movieId);
+      if (pending !== undefined) return pending;
+      const started = loadMovie(movieId).then((value) => {
+        rememberMovie(movieId, value);
+        return value;
+      });
+      movieInflight.set(movieId, started);
+      void started.finally(() => movieInflight.delete(movieId));
+      return started;
+    },
     async showings(cinema, date) {
       const cinemaId = cinema.id;
       const items = await parsedShowings(cinemaId, date);
