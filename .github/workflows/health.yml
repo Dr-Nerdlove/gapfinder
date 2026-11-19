@@ -2,6 +2,8 @@
 # - Runs at minute 37 because GitHub delays or drops scheduled runs at the start of the hour.
 # - Down = no valid answer in 3 tries over about 10 minutes (scripts/health-watch.sh).
 # - Night pause: nothing is checked from 00:55 to 07:30 Berlin time (the home PC is off), tested before every try.
+#   The schedule itself leaves out the night: 05:37 to 23:37 UTC covers 07:37 to 00:37 Berlin time in winter (UTC+1)
+#   and in summer (UTC+2); the one run a day that still falls into the pause stops at once.
 # - One mail per outage: the step "Server down marker" runs only when the server was down; the next run reports
 #   again only if the previous completed run did not have that step succeed. No mail when the server is back.
 #   The step name is shared with the script (HEALTH_MARKER_STEP): change both together.
@@ -16,7 +18,7 @@ name: Server health
 
 on:
   schedule:
-    - cron: "37 * * * *"
+    - cron: "37 5-23 * * *"
   workflow_dispatch:
     inputs:
       test_alarm:
@@ -30,7 +32,7 @@ permissions:
 
 concurrency:
   group: health
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   health:

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Builds the Android app: checks that the committed Capacitor sync output is current, runs the unit tests and the
-# debug build and, when the signing secrets are given, builds the signed release APK and checks its signature.
+# Builds the Android app: checks that the committed Capacitor sync output is current, runs the unit tests and builds one
+# variant: without the signing secrets the debug build (CI's check), with them only the signed release APK, whose
+# signature is then checked.
 # Used by .github/actions/android-apk (CI and release). Run from the repository root after `npm ci`; see
 # docs/android-app.md. Never prints the password or the keystore.
 #
@@ -66,16 +67,15 @@ if [ -n "$(git status --porcelain -- "${SYNCED[@]}")" ]; then
   die "The committed Capacitor files are stale. Run \`npx cap sync android\` and commit the result."
 fi
 
-# --- Tests and debug build (one retry: Maven Central sometimes answers 429) -----------------------------------------
+# --- Gradle (one retry: Maven Central sometimes answers 429) -----------------------------------------
 gradle_run() {
   (cd android && chmod +x gradlew && ./gradlew --max-workers=2 "$@") && return 0
   echo "Gradle failed, trying once more (a failed download is the usual cause)." >&2
   sleep 20
   (cd android && ./gradlew --max-workers=2 "$@")
 }
-gradle_run testDebugUnitTest assembleDebug
-
 if [ "$SIGN" -eq 0 ]; then
+  gradle_run testDebugUnitTest assembleDebug
   echo "No signing secrets: tests and debug build done, no release APK built."
   exit 0
 fi
@@ -86,7 +86,8 @@ printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$KEYSTORE"
 [ -s "$KEYSTORE" ] || die "ANDROID_KEYSTORE_BASE64 is not valid base64 or empty."
 export LUECKENFUELLER_KEYSTORE="$KEYSTORE"
 export LUECKENFUELLER_KEYSTORE_PASSWORD="$ANDROID_KEYSTORE_PASSWORD"
-gradle_run assembleRelease
+# Only the release variant is packaged; the unit tests still run (they need no APK).
+gradle_run testDebugUnitTest assembleRelease
 
 OUT="${APK_OUT_DIR:-.}"
 mkdir -p "$OUT"

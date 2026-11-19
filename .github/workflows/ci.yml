@@ -1,24 +1,27 @@
 name: CI
 
-# Pull requests and pushes to main only. A push to a branch with an open pull request would run
-# every check twice (once per trigger); pull requests cover those branches.
+# Pull requests only: every change reaches main through one, and deploy.yml tests main again
+# before it publishes, so a run on the push to main would only repeat the same checks.
+# No paths-ignore: the ruleset on main requires these checks, and a required check that never
+# ran would block the merge of a documentation-only pull request.
+# "Run workflow" (choose a branch) builds only a signed test APK of that branch, kept for 1 day.
 on:
-  push:
-    branches: [main]
   pull_request:
+  workflow_dispatch:
 
-# A newer push to a pull request cancels the older run of the same pull request. Runs on main
-# are never cancelled, so every commit there keeps its own result.
+# A newer push to a pull request cancels the older run of the same pull request.
 concurrency:
   group: ci-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
 
 jobs:
   test:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -33,10 +36,11 @@ jobs:
       - run: npm run build
 
   android:
-    # Tests and debug build always; a signed test APK on pull requests and on pushes to main once
-    # the signing secrets exist (docs/android-app.md). Pull requests from forks get no secrets,
-    # so they never build a signed APK.
+    # Pull requests: the stale-sync check, the Kotlin unit tests and the debug build, unsigned (no
+    # secrets needed, so forks work too). "Run workflow": the signed release APK of the chosen
+    # branch instead, as an artifact for 1 day (docs/android-app.md, "Installing").
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -44,41 +48,30 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm ci
-      - name: Decide whether a signed test APK is built
-        id: signing
-        env:
-          # On pull requests GITHUB_SHA is the merge commit; the label names the branch's own commit.
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
-          PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-        run: |
-          set -eu
-          sha="${PR_HEAD_SHA:-$GITHUB_SHA}"
-          echo "label=sha-${sha::7}" >> "$GITHUB_OUTPUT"
-          if [ -z "$KEYSTORE" ] || [ -z "$PASSWORD" ]; then
-            echo "sign=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::No signed test APK was built: the secrets ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD are not available (not set, or a pull request from a fork; docs/android-app.md). Tests and debug build still run."
-          else
-            echo "sign=true" >> "$GITHUB_OUTPUT"
-          fi
+      - name: Label for the APK file name
+        id: label
+        run: echo "label=sha-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
       - name: Build the Android app
         id: apk
         uses: ./.github/actions/android-apk
         with:
-          keystore-base64: ${{ steps.signing.outputs.sign == 'true' && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
-          keystore-password: ${{ steps.signing.outputs.sign == 'true' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
-          label: ${{ steps.signing.outputs.label }}
-      - name: Keep the signed test APK
-        if: steps.signing.outputs.sign == 'true'
+          keystore-base64: ${{ github.event_name == 'workflow_dispatch' && secrets.ANDROID_KEYSTORE_BASE64 || '' }}
+          keystore-password: ${{ github.event_name == 'workflow_dispatch' && secrets.ANDROID_KEYSTORE_PASSWORD || '' }}
+          require-signing: ${{ github.event_name == 'workflow_dispatch' }}
+          label: ${{ steps.label.outputs.label }}
+      - name: Keep the signed test APK (1 day)
+        if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v5
         with:
           name: lueckenfueller-apk
           path: ${{ steps.apk.outputs.apk }}
-          retention-days: 14
+          retention-days: 1
           if-no-files-found: error
 
   vm-scripts:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
       - name: Check the VM shell scripts (shellcheck is preinstalled on the runner)
@@ -101,7 +94,9 @@ jobs:
         run: touch deploy/vm/.env && docker compose -f deploy/vm/compose.yaml config --quiet
 
   docker:
+    if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v5
       - name: Build the server image (not pushed)

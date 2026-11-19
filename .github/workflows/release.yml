@@ -1,75 +1,96 @@
 name: Release
 
-# Creates the tag vX.Y.Z and the GitHub release when `main` carries a version (the "version" in package.json) that has
-# no release yet. A release is therefore made by merging the release pull request (version numbers + CHANGELOG);
-# a push without a new version does nothing. The notes come from the summary at the top of that version's
-# CHANGELOG section (scripts/release-notes.sh), plus a short "Android app" paragraph with the APK's signature.
+# Started by hand: Actions -> Release -> Run workflow (branch main) -> enter the version, e.g. 2.8.0.
+# It releases the commit of main that Deploy last published green, so a version that never went live gets no release:
+# merge the release pull request (version numbers + CHANGELOG), wait until its Deploy run is green, then start this.
+# It stops at the start with a clear message when the tag or release exists already, when it was not started on main,
+# or when that commit's package.json carries another version (e.g. Deploy has not finished yet).
+# It then sets the tag vX.Y.Z on that commit and creates the GitHub release in this one run (a tag made by a workflow
+# starts no other workflow). The notes come from the summary at the top of that version's CHANGELOG section
+# (scripts/release-notes.sh), plus a short "Android app" paragraph with the APK's signature.
 # Every release carries the signed Android APK (lueckenfueller-<version>.apk), built here from the release commit
-# (.github/actions/android-apk). Without the secrets ANDROID_KEYSTORE_BASE64 and ANDROID_KEYSTORE_PASSWORD, or with
-# a key that differs from android/signing-fingerprint.txt, the run fails and no release is made.
+# (.github/actions/android-apk, release variant only). Without the secrets ANDROID_KEYSTORE_BASE64 and
+# ANDROID_KEYSTORE_PASSWORD, or with a key that differs from android/signing-fingerprint.txt, the run fails and no
+# release is made.
 # Next to the APK every release carries app-update.json (scripts/app-update-json.sh: version, shell version, APK name,
 # SHA-256). The Android app reads it from the latest release to offer a self-update (phase 7c). Both files are uploaded
 # in the one `gh release create` call below, so the draft-then-publish step covers both.
 # The web app's "Android-App herunterladen" button links to this versioned file (apkDownloadUrl in
-# web/src/lib/app-update.ts), so no second copy under a fixed name is made.
-#
-# It runs only after the Deploy workflow has finished green for a push to main (tests passed, app and server image
-# published), so a version that never went live gets no release. The release is set on the commit Deploy ran on.
-# "Run workflow" by hand does the same check on the newest main, e.g. to repeat a run that failed.
+# web/src/lib/app-update.ts): until this has run for a new version, that link answers 404, so start it soon after the
+# release pull request's Deploy.
 
 on:
-  workflow_run:
-    workflows: [Deploy]
-    types: [completed]
   workflow_dispatch:
+    inputs:
+      version:
+        description: "Version to release, as in package.json (e.g. 2.8.0)"
+        required: true
+        type: string
 
 permissions:
+  actions: read
   contents: write
 
+# A second run waits instead of breaking off a release halfway.
 concurrency:
   group: release
   cancel-in-progress: false
 
 jobs:
   release:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      (github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push' &&
-       github.event.workflow_run.head_branch == 'main')
     runs-on: ubuntu-latest
-    env:
-      TARGET_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+    timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
-        with:
-          ref: ${{ env.TARGET_SHA }}
-      - name: Check whether this version has a release already
+      - name: Check the version and find the commit to release
         id: version
         env:
           GH_TOKEN: ${{ github.token }}
+          INPUT_VERSION: ${{ inputs.version }}
         run: |
-          version="$(node -p "require('./package.json').version")"
+          set -euo pipefail
+          version="${INPUT_VERSION#v}"
+          version="${version// /}"
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "package.json has version \"$version\", which is not MAJOR.MINOR.PATCH" >&2
+            echo "::error::\"$INPUT_VERSION\" is not a version like 2.8.0."
+            exit 1
+          fi
+          if gh release view "v$version" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1 \
+            || gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$version" >/dev/null 2>&1; then
+            echo "::error::v$version exists already (tag or release). Nothing was changed. Enter the new version."
+            exit 1
+          fi
+          if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+            echo "::error::Start the release on the branch main (\"Use workflow from: main\"), not on $GITHUB_REF_NAME."
+            exit 1
+          fi
+          sha="$(gh run list --repo "$GITHUB_REPOSITORY" --workflow deploy.yml --branch main --status success \
+            --limit 1 --json headSha --jq '.[0].headSha // empty')"
+          if [ -z "$sha" ]; then
+            echo "::error::No green Deploy run on main was found."
             exit 1
           fi
           echo "version=$version" >> "$GITHUB_OUTPUT"
-          if gh release view "v$version" >/dev/null 2>&1; then
-            echo "Release v$version exists already, nothing to do."
-            echo "needed=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "needed=true" >> "$GITHUB_OUTPUT"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Releasing v$version on ${sha::7}, the commit Deploy last published."
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ steps.version.outputs.sha }}
+      - name: Check that this commit carries the version
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+          TARGET_SHA: ${{ steps.version.outputs.sha }}
+        run: |
+          found="$(node -p "require('./package.json').version")"
+          if [ "$found" != "$VERSION" ]; then
+            echo "::error::The commit Deploy last published (${TARGET_SHA::7}) has version $found in package.json, not $VERSION. Merge the release pull request first and wait until its Deploy run is green, then start this again."
+            exit 1
           fi
       - uses: actions/setup-node@v5
-        if: steps.version.outputs.needed == 'true'
         with:
           node-version: 24
           cache: npm
-      - if: steps.version.outputs.needed == 'true'
-        run: npm ci
+      - run: npm ci
       - name: Build the signed Android APK
-        if: steps.version.outputs.needed == 'true'
         id: apk
         uses: ./.github/actions/android-apk
         with:
@@ -77,10 +98,10 @@ jobs:
           keystore-password: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           require-signing: 'true'
       - name: Create the release
-        if: steps.version.outputs.needed == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.version.outputs.version }}
+          TARGET_SHA: ${{ steps.version.outputs.sha }}
           APK: ${{ steps.apk.outputs.apk }}
           FINGERPRINT: ${{ steps.apk.outputs.fingerprint }}
         run: |
