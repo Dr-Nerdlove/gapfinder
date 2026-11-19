@@ -2,7 +2,7 @@
 
 Instructions for every AI tool working on this repository.
 
-<!-- owner-rules v16: general (AGENTS.md) - begin -->
+<!-- owner-rules v18: general (AGENTS.md) - begin -->
 
 ## General rules
 
@@ -113,10 +113,11 @@ missing, with a recommendation, and let the people choose.
   it (build, test, release), and its licence. Keep it up to date with every change that affects it.
 - **Pull request descriptions**: what changes, why, how it was tested (and what was not), and anything the
   reviewer should know.
-- **Automatic checks (CI)**: every push and pull request builds the project and runs its tests
-  automatically; merge only when they pass. Where a project has none, offer to set it up. Where they do not
-  look for secrets yet, offer a secret scan of every push (e.g. gitleaks); add it only when the owner chooses
-  it.
+- **Automatic checks (CI)**: every pull request runs the project's tests and checks that the code compiles,
+  also where there are no tests; merge only when this passes. Keep these checks quick and keep nothing they
+  build; files to publish are built for releases (see "GitHub Actions"). Where a project has none, offer to
+  set it up. Where they do not look for secrets yet, offer a secret scan of every push (e.g. gitleaks); add it
+  only when the owner chooses it.
 - **Releases**: version numbers `vMAJOR.MINOR.PATCH` (e.g. `v1.4.2`: major for breaking changes, minor for
   new features, patch for fixes). Files that are published are built by CI, never by hand. Each release says
   in plain words what is new and how to install or update.
@@ -159,6 +160,42 @@ missing, with a recommendation, and let the people choose.
   Für weitere Projekte: das Ruleset dort über **Export ruleset** speichern und im nächsten Projekt über
   **Import a ruleset** übernehmen.
 
+### GitHub Actions
+
+The owner's account is on GitHub's free plan: 0.5 GB of storage and a limited number of minutes. Use both
+sparingly. Where the repository belongs to someone else, these points still apply unless "Project knowledge"
+says otherwise.
+
+- **Builds** (an APK and the like) run only for release tags (`v*`) and when started by hand
+  (`workflow_dispatch`), not on every push.
+- **Releases are started by hand**, because a cloud session cannot push tags: the release workflow has
+  `workflow_dispatch` with the version as input, creates the tag and the GitHub Release itself
+  (`permissions: contents: write`) and builds in the same run, since a tag created by a workflow does not
+  start other workflows. Tell the person how to start it (Actions → the release workflow → Run workflow →
+  enter the version) and describe it under "Release" in "Project knowledge". If the tag exists already, the
+  workflow stops at the start with a clear message.
+- Where a build on push is needed (e.g. publishing to GitHub Pages after a merge): only on `main`, and with
+  `paths-ignore:` so that changes to documentation, the README and the AI instructions (`AGENTS.md`,
+  `CLAUDE.md`, `.claude/**`) do not start it.
+- Checks on pull requests skip changes that only touch those files (`paths-ignore:`). Not where `main`
+  requires the check (see "Protecting `main`"): a required check that never ran blocks the merge.
+- Every workflow sets `concurrency` with `cancel-in-progress: true`, except the release workflow: there
+  `cancel-in-progress: false`, so a second run waits instead of breaking off a release halfway.
+- Every job has `timeout-minutes`.
+- Dependencies are cached (e.g. `gradle/actions/setup-gradle`, `actions/setup-node` with `cache:`).
+- Finished APKs are attached to a GitHub Release instead of kept as an artifact.
+- Where an artifact is needed: only the final file, with `retention-days: 1`.
+- Build only the one variant that is needed (e.g. release, not debug as well).
+- **A release APK must be signed**, always with the same key, the keystore and its passwords kept as
+  repository secrets. An app signed with a different key cannot be installed as an update: the old one has to
+  be removed first, and its data with it. Before switching from a debug build, check whether the earlier APKs
+  had a fixed key at all (on GitHub's runners the debug key is made anew on every run unless the project
+  keeps one), tell the owner which case it is and whether users will have to reinstall, and ask. When the
+  keystore is set up, ask the owner to keep a copy of it and its passwords outside GitHub (e.g. in a password
+  manager): a secret cannot be read back, and without the key no update can ever be built again.
+- When the rules are installed, check the project's workflows against these points and point out what
+  differs, with a proposed change.
+
 ### Showing changes
 
 - Show visual changes rather than describing them: **screenshots** where the result runs on a computer.
@@ -178,7 +215,7 @@ missing, with a recommendation, and let the people choose.
   conversation: decisions and why, traps that cost time, how to build, test and release, and the limits of
   the environment (what a cloud session cannot do there).
 
-<!-- owner-rules v16: general (AGENTS.md) - end -->
+<!-- owner-rules v18: general (AGENTS.md) - end -->
 
 ## Project knowledge
 
