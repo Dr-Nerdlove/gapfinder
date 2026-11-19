@@ -1,7 +1,7 @@
 name: Build the Android app
 description: >-
-  Checks that the committed Capacitor files are current, runs the Android unit tests and the debug build and,
-  when the signing secrets are given, builds the signed release APK and checks its fingerprint against
+  Checks that the committed Capacitor files are current and runs the Android unit tests. Without the signing secrets
+  it builds the debug variant; with them only the signed release APK, whose fingerprint is checked against
   android/signing-fingerprint.txt. Needs a checkout and `npm ci` first. The work is in scripts/android-apk.sh.
 
 inputs:
