@@ -134,7 +134,7 @@ npm run build   # shared, then server (dist/) and web (web/dist/)
 
 `npm test` also runs the tests of the VM update and backup scripts (`npm run test:vm`, needs bash and
 [age](https://age-encryption.org/)). CI runs exactly these on
-every pull request and every push to `main`, plus a build of the server's Docker image and checks of the VM files (shellcheck,
+every pull request, plus a build of the server's Docker image and checks of the VM files (shellcheck,
 systemd units, compose file). The VM firewall's test needs root and is run by CI only:
 `sudo bash deploy/vm/test/firewall.test.sh` (needs `nft` and `ip`).
 
@@ -152,7 +152,8 @@ job does the same through `.github/actions/android-apk`.
 
 An Android app (a Capacitor shell around the live web app, with notifications from a background check) is built from
 `android/`. Install, signing key, local build and rules for changes: [`docs/android-app.md`](docs/android-app.md).
-CI builds a signed test APK on every pull request and every push to `main`; each release carries the signed APK (`lueckenfueller-<version>.apk`) and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
+CI builds the unsigned debug app on every pull request; a signed test APK of a branch is built by hand (Actions, "CI",
+"Run workflow"). Each release carries the signed APK (`lueckenfueller-<version>.apk`) and `app-update.json`; the app offers an update itself when a release brings a new app shell. Instant notifications (through a content-free
 Firebase "doorbell") need a one-time Firebase setup: [`docs/firebase-setup.md`](docs/firebase-setup.md).
 
 ## Run the server with Docker Compose
@@ -173,7 +174,7 @@ of pulling it: `docker compose build`.
 
 ## Releases and deployment
 
-- **Frontend:** every push to `main` builds the site and publishes it to GitHub Pages
+- **Frontend:** every push to `main` that changes more than documentation builds the site and publishes it to GitHub Pages
   (`.github/workflows/deploy.yml`). One-time setup in GitHub: Settings, Pages, Source "GitHub Actions"; and a
   repository variable `API_URL` with the public address of the API server.
 - **Server:** the same workflow builds the Docker image and pushes it to
@@ -185,11 +186,13 @@ of pulling it: `docker compose build`.
   owner when the server has not answered for about 10 minutes; from 50 days without a change on `main` it also sends a
   daily reminder, because GitHub would switch the check off after 60 days.
 - Versions follow `vMAJOR.MINOR.PATCH`; changes are listed in [`CHANGELOG.md`](CHANGELOG.md).
-- **GitHub release:** made automatically (`.github/workflows/release.yml`) after the deploy of a push to `main` finished
-  green and that push carries a version in `package.json` that has no release yet: it sets the tag `vX.Y.Z` and creates the release with the summary at the top
-  of that version's `CHANGELOG.md` section. To release: one pull request that sets the four `package.json` versions
+- **GitHub release:** first one pull request that sets the four `package.json` versions
   (`npm version <x.y.z> --workspaces --include-workspace-root --no-git-tag-version`) and turns `[Unreleased]` into
-  `[x.y.z] - date` with a short summary in plain words before its first `###` heading; merging it is the release.
+  `[x.y.z] - date` with a short summary in plain words before its first `###` heading. Merge it and wait until its
+  Deploy run is green, then start the release by hand: Actions, "Release", "Run workflow" on `main`, enter the version
+  (e.g. `2.8.0`). `.github/workflows/release.yml` sets the tag `vX.Y.Z` on the commit Deploy last published, builds the
+  signed APK and creates the release with the summary at the top of that version's `CHANGELOG.md` section. It stops
+  with a message when that version exists already or the deployed commit carries another version.
 
 ## Licence
 

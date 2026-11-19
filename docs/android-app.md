@@ -122,11 +122,11 @@ browser version, and it adds what a web page cannot do on Android: notifications
   update there after changing this code.
 - **Verified on the owner's phone on 2026-11-05** (release 1.7.0): the 1.6.0 card, the hand install, the permission
   prompt, Android's "Update installieren?", the login kept and "App ist aktuell" afterwards all worked.
-- **How to test it on a phone:** after the release with the new shell, push a test branch (never merged) from that release and open a draft pull request for it (CI builds only for
-  pull requests and `main`) with `SHELL_VERSION` one lower and the version set to `x.y.99` of the previous release
-  (e.g. 1.6.99, version code 10699 < 10700); CI builds a signed test APK from the pull request (artifact `lueckenfueller-apk`, a ZIP).
+- **How to test it on a phone:** after the release with the new shell, push a test branch (never merged) from that release with `SHELL_VERSION` one lower and the version set to `x.y.99` of the previous release
+  (e.g. 1.6.99, version code 10699 < 10700); build a signed test APK of it by hand (Actions, "CI", "Run workflow", choose
+  the branch; artifact `lueckenfueller-apk`, a ZIP, kept 1 day).
   Install it **over the older app**, not over the new release: Android refuses to install a lower version code over a
-  higher one, and uninstalling would lose the login. Then tap "Aktualisieren" and close the pull request and delete the test branch afterwards.
+  higher one, and uninstalling would lose the login. Then tap "Aktualisieren" and delete the test branch afterwards.
 
 ## Colours (Material You)
 
@@ -180,12 +180,13 @@ it has to be, and keep your own copy.
 
 ## Installing
 
-- **Test APK (every pull request from this repository and every push to `main`):** GitHub, Actions, the run of the pull request or push, section "Artifacts", `lueckenfueller-apk` (kept
-  14 days). Unzip it on the phone or PC and open the `.apk`. Only exists once the secrets are set.
+- **Test APK (built by hand):** GitHub, Actions, "CI", "Run workflow", choose the branch, "Run workflow". When the run
+  is green: its page, section "Artifacts", `lueckenfueller-apk` (kept 1 day). Unzip it on the phone or PC and open the `.apk`. Only exists once the secrets are set.
 - **Release APK:** on the release page under "Assets": `lueckenfueller-<version>.apk`. Every release has one
   (`release.yml` builds it and fails without it). The web app's "Android-App herunterladen" button links to the APK of its own
-  version (`apkDownloadUrl` in `web/src/lib/app-update.ts`); for about 2 minutes after a release is merged the new page is
-  live before the release exists, so the link answers 404 for that short time (accepted 2026-11-09). The self-update uses the same versioned name. Download on the phone, open it, allow installing from this source
+  version (`apkDownloadUrl` in `web/src/lib/app-update.ts`); after the release pull request is merged the new page is live
+  before the release exists (started by hand, see "Release" in `AGENTS.md`), so the link answers 404 until the release
+  run has finished (accepted 2026-11-09, when the gap was about 2 minutes). The self-update uses the same versioned name. Download on the phone, open it, allow installing from this source
   once. From the first release with shell version 3 on, the app offers later updates itself (see "Self-update"). An installed version is replaced and the login stays, because the signature is the same.
 
 ## Building and testing locally

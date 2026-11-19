@@ -236,10 +236,13 @@ says otherwise.
   and reasons: `docs/PLAN.md`.
 - **Build and test:** npm workspaces (`shared`, `server`, `web`), Node 24 in CI and Docker (22.13+ works
   locally). Before pushing: `npm run check`, `npm test`, `npm run build` (see README). CI (`ci.yml`) runs these
-  plus a Docker build of the server on every pull request and every push to `main` (not on pushes to other branches, which a pull request covers; a newer push cancels the older run of the same pull request). Cloud sessions have no Docker daemon, so
+  plus a Docker build of the server on every pull request only (since 2026-11-19; `deploy.yml` tests `main` again before
+  it publishes; a newer push cancels the older run of the same pull request). Cloud sessions have no Docker daemon, so
   the image build is only verified by CI. Android: CI's `android` job (`.github/actions/android-apk`, script
-  `scripts/android-apk.sh`) checks the synced Capacitor files, runs the Kotlin unit tests and the debug build, and
-  on pull requests from this repository and on pushes to `main` builds a signed test APK (artifact `lueckenfueller-apk`) when the secrets exist (forks get no secrets; on a pull request the label `sha-<7>` is the branch's commit, not GitHub's merge commit). A cloud session builds
+  `scripts/android-apk.sh`) checks the synced Capacitor files, runs the Kotlin unit tests and, on pull requests, the unsigned
+  debug build. A signed test APK of a branch is built only by hand: Actions, "CI", "Run workflow", choose the branch
+  (artifact `lueckenfueller-apk`, kept 1 day; that run skips the other jobs). With the secrets the script packages only
+  the release variant, without them only the debug one. A cloud session builds
   Android with JDK 21 and the SDK installed into the scratchpad as in `docs/android-app.md`, then runs the script;
   Maven Central sometimes answers 429: `--max-workers=2` and one retry (the script does both). The script refuses
   to run while files under `android/` are uncommitted (its stale-sync check). CI's `vm-scripts` job runs
@@ -254,7 +257,19 @@ says otherwise.
   takes the pictures of the whole app on a throw-away server with made-up people and calendars (details, the traps
   found and what it does not cover: `scripts/docs-screenshots/README.md`). Retake the pictures of every screen that a
   change alters visibly, and look at them before committing; the start picture is cropped above the version line.
-- **Release:** On every push to `main`, `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
+- **Release:** A version gets out in two steps, both the owner's:
+  1. Merge the release pull request (version numbers + `CHANGELOG.md`, see "Versions and releases"); `deploy.yml`
+     publishes app and server image as for every merge.
+  2. Once that Deploy run is green (about 2 minutes): Actions, "Release", "Run workflow", "Use workflow from: main",
+     enter the version (e.g. `2.8.0`), "Run workflow". `release.yml` releases the commit Deploy last published green:
+     it sets the tag `vX.Y.Z`, builds the signed APK and creates the GitHub release with the APK and `app-update.json`
+     (about 3 minutes). It stops at once with a clear message when the tag or release exists, when started on another
+     branch, or when that commit's `package.json` has another version (Deploy not finished yet).
+  Done when the release page shows `lueckenfueller-<version>.apk` under "Assets". Until step 2 has run, the web app's
+  "Android-App herunterladen" button (versioned link) answers 404, so do step 2 right after step 1 and merge nothing
+  else in between (otherwise the release lands on that later commit). Tags and releases are never made by hand: a
+  cloud session cannot push tags.
+  On every push to `main` that changes more than documentation (`**.md`, `docs/**`, `.claude/**`), `deploy.yml` deploys the frontend to GitHub Pages and pushes the server
   image to GHCR (`ghcr.io/dr-nerdlove/lueckenfueller-api`, tags `latest` and `sha-<short>`). The VM updates
   itself hourly from GHCR and rolls back an image that is not healthy (`deploy/vm/update.sh`, guide
   `docs/server-setup.md`). Changes to `deploy/vm/` reach the VM only when the owner reruns `setup.sh`: say so
@@ -398,6 +413,8 @@ says otherwise.
     under Actions). The step name "Server down marker" is shared by the workflow and the script (`HEALTH_MARKER_STEP`):
     the script finds out from it whether the previous run already reported the outage; change both together. A cloud
     session cannot reach the server, so the script is only tested with fake `curl`, `gh`, `date` and `sleep`.
+    Its schedule leaves out the night (`37 5-23 * * *`, UTC; changed 2026-11-19): after a change of the cron line the
+    owner disables and re-enables the workflow once, so the failure e-mails keep going to them.
     From day 50 after the last commit on `main`, the run at 12:37 Berlin time fails once a day as a reminder
     (`scripts/inactivity-reminder.sh`, last step of the workflow); a run failed because of the reminder does not
     affect the outage marker.
@@ -413,7 +430,10 @@ says otherwise.
 - **Android release:** `release.yml` builds the signed APK (`lueckenfueller-<version>.apk`) for the release commit and
   attaches it, with its SHA-256 signature in the notes. It needs the secrets `ANDROID_KEYSTORE_BASE64` and
   `ANDROID_KEYSTORE_PASSWORD` and the committed `android/signing-fingerprint.txt` (made by the owner, see
-  `docs/android-app.md`); without them, or on a fingerprint mismatch, the run fails and no release is made.
+  `docs/android-app.md`); without them, or on a fingerprint mismatch, the run fails and no release is made. Every
+  release APK so far is signed with that one key (fingerprint `1C:CC:8C:…`, checked 2026-11-19), so installed apps
+  update without reinstalling. The owner keeps the keystore and its password in a password manager (confirmed
+  2026-11-19); a secret cannot be read back from GitHub, and without the key no update can be built.
 - **Versions and releases:** First release `v1.0.0` (2026-11-03). The version lives in the four `package.json`
   files (kept equal, `npm version <x.y.z> --workspaces --include-workspace-root --no-git-tag-version`) and in
   `CHANGELOG.md`; the app shows it on the start page ("Version 1.0.0"), together with a note whether the server has
@@ -424,16 +444,26 @@ says otherwise.
   owner's word. A release is one pull request (version in the `package.json` files, `CHANGELOG.md` with
   "[Unreleased]" turned into "[x.y.z] - date" and a short summary in plain words before its first `###` heading,
   nothing else). The summary becomes the release notes on its own, so it must not point at the entries "below";
-  its wrapped lines are joined per paragraph and list item, because GitHub shows every line break in a release. **Merging it is the release:** once `deploy.yml` has finished green for that push,
-  `.github/workflows/release.yml` (`workflow_run`) sets the tag `vX.Y.Z` on that commit and creates the GitHub release (text only, no files, notes = that summary plus a link to the changelog,
-  `scripts/release-notes.sh`) when the version in `package.json` has no release yet. A push without a new version
-  does nothing. On 2026-11-03 a cloud session's tag push was cut off (not retried) and the GitHub tools have no release call,
-  which is why the workflow does it. If a run fails, repeat it under Actions, "Release",
-  "Run workflow".
+  its wrapped lines are joined per paragraph and list item, because GitHub shows every line break in a release. After
+  merging it, the owner starts `.github/workflows/release.yml` by hand (steps under "Release"; until 2026-11-19 merging
+  alone was the release, through a `workflow_run` after every Deploy that cost a minute each time). The notes are that
+  summary plus a link to the changelog (`scripts/release-notes.sh`) and the APK's signature. On 2026-11-03 a cloud
+  session's tag push was cut off (not retried) and the GitHub tools have no release call, which is why the workflow sets
+  the tag. If a run fails, fix the cause and start it again with the same version.
 - **Repository:** public (checked Nov 2026); `main` is protected by the ruleset "protect main branch" (no force
   pushes, no deletion; the checks `test`, `docker`, `vm-scripts` and `android` must pass, Nov 2026); licence AGPL-3.0 (`LICENSE`, from the initial commit). Version scheme `vMAJOR.MINOR.PATCH`.
-  CI: `.github/workflows/ci.yml` (checks), `deploy.yml` (Pages + server image), `release.yml` (tag + GitHub
-  release after a green deploy of a new version) and `health.yml` (hourly check of the server). GitHub security settings (set by the owner, Nov 2026): Dependabot alerts on (with the dependency
+  CI: `.github/workflows/ci.yml` (checks on pull requests; test APK by hand), `deploy.yml` (Pages + server image on
+  pushes to `main`), `release.yml` (tag + GitHub release with the APK, started by hand) and `health.yml` (hourly check
+  of the server from 05:37 to 23:37 UTC). Every job has `timeout-minutes`; npm and Gradle are cached.
+  Actions usage (checked 2026-11-19): November showed about 3,600 minutes, mostly CI (4 jobs per run, each rounded up
+  to a full minute; until 2026-11-12 every push ran twice, then every merge ran CI again on `main`) and a Release run
+  after every Deploy. The repository is public, so GitHub bills none of it (`get_workflow_run_usage`: 0 billable ms);
+  the server image on GHCR is public too. Fewer runs still matter if the repository ever becomes private.
+  **Deliberate deviations from the owner's rules "GitHub Actions"** (decided by the owner on 2026-11-19):
+  - CI's pull request checks have no `paths-ignore`: the ruleset requires `test`, `docker`, `vm-scripts` and `android`,
+    and a required check that never ran would block merging a documentation-only pull request.
+  - `deploy.yml` keeps `cancel-in-progress: false` (one run after the other): see the trap about 1.9.0 overwriting
+    2.0.0 on Pages. GitHub security settings (set by the owner, Nov 2026): Dependabot alerts on (with the dependency
   graph), secret scanning with push protection on; automatic dependency submission and AI scan off (Actions runs and AI credits for little gain). A Dependabot alert is checked in a session
   before anything is changed.
   Checked on 2026-11-16: `deepmerge` 4.3.1 (GHSA-gcqx-w48m-w2h4, low, prototype poisoning, no fixed version yet) needs

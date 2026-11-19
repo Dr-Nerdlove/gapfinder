@@ -12,10 +12,10 @@ export function apkDownloadUrl(version: string): string {
 }
 
 /**
- * The APK of the version this web app belongs to (the button "Android-App herunterladen"). Known, accepted gap: right
- * after a release is merged, the new page is live about 2 minutes before `release.yml` has created the release, so for
- * those minutes this link answers 404 (the owner accepted this on 2026-11-09 instead of asking the GitHub API from the
- * browser).
+ * The APK of the version this web app belongs to (the button "Android-App herunterladen"). Known, accepted gap: after
+ * the release pull request is merged, the new page is live before the owner has run `release.yml` (started by hand
+ * since 2026-11-19) and it has created the release, so until then this link answers 404 (the owner accepted this on
+ * 2026-11-09, when the gap was about 2 minutes, instead of asking the GitHub API from the browser).
  */
 export const APK_DOWNLOAD_URL = apkDownloadUrl(APP_RELEASE);
 
