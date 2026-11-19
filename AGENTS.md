@@ -482,7 +482,8 @@ repository belongs to someone else, these points still apply unless "Project kno
   the known public Firebase key in `android/app/google-services.json`. All 121 image versions (PNG, JPG, SVG) carry no
   EXIF, GPS or text metadata. Authors are GitHub noreply addresses. Home-network addresses: `192.168.178.20`/`.30`
   in `docs/server-setup.md` (named as the guide's examples) and, only in older versions of that file,
-  `172.20.31.5` (a Hyper-V Default Switch address). gitleaks itself could not be used from the cloud session.
+  `172.20.31.5` (a Hyper-V Default Switch address); the owner confirmed on 2026-11-19 that all three are examples, not
+  their real addresses. gitleaks itself could not be used from the cloud session.
   **Deliberate deviations from the owner's rules "GitHub Actions"** (decided by the owner on 2026-11-19):
   - CI's pull request checks have no `paths-ignore`: the ruleset requires `test`, `docker`, `vm-scripts` and `android`,
     and a required check that never ran would block merging a documentation-only pull request.
