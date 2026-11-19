@@ -476,6 +476,13 @@ repository belongs to someone else, these points still apply unless "Project kno
   no change. It comes only with the build tool `@sveltejs/vite-plugin-svelte`, which merges the project's own build
   configuration with it; it is not part of the shipped app or the server and never sees data from users. Look again
   only when a fixed version exists (then update) or when the package turns up in `server` or in the built app.
+  History check (owner-rules v19, the repository is public; done 2026-11-19 on a full mirror: 406 commits of all
+  branches, tags and the 151 pull request refs, 1,815 file versions, all commit messages): no secrets found. Pattern
+  search (private keys, GitHub/AWS/Slack/AI tokens, assigned passwords, long base64) found only code, test values and
+  the known public Firebase key in `android/app/google-services.json`. All 121 image versions (PNG, JPG, SVG) carry no
+  EXIF, GPS or text metadata. Authors are GitHub noreply addresses. Home-network addresses: `192.168.178.20`/`.30`
+  in `docs/server-setup.md` (named as the guide's examples) and, only in older versions of that file,
+  `172.20.31.5` (a Hyper-V Default Switch address). gitleaks itself could not be used from the cloud session.
   **Deliberate deviations from the owner's rules "GitHub Actions"** (decided by the owner on 2026-11-19):
   - CI's pull request checks have no `paths-ignore`: the ruleset requires `test`, `docker`, `vm-scripts` and `android`,
     and a required check that never ran would block merging a documentation-only pull request.
