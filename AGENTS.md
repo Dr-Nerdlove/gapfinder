@@ -459,17 +459,18 @@ says otherwise.
   to a full minute; until 2026-11-12 every push ran twice, then every merge ran CI again on `main`) and a Release run
   after every Deploy. The repository is public, so GitHub bills none of it (`get_workflow_run_usage`: 0 billable ms);
   the server image on GHCR is public too. Fewer runs still matter if the repository ever becomes private.
-  **Deliberate deviations from the owner's rules "GitHub Actions"** (decided by the owner on 2026-11-19):
-  - CI's pull request checks have no `paths-ignore`: the ruleset requires `test`, `docker`, `vm-scripts` and `android`,
-    and a required check that never ran would block merging a documentation-only pull request.
-  - `deploy.yml` keeps `cancel-in-progress: false` (one run after the other): see the trap about 1.9.0 overwriting
-    2.0.0 on Pages. GitHub security settings (set by the owner, Nov 2026): Dependabot alerts on (with the dependency
+  GitHub security settings (set by the owner, Nov 2026): Dependabot alerts on (with the dependency
   graph), secret scanning with push protection on; automatic dependency submission and AI scan off (Actions runs and AI credits for little gain). A Dependabot alert is checked in a session
   before anything is changed.
   Checked on 2026-11-16: `deepmerge` 4.3.1 (GHSA-gcqx-w48m-w2h4, low, prototype poisoning, no fixed version yet) needs
   no change. It comes only with the build tool `@sveltejs/vite-plugin-svelte`, which merges the project's own build
   configuration with it; it is not part of the shipped app or the server and never sees data from users. Look again
   only when a fixed version exists (then update) or when the package turns up in `server` or in the built app.
+  **Deliberate deviations from the owner's rules "GitHub Actions"** (decided by the owner on 2026-11-19):
+  - CI's pull request checks have no `paths-ignore`: the ruleset requires `test`, `docker`, `vm-scripts` and `android`,
+    and a required check that never ran would block merging a documentation-only pull request.
+  - `deploy.yml` keeps `cancel-in-progress: false` (one run after the other): see the trap about 1.9.0 overwriting
+    2.0.0 on Pages.
 - **Limits of the environment:** Cloud sessions have no `gh` CLI; GitHub is reached through the GitHub MCP
   tools. A session cannot reach the owner's home server or create accounts with outside services (Tailscale,
   later Google/Microsoft); the owner does those steps from a written guide and keeps the keys in the VM, never
