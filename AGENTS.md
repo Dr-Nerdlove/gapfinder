@@ -2,7 +2,7 @@
 
 Instructions for every AI tool working on this repository.
 
-<!-- owner-rules v18: general (AGENTS.md) - begin -->
+<!-- owner-rules v19: general (AGENTS.md) - begin -->
 
 ## General rules
 
@@ -67,6 +67,10 @@ Instructions for every AI tool working on this repository.
   once, without repeating the value. The secret counts as burnt: it must be **changed at the provider**, which
   makes the leaked copy worthless. Deleting it from the history alone is not enough (copies, caches, forks and
   logs keep it), and rewriting history happens only when the owner explicitly agrees.
+- **Before a repository is made public**, check its whole history (all commits and branches) for secrets and
+  for what tells others about the people or their machines (see above). Report what you find without showing
+  the values, and change nothing in the history without the owner's consent. Anything found counts as burnt
+  once the repository is public. If it is public already, do the check at once.
 - **Personal data** (of the people or of the product's users) is not sent anywhere new, logged or published
   without asking.
 - **What users have stays usable after an update**: their settings, saved data, accounts. When a change
@@ -162,9 +166,15 @@ missing, with a recommendation, and let the people choose.
 
 ### GitHub Actions
 
-The owner's account is on GitHub's free plan: 0.5 GB of storage and a limited number of minutes. Use both
-sparingly. Where the repository belongs to someone else, these points still apply unless "Project knowledge"
-says otherwise.
+The owner's account is on GitHub's free plan: 0.5 GB of storage and a limited number of minutes. Where the
+repository belongs to someone else, these points still apply unless "Project knowledge" says otherwise.
+
+- **Storage counts in every repository.** Artifacts that are kept (test builds, APKs from pull requests) are
+  what fills it; keep as little as possible, as short as possible.
+- **Minutes count only in private repositories.** In public ones, GitHub-hosted runners are free. Check whether
+  the repository is public or private before weighing a change: in a public one, saving minutes is tidiness,
+  not money; in a private one, it matters.
+- Apply the points below in both cases; they keep the project tidy and make it ready to become private.
 
 - **Builds** (an APK and the like) run only for release tags (`v*`) and when started by hand
   (`workflow_dispatch`), not on every push.
@@ -215,7 +225,7 @@ says otherwise.
   conversation: decisions and why, traps that cost time, how to build, test and release, and the limits of
   the environment (what a cloud session cannot do there).
 
-<!-- owner-rules v18: general (AGENTS.md) - end -->
+<!-- owner-rules v19: general (AGENTS.md) - end -->
 
 ## Project knowledge
 
